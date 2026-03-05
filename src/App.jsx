@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useReducer, useState } from 'react'
 import Navbar from './components/navbar/Navbar'
 import HomeView from './features/home/HomeView'
 import LoginView from './features/login/LoginView'
 import RegisterView from './features/register/RegisterView'
 import { buildEv12Preview, formatReply, initialConfigForm } from './features/home/ev12'
+import { authReducer, initialAuthState, loadPersistedAuth, persistAuth } from './store/authStore'
 import './App.css'
 
 const initialRegisterForm = {
@@ -21,9 +22,9 @@ const initialRegisterForm = {
 const initialLoginForm = { email: '', password: '' }
 
 export default function App() {
-  const [activeView, setActiveView] = useState('login')
-  const [authStatus, setAuthStatus] = useState('Not logged in.')
-  const [session, setSession] = useState(null)
+  const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
+  const [activeView, setActiveView] = useState(auth.isAuthenticated ? 'home' : 'login')
+  const [authStatus, setAuthStatus] = useState(auth.isAuthenticated ? 'Authenticated session restored.' : 'Not logged in.')
 
   const [registerForm, setRegisterForm] = useState(initialRegisterForm)
   const [loginForm, setLoginForm] = useState(initialLoginForm)
@@ -41,6 +42,10 @@ export default function App() {
   const [configResult, setConfigResult] = useState(null)
   const [configForm, setConfigForm] = useState(initialConfigForm)
 
+  useEffect(() => {
+    persistAuth(auth)
+  }, [auth])
+
   const commandPreview = useMemo(() => buildEv12Preview(configForm), [configForm])
   const formattedReplies = useMemo(
     () => (replies.length ? replies.map(formatReply).join('\n') : 'No replies loaded yet.'),
@@ -49,7 +54,8 @@ export default function App() {
 
   const commonHeaders = () => ({
     ...(gatewayBaseUrl.trim() ? { 'X-Gateway-Base-Url': gatewayBaseUrl.trim() } : {}),
-    ...(gatewayToken.trim() ? { Authorization: gatewayToken.trim() } : {})
+    ...(gatewayToken.trim() ? { Authorization: gatewayToken.trim() } : {}),
+    ...(auth.token ? { 'X-Auth-Token': auth.token } : {})
   })
 
   const handleRegister = async () => {
@@ -86,12 +92,18 @@ export default function App() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Login failed')
 
-      setSession(data)
+      dispatchAuth({ type: 'LOGIN_SUCCESS', payload: data })
       setAuthStatus(`Logged in as ${data.user.firstName} ${data.user.lastName} (role ${data.user.userRole}).`)
       setActiveView('home')
     } catch (error) {
       setAuthStatus(`Login failed: ${error.message}`)
     }
+  }
+
+  const handleLogout = () => {
+    dispatchAuth({ type: 'LOGOUT' })
+    setAuthStatus('Logged out successfully.')
+    setActiveView('login')
   }
 
   const handleSendMessage = async () => {
@@ -123,21 +135,45 @@ export default function App() {
   }
 
   const handleFetchReplies = async () => {
+    const phoneFilter = (lastSentPhone || phone.trim() || configForm.contactNumber?.trim() || '').trim()
     setLoading(true)
-    try {
-      const response = await fetch(
-        `/api/messages/replies?phone=${encodeURIComponent(lastSentPhone)}&since=${lastSeenTimestamp}`,
-        { headers: commonHeaders() }
-      )
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Unable to fetch replies')
 
-      const incoming = Array.isArray(data.messages) ? data.messages : []
-      const newTimestamp = Number(data.lastSeenTimestamp || lastSeenTimestamp)
+    try {
+      const params = new URLSearchParams({ since: String(lastSeenTimestamp), limit: '50' })
+      if (phoneFilter) params.set('phone', phoneFilter)
+
+      const endpoints = [`/api/messages/replies?${params.toString()}`, `/api/inbound-messages?${params.toString()}`]
+
+      let data = null
+      let lastError = null
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint, { headers: commonHeaders() })
+          const body = await response.json().catch(() => ({}))
+          if (!response.ok) throw new Error(body.error || body.message || `Unable to fetch replies from ${endpoint}`)
+          data = body
+          break
+        } catch (error) {
+          lastError = error
+        }
+      }
+
+      if (!data) throw lastError || new Error('Unable to fetch replies')
+
+      const incoming = Array.isArray(data.messages)
+        ? data.messages
+        : Array.isArray(data.replies)
+          ? data.replies
+          : Array.isArray(data)
+            ? data
+            : []
+
+      const newTimestamp = Number(data.lastSeenTimestamp || data.since || Date.now())
 
       setReplies(incoming)
-      setLastSeenTimestamp(newTimestamp)
-      setStatus(`Loaded ${incoming.length} replies.`)
+      setLastSeenTimestamp(Number.isFinite(newTimestamp) ? newTimestamp : Date.now())
+      setStatus(`Loaded ${incoming.length} replies${phoneFilter ? ` for ${phoneFilter}` : ''}.`)
     } catch (error) {
       setStatus(`Fetch failed: ${error.message}`)
     } finally {
@@ -146,18 +182,53 @@ export default function App() {
   }
 
   const handleSendConfig = async () => {
+    const to = configForm.contactNumber?.trim() || phone.trim()
+    const command = commandPreview.trim()
+
+    if (!to) {
+      setConfigStatus('Config failed: device/contact number is required.')
+      return
+    }
+
+    if (!command) {
+      setConfigStatus('Config failed: no command generated yet.')
+      return
+    }
+
     setLoading(true)
     setConfigStatus('Sending configuration...')
     try {
-      const response = await fetch('/api/config/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...commonHeaders() },
-        body: JSON.stringify({ ...configForm, command: commandPreview })
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Unable to send configuration')
+      const payload = { ...configForm, to, command }
+      const endpoints = ['/api/send-config', '/api/config/send', '/api/messages/send']
+
+      let data = null
+      let lastError = null
+
+      for (const endpoint of endpoints) {
+        try {
+          const body = endpoint === '/api/messages/send' ? { to, message: command } : payload
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...commonHeaders() },
+            body: JSON.stringify(body)
+          })
+
+          const responseBody = await response.json().catch(() => ({}))
+          if (!response.ok) {
+            throw new Error(responseBody.error || responseBody.message || `Unable to send configuration via ${endpoint}`)
+          }
+
+          data = responseBody
+          break
+        } catch (error) {
+          lastError = error
+        }
+      }
+
+      if (!data) throw lastError || new Error('Unable to send configuration')
 
       setConfigResult(data)
+      setStatus(`Message sent to ${to}.`)
       setConfigStatus('Configuration sent successfully.')
     } catch (error) {
       setConfigStatus(`Config failed: ${error.message}`)
@@ -168,10 +239,16 @@ export default function App() {
 
   return (
     <main className="container">
-      <Navbar activeView={activeView} authStatus={authStatus} onChangeView={setActiveView} />
+      {activeView === 'home' ? <Navbar user={auth.user} /> : null}
 
       {activeView === 'login' && (
-        <LoginView loginForm={loginForm} setLoginForm={setLoginForm} onLogin={handleLogin} session={session} />
+        <LoginView
+          loginForm={loginForm}
+          setLoginForm={setLoginForm}
+          onLogin={handleLogin}
+          session={auth.isAuthenticated ? auth : null}
+          onGoRegister={() => setActiveView('register')}
+        />
       )}
 
       {activeView === 'register' && (
@@ -179,11 +256,15 @@ export default function App() {
           registerForm={registerForm}
           setRegisterForm={setRegisterForm}
           onRegister={handleRegister}
+          onGoLogin={() => setActiveView('login')}
         />
       )}
 
       {activeView === 'home' && (
         <HomeView
+          user={auth.user}
+          authStatus={authStatus}
+          onLogout={handleLogout}
           gatewayBaseUrl={gatewayBaseUrl}
           gatewayToken={gatewayToken}
           setGatewayBaseUrl={setGatewayBaseUrl}
@@ -203,6 +284,8 @@ export default function App() {
           fetchReplies={handleFetchReplies}
           status={status}
           formattedReplies={formattedReplies}
+          repliesCount={replies.length}
+          authToken={auth.token}
         />
       )}
     </main>
