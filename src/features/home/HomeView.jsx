@@ -1,26 +1,21 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
 import './home.css'
 
-const users = [
-  ['Markwayne', 'mark@mail.com', 'User', '+639111111111', 'Sydney, AU', 'Mark Wayne'],
-  ['Karen Anne', 'karen@mail.com', 'User', '+639122222222', 'Sydney, AU', 'Mark Wayne'],
-  ['John Doe', 'john@mail.com', 'Super Admin', '+639133333333', 'Sydney, AU', 'N/A']
+const metrics = [
+  { label: 'TOTAL USERS', value: '200' },
+  { label: 'TOTAL DEVICES', value: '683' },
+  { label: 'TOTAL LOCATIONS', value: '42' },
+  { label: 'RECENT REPLIES', value: '28' }
 ]
 
-const locations = [
-  ['Sydney, Australia', 'Lorem ipsum dolor sit amet', '35', '104'],
-  ['Melbourne, Australia', 'Lorem ipsum dolor sit amet', '26', '94']
-]
-
-const devices = [
-  ['LOREM-EV12', '+63 917 111 111', 'Markwayne', 'Manager', 'Sydney, Australia'],
-  ['LOREM-CT12', '+63 917 222 222', 'Karen Anne', 'User', 'Melbourne, Australia']
-]
-
-const repliesRows = [
-  ['2026-03-03 04:20', '+63 917 111 111', 'Hi there', 'received'],
-  ['2026-03-03 04:32', '+63 917 222 222', 'Location updated', 'received']
+const deviceRows = [
+  ['Device Name', 'Lorem - EV12'],
+  ['Device Phone Number', '+639108653532'],
+  ['Owner User', 'John Doe'],
+  ['Owner Location', 'Sydney, Australia'],
+  ['Last reply', '04-03-2026 23:15'],
+  ['Battery status', '74%']
 ]
 
 export default function HomeView({
@@ -44,26 +39,56 @@ export default function HomeView({
   status,
   formattedReplies
 }) {
-  const [activeSection, setActiveSection] = useState('settings-basic')
-
-  const headerTitle = useMemo(() => {
-    if (activeSection.startsWith('settings')) return 'Settings'
-    if (activeSection === 'commands') return 'Command Page'
-    return activeSection.charAt(0).toUpperCase() + activeSection.slice(1)
-  }, [activeSection])
+  const [activeSection, setActiveSection] = useState('dashboard')
 
   return (
     <div className="home-shell">
       <Sidebar activeSection={activeSection} onChangeSection={setActiveSection} />
 
       <div className="dashboard-content">
-        <section className="dashboard-header-row">
-          <h2>{headerTitle}</h2>
-        </section>
+        {activeSection === 'dashboard' && (
+          <>
+            <h2 className="page-title">Dashboard</h2>
+            <section className="metric-grid">
+              {metrics.map((metric) => (
+                <article key={metric.label} className="metric-card">
+                  <div className="metric-icon" />
+                  <div>
+                    <p>{metric.label}</p>
+                    <h3>{metric.value}</h3>
+                  </div>
+                </article>
+              ))}
+            </section>
+
+            <section className="dashboard-main-grid">
+              <article className="device-overview card-like">
+                <h3>Device Overview</h3>
+                <div className="device-panel">
+                  <div className="device-photo-placeholder" />
+                  <dl>
+                    {deviceRows.map(([label, value]) => (
+                      <div className="device-row" key={label}>
+                        <dt>{label}</dt>
+                        <dd>{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              </article>
+
+              <aside className="action-stack card-like">
+                <button disabled={loading} onClick={sendConfig}>Send Command</button>
+                <button disabled={loading} onClick={sendMessage}>Request Location</button>
+                <button disabled={loading} onClick={fetchReplies}>Request Location</button>
+              </aside>
+            </section>
+          </>
+        )}
 
         {activeSection === 'settings-basic' && (
-          <section className="card-like settings-panel">
-            <h3>Settings &gt; Basic Configuration</h3>
+          <section className="card-like section-panel">
+            <h2 className="section-title">Settings &gt; Basic Configuration</h2>
             <div className="field-grid two-col">
               <div>
                 <label>Device ID</label>
@@ -72,43 +97,6 @@ export default function HomeView({
               <div>
                 <label>Device Name</label>
                 <input value={configForm.contactName} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactName: event.target.value }))} />
-              </div>
-            </div>
-
-            <h4>Contact Information</h4>
-            <div className="field-grid four-col">
-              <div>
-                <label>Contact Number</label>
-                <input value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
-              </div>
-              <div>
-                <label>Name</label>
-                <input value={configForm.contactName} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactName: event.target.value }))} />
-              </div>
-              <div>
-                <label>SMS</label>
-                <select value={configForm.contactSmsEnabled ? '1' : '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactSmsEnabled: event.target.value === '1' }))}>
-                  <option value="1">On</option><option value="0">Off</option>
-                </select>
-              </div>
-              <div>
-                <label>Call</label>
-                <select value={configForm.contactCallEnabled ? '1' : '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactCallEnabled: event.target.value === '1' }))}>
-                  <option value="1">On</option><option value="0">Off</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="field-grid two-col">
-              <div>
-                <label>SMS Password</label>
-                <input value={configForm.smsPassword} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} />
-              </div>
-              <div>
-                <label>SMS Whitelist</label>
-                <select value={configForm.smsWhitelistEnabled ? '1' : '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsWhitelistEnabled: event.target.value === '1' }))}>
-                  <option value="1">On</option><option value="0">Off</option>
-                </select>
               </div>
             </div>
           </section>
@@ -144,51 +132,96 @@ export default function HomeView({
           </section>
         )}
 
-        {(activeSection === 'commands' || activeSection.startsWith('settings')) && (
-          <section className="card-like gateway-panel">
-            <h3>SMS Gateway & Testing</h3>
-            <div className="field-grid two-col">
-              <div><label>Gateway Base URL</label><input placeholder="https://gateway..." value={gatewayBaseUrl} onChange={(event) => setGatewayBaseUrl(event.target.value)} /></div>
-              <div><label>Gateway Token</label><input placeholder="Authorization token" value={gatewayToken} onChange={(event) => setGatewayToken(event.target.value)} /></div>
+            <h3 className="block-title">Contact Information</h3>
+            <div className="contact-table">
+              <div className="contact-head"><span>Contact</span><span>Name</span><span>Contact Number</span><span>SMS</span><span>Call</span><span /></div>
+              <div className="contact-row"><span className="chip">Contact 1</span><span>{configForm.contactName || 'John Doe'}</span><span>{configForm.contactNumber || '+639198765432'}</span><span>Off</span><span>Off</span><span>✎ 🗑</span></div>
+              <div className="contact-row"><span className="chip">Contact 2</span><span>—</span><span>—</span><span>Off</span><span>Off</span><span>✎ 🗑</span></div>
+              <button className="mini-action add-contact">+ Add Contact</button>
             </div>
-            <div className="field-grid two-col">
-              <div><label>Test Phone Number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} /></div>
-              <div><label>Custom Message</label><input value={message} onChange={(event) => setMessage(event.target.value)} /></div>
+
+            <div className="field-grid two-col footer-config">
+              <div>
+                <label>SMS Password</label>
+                <input value={configForm.smsPassword} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} />
+              </div>
+              <div>
+                <label>SMS White List</label>
+                <select value={configForm.smsWhitelistEnabled ? '1' : '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsWhitelistEnabled: event.target.value === '1' }))}><option value="0">Off</option><option value="1">On</option></select>
+              </div>
             </div>
-            <button className="mini-action" disabled={loading} onClick={sendMessage}>Send Test Message</button>
-            <div className="status">{status}</div>
           </section>
         )}
 
-        {activeSection === 'location' && <section className="card-like"><h3>Location</h3><p className="small-muted">Map/track controls can be integrated here.</p></section>}
-
-        {activeSection === 'users' && (
-          <section className="module-table card-like">
-            <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th></tr></thead><tbody>{users.map((row) => <tr key={row[1]}>{row.map((col) => <td key={`${row[1]}-${col}`}>{col}</td>)}</tr>)}</tbody></table>
+        {activeSection === 'settings-alarm' && (
+          <section className="card-like section-panel">
+            <h2 className="section-title">Settings &gt; Alarm Settings</h2>
+            <div className="alarm-card"><h3>SOS</h3><div className="alarm-row"><label>Mode</label><input value={configForm.sosMode} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosMode: event.target.value }))} /><label>Action Time</label><input value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div></div>
+            <div className="alarm-card"><h3>Fall Detection</h3><div className="alarm-row"><label>Enable</label><select value={configForm.fallDownEnabled} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownEnabled: event.target.value }))}><option value="0">Off</option><option value="1">On</option></select><label>Sensitivity</label><input value={configForm.fallDownSensitivity} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} /></div></div>
+            <div className="alarm-card"><h3>Motion / No Motion</h3><div className="alarm-row"><label>Enable</label><select value={configForm.motionEnabled} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionEnabled: event.target.value }))}><option value="0">Off</option><option value="1">On</option></select><label>Duration</label><input value={configForm.motionDurationTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionDurationTime: event.target.value }))} /></div></div>
+            <div className="alarm-card"><h3>Over-speed</h3><div className="alarm-row"><label>Enable</label><select value={configForm.overSpeedEnabled} onChange={(event) => setConfigForm((prev) => ({ ...prev, overSpeedEnabled: event.target.value }))}><option value="0">Off</option><option value="1">On</option></select><label>Speed Limit</label><input value={configForm.overSpeedLimit} onChange={(event) => setConfigForm((prev) => ({ ...prev, overSpeedLimit: event.target.value }))} /></div></div>
+            <div className="alarm-card"><h3>Geo-fence</h3><div className="alarm-row"><label>Enable</label><select value={configForm.geoFenceEnabled} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceEnabled: event.target.value }))}><option value="0">Off</option><option value="1">On</option></select><label>Radius</label><input value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div></div>
           </section>
         )}
 
-        {activeSection === 'devices' && (
-          <section className="module-table card-like">
-            <table><thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead><tbody>{devices.map((row) => <tr key={row[0]}>{row.map((col) => <td key={`${row[0]}-${col}`}>{col}</td>)}</tr>)}</tbody></table>
+        {activeSection === 'location' && (
+          <section className="section-panel">
+            <h2 className="page-title">Location</h2>
+            <article className="card-like map-panel">
+              <div className="map-placeholder">
+                <span className="map-chip">Lat: -33.8698439 Lon: 151.2082848</span>
+              </div>
+              <button className="mini-action request-btn" disabled={loading} onClick={sendMessage}>Request Location</button>
+            </article>
+            <div className="location-grid">
+              <article className="card-like"><h3>Continuous Tracking</h3><div className="field-grid"><label>Enable</label><select><option>Off</option><option>On</option></select><label>Interval</label><input placeholder="Seconds" /><label>Duration</label><input placeholder="Minutes" /></div></article>
+              <article className="card-like"><h3>Geo-fence Settings</h3><div className="field-grid"><label>Enable</label><select><option>Off</option><option>On</option></select><label>Radius</label><input /><label>Action</label><select><option>Select</option><option>Alert</option></select></div></article>
+            </div>
           </section>
         )}
 
-        {activeSection === 'replies' && (
-          <section className="module-table card-like replies-module">
-            <button className="mini-action" disabled={loading} onClick={fetchReplies}>Refresh Replies</button>
-            <table><thead><tr><th>Date</th><th>Phone Number</th><th>Text/Info</th><th>State</th></tr></thead><tbody>{repliesRows.map((row) => <tr key={`${row[0]}-${row[1]}`}>{row.map((col) => <td key={`${row[0]}-${col}`}>{col}</td>)}</tr>)}</tbody></table>
-            <h4>Conversation</h4>
-            <pre className="replies conversation-box">{formattedReplies}</pre>
+        {activeSection === 'commands' && (
+          <section>
+            <h2 className="page-title">Command Page</h2>
+            <div className="commands-layout">
+              <article className="card-like">
+                <h3>Command Input</h3>
+                <div className="field-grid">
+                  <div><label>Contact Number</label><input value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} /></div>
+                  <div><label>SOS Action</label><input value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div>
+                  <div><label>Geo-fence</label><input value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div>
+                </div>
+                <button className="mini-action" disabled={loading} onClick={sendConfig}>Submit</button>
+              </article>
+
+              <article className="card-like">
+                <h3>Command Preview</h3>
+                <pre className="preview-box">{commandPreview || 'No command generated yet.'}</pre>
+                <button className="mini-action" disabled={loading} onClick={sendConfig}>Submit</button>
+              </article>
+            </div>
+
+            <article className="card-like gateway-panel">
+              <h3>SMS Gateway + Test Message</h3>
+              <div className="field-grid two-col">
+                <div><label>Gateway Base URL</label><input placeholder="https://gateway-url" value={gatewayBaseUrl} onChange={(event) => setGatewayBaseUrl(event.target.value)} /></div>
+                <div><label>Gateway Token</label><input placeholder="Authorization token" value={gatewayToken} onChange={(event) => setGatewayToken(event.target.value)} /></div>
+                <div><label>Test Phone Number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} /></div>
+                <div><label>Custom Message</label><input value={message} onChange={(event) => setMessage(event.target.value)} /></div>
+              </div>
+              <button className="mini-action" disabled={loading} onClick={sendMessage}>Send Test Message</button>
+              <div className="status">{status}</div>
+              <div className="status">{configStatus}</div>
+              {configResult ? <pre className="replies conversation-box">{JSON.stringify(configResult, null, 2)}</pre> : null}
+            </article>
           </section>
         )}
 
-        {activeSection === 'dashboard' && (
-          <section className="module-table card-like">
-            <h3>Overview</h3>
-            <table><thead><tr><th>Location</th><th>Details</th><th>Total Users</th><th>Total Devices</th></tr></thead><tbody>{locations.map((row) => <tr key={row[0]}>{row.map((col) => <td key={`${row[0]}-${col}`}>{col}</td>)}</tr>)}</tbody></table>
-          </section>
-        )}
+        <section className="card-like replies-section">
+          <h3>Replies Conversation</h3>
+          <button className="mini-action" disabled={loading} onClick={fetchReplies}>Refresh Replies</button>
+          <pre className="replies conversation-box">{formattedReplies}</pre>
+        </section>
       </div>
     </div>
   )

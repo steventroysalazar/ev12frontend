@@ -2,7 +2,6 @@ import './sidebar.css'
 
 const sidebarItems = [
   { id: 'dashboard', label: 'Dashboard' },
-  { id: 'users', label: 'Users' },
   {
     id: 'settings',
     label: 'Settings',
@@ -12,34 +11,34 @@ const sidebarItems = [
     ]
   },
   { id: 'location', label: 'Location' },
-  { id: 'devices', label: 'Devices' },
-  { id: 'commands', label: 'Commands' },
-  { id: 'replies', label: 'Replies' }
+  { id: 'commands', label: 'Commands' }
 ]
 
 export default function Sidebar({ activeSection, onChangeSection }) {
+  const isSettingsActive = activeSection.startsWith('settings')
+
   return (
     <aside className="sidebar-panel">
-      <div className="sidebar-logo">EV12 LOGO</div>
       <ul className="sidebar-nav">
         {sidebarItems.map((item) => (
           <li key={item.id}>
             <a
-              className={activeSection === item.id ? 'active' : ''}
+              className={activeSection === item.id || (item.id === 'settings' && isSettingsActive) ? 'active' : ''}
               href="#"
               onClick={(event) => {
                 event.preventDefault()
-                onChangeSection(item.id)
+                onChangeSection(item.id === 'settings' ? 'settings-basic' : item.id)
               }}
             >
               {item.label}
             </a>
+
             {item.children ? (
               <ul className="sidebar-subnav">
                 {item.children.map((child) => (
                   <li key={child.id}>
                     <a
-                      className={activeSection === child.id ? 'active sub-active' : ''}
+                      className={activeSection === child.id ? 'sub-active' : ''}
                       href="#"
                       onClick={(event) => {
                         event.preventDefault()

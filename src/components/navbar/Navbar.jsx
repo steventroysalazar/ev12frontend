@@ -1,6 +1,6 @@
 import './navbar.css'
 
-export default function Navbar({ onChangeView }) {
+export default function Navbar() {
   return (
     <header className="dashboard-topbar">
       <div className="brand">EV12 LOGO</div>
@@ -11,7 +11,6 @@ export default function Navbar({ onChangeView }) {
         </div>
         <span className="avatar-dot" />
       </div>
-      <button className="back-auth" onClick={() => onChangeView('login')}>Auth</button>
     </header>
   )
 }

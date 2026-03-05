@@ -169,7 +169,7 @@ export default function App() {
   return (
     <main className="container">
       {activeView === 'home' ? (
-        <Navbar onChangeView={setActiveView} />
+        <Navbar />
       ) : null}
 
       {activeView === 'login' && (
