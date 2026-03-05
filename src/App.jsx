@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import Navbar from './components/navbar/Navbar'
 import HomeView from './features/home/HomeView'
 import LoginView from './features/login/LoginView'
 import RegisterView from './features/register/RegisterView'
 import { buildEv12Preview, formatReply, initialConfigForm } from './features/home/ev12'
+import { authReducer, initialAuthState, loadPersistedAuth, persistAuth } from './store/authStore'
 import './App.css'
 
 const initialRegisterForm = {
@@ -20,10 +21,37 @@ const initialRegisterForm = {
 
 const initialLoginForm = { email: '', password: '' }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const extractLocationFromText = (text) => {
+  if (!text) return null
+
+  const mapMatch = text.match(/https?:\/\/(?:www\.)?google\.com\/maps\?q=\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/i)
+  const genericMapMatch = text.match(/maps\?q=\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/i)
+  const coordMatch = text.match(/(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)/)
+
+  const match = mapMatch || genericMapMatch || coordMatch
+  if (!match) return null
+
+  const latitude = Number.parseFloat(match[1])
+  const longitude = Number.parseFloat(match[2])
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null
+
+  return {
+    latitude,
+    longitude,
+    mapUrl: `https://www.google.com/maps?q=${latitude},${longitude}`
+  }
+}
+
+const replyText = (reply) => String(reply?.message || reply?.text || reply?.body || '')
+
 export default function App() {
-  const [activeView, setActiveView] = useState('login')
-  const [authStatus, setAuthStatus] = useState('Not logged in.')
-  const [session, setSession] = useState(null)
+  const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
+  const [activeView, setActiveView] = useState(auth.isAuthenticated ? 'home' : 'login')
+  const [authStatus, setAuthStatus] = useState(auth.isAuthenticated ? 'Authenticated session restored.' : 'Not logged in.')
 
   const [registerForm, setRegisterForm] = useState(initialRegisterForm)
   const [loginForm, setLoginForm] = useState(initialLoginForm)
@@ -40,6 +68,11 @@ export default function App() {
   const [configStatus, setConfigStatus] = useState('')
   const [configResult, setConfigResult] = useState(null)
   const [configForm, setConfigForm] = useState(initialConfigForm)
+  const [locationResult, setLocationResult] = useState(null)
+
+  useEffect(() => {
+    persistAuth(auth)
+  }, [auth])
 
   const commandPreview = useMemo(() => buildEv12Preview(configForm), [configForm])
   const formattedReplies = useMemo(
@@ -47,10 +80,79 @@ export default function App() {
     [replies]
   )
 
-  const commonHeaders = () => ({
-    ...(gatewayBaseUrl.trim() ? { 'X-Gateway-Base-Url': gatewayBaseUrl.trim() } : {}),
-    ...(gatewayToken.trim() ? { Authorization: gatewayToken.trim() } : {})
-  })
+  const commonHeaders = useCallback(
+    () => ({
+      ...(gatewayBaseUrl.trim() ? { 'X-Gateway-Base-Url': gatewayBaseUrl.trim() } : {}),
+      ...(gatewayToken.trim() ? { Authorization: gatewayToken.trim() } : {}),
+      ...(auth.token ? { 'X-Auth-Token': auth.token } : {})
+    }),
+    [gatewayBaseUrl, gatewayToken, auth.token]
+  )
+
+  const fetchRepliesData = useCallback(
+    async ({ sinceValue = lastSeenTimestamp, phoneOverride = '' } = {}) => {
+      const phoneFilter = (phoneOverride || lastSentPhone || phone.trim() || configForm.contactNumber?.trim() || '').trim()
+      const params = new URLSearchParams({ since: String(sinceValue), limit: '50' })
+      if (phoneFilter) params.set('phone', phoneFilter)
+
+      const endpoints = [`/api/messages/replies?${params.toString()}`, `/api/inbound-messages?${params.toString()}`]
+
+      let data = null
+      let lastError = null
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint, { headers: commonHeaders() })
+          const body = await response.json().catch(() => ({}))
+          if (!response.ok) throw new Error(body.error || body.message || `Unable to fetch replies from ${endpoint}`)
+          data = body
+          break
+        } catch (error) {
+          lastError = error
+        }
+      }
+
+      if (!data) throw lastError || new Error('Unable to fetch replies')
+
+      const incoming = Array.isArray(data.messages)
+        ? data.messages
+        : Array.isArray(data.replies)
+          ? data.replies
+          : Array.isArray(data)
+            ? data
+            : []
+
+      const newTimestamp = Number(data.lastSeenTimestamp || data.since || Date.now())
+      return {
+        incoming,
+        newTimestamp: Number.isFinite(newTimestamp) ? newTimestamp : Date.now(),
+        phoneFilter
+      }
+    },
+    [commonHeaders, lastSeenTimestamp, lastSentPhone, phone, configForm.contactNumber]
+  )
+
+  const updateLocationFromReplies = useCallback((incoming) => {
+    const locReply = [...incoming].reverse().find((entry) => {
+      const text = replyText(entry)
+      return /gps\s*loc|loc\s*time|google\.com\/maps\?q=|maps\?q=/i.test(text)
+    })
+
+    if (!locReply) return false
+
+    const text = replyText(locReply)
+    const extracted = extractLocationFromText(text)
+    if (!extracted) return false
+
+    setLocationResult({
+      ...extracted,
+      rawMessage: text,
+      from: locReply.from || locReply.phone || 'Unknown',
+      receivedAt: Number(locReply.date || Date.now())
+    })
+
+    return true
+  }, [])
 
   const handleRegister = async () => {
     try {
@@ -86,12 +188,18 @@ export default function App() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Login failed')
 
-      setSession(data)
+      dispatchAuth({ type: 'LOGIN_SUCCESS', payload: data })
       setAuthStatus(`Logged in as ${data.user.firstName} ${data.user.lastName} (role ${data.user.userRole}).`)
       setActiveView('home')
     } catch (error) {
       setAuthStatus(`Login failed: ${error.message}`)
     }
+  }
+
+  const handleLogout = () => {
+    dispatchAuth({ type: 'LOGOUT' })
+    setAuthStatus('Logged out successfully.')
+    setActiveView('login')
   }
 
   const handleSendMessage = async () => {
@@ -110,7 +218,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json', ...commonHeaders() },
         body: JSON.stringify({ to, message: body })
       })
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || 'Unable to send message')
 
       setLastSentPhone(to)
@@ -122,42 +230,130 @@ export default function App() {
     }
   }
 
-  const handleFetchReplies = async () => {
+  const handleFetchReplies = useCallback(async () => {
     setLoading(true)
+
     try {
-      const response = await fetch(
-        `/api/messages/replies?phone=${encodeURIComponent(lastSentPhone)}&since=${lastSeenTimestamp}`,
-        { headers: commonHeaders() }
-      )
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Unable to fetch replies')
-
-      const incoming = Array.isArray(data.messages) ? data.messages : []
-      const newTimestamp = Number(data.lastSeenTimestamp || lastSeenTimestamp)
-
+      const { incoming, newTimestamp, phoneFilter } = await fetchRepliesData()
       setReplies(incoming)
       setLastSeenTimestamp(newTimestamp)
-      setStatus(`Loaded ${incoming.length} replies.`)
+      updateLocationFromReplies(incoming)
+      setStatus(`Loaded ${incoming.length} replies${phoneFilter ? ` for ${phoneFilter}` : ''}.`)
     } catch (error) {
       setStatus(`Fetch failed: ${error.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }, [fetchRepliesData, updateLocationFromReplies])
+
+  const handleRequestLocation = async () => {
+    const targetPhone = (configForm.contactNumber?.trim() || phone.trim() || lastSentPhone || '').trim()
+    if (!targetPhone) {
+      setStatus('Location request failed: no device phone number set.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...commonHeaders() },
+        body: JSON.stringify({ to: targetPhone, message: 'loc' })
+      })
+
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || body.message || 'Unable to send loc command')
+
+      setLastSentPhone(targetPhone)
+      setStatus(`Loc command sent to ${targetPhone}. Waiting for device reply...`)
+
+      let sinceCursor = lastSeenTimestamp
+      for (let attempt = 1; attempt <= 12; attempt += 1) {
+        await sleep(3000)
+        const { incoming, newTimestamp } = await fetchRepliesData({ sinceValue: sinceCursor, phoneOverride: targetPhone })
+
+        if (incoming.length) {
+          setReplies((prev) => {
+            const merged = [...incoming, ...prev]
+            const unique = []
+            const seen = new Set()
+            for (const item of merged) {
+              const key = `${item?.date || ''}-${item?.from || ''}-${replyText(item)}`
+              if (seen.has(key)) continue
+              seen.add(key)
+              unique.push(item)
+            }
+            return unique
+          })
+
+          setLastSeenTimestamp(newTimestamp)
+          const foundLocation = updateLocationFromReplies(incoming)
+          if (foundLocation) {
+            setStatus('Location reply received and mapped.')
+            return
+          }
+        }
+
+        sinceCursor = newTimestamp
+        setStatus(`Waiting for location reply... (${attempt}/12)`)
+      }
+
+      setStatus('No location reply received yet. You can try again or use Fetch Replies manually.')
+    } catch (error) {
+      setStatus(`Location request failed: ${error.message}`)
     } finally {
       setLoading(false)
     }
   }
 
   const handleSendConfig = async () => {
+    const to = configForm.contactNumber?.trim() || phone.trim()
+    const command = commandPreview.trim()
+
+    if (!to) {
+      setConfigStatus('Config failed: device/contact number is required.')
+      return
+    }
+
+    if (!command) {
+      setConfigStatus('Config failed: no command generated yet.')
+      return
+    }
+
     setLoading(true)
     setConfigStatus('Sending configuration...')
     try {
-      const response = await fetch('/api/config/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...commonHeaders() },
-        body: JSON.stringify({ ...configForm, command: commandPreview })
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Unable to send configuration')
+      const payload = { ...configForm, to, command }
+      const endpoints = ['/api/send-config', '/api/config/send', '/api/messages/send']
+
+      let data = null
+      let lastError = null
+
+      for (const endpoint of endpoints) {
+        try {
+          const body = endpoint === '/api/messages/send' ? { to, message: command } : payload
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...commonHeaders() },
+            body: JSON.stringify(body)
+          })
+
+          const responseBody = await response.json().catch(() => ({}))
+          if (!response.ok) {
+            throw new Error(responseBody.error || responseBody.message || `Unable to send configuration via ${endpoint}`)
+          }
+
+          data = responseBody
+          break
+        } catch (error) {
+          lastError = error
+        }
+      }
+
+      if (!data) throw lastError || new Error('Unable to send configuration')
 
       setConfigResult(data)
+      setStatus(`Message sent to ${to}.`)
       setConfigStatus('Configuration sent successfully.')
     } catch (error) {
       setConfigStatus(`Config failed: ${error.message}`)
@@ -168,10 +364,16 @@ export default function App() {
 
   return (
     <main className="container">
-      <Navbar activeView={activeView} authStatus={authStatus} onChangeView={setActiveView} />
+      {activeView === 'home' ? <Navbar user={auth.user} /> : null}
 
       {activeView === 'login' && (
-        <LoginView loginForm={loginForm} setLoginForm={setLoginForm} onLogin={handleLogin} session={session} />
+        <LoginView
+          loginForm={loginForm}
+          setLoginForm={setLoginForm}
+          onLogin={handleLogin}
+          session={auth.isAuthenticated ? auth : null}
+          onGoRegister={() => setActiveView('register')}
+        />
       )}
 
       {activeView === 'register' && (
@@ -179,11 +381,15 @@ export default function App() {
           registerForm={registerForm}
           setRegisterForm={setRegisterForm}
           onRegister={handleRegister}
+          onGoLogin={() => setActiveView('login')}
         />
       )}
 
       {activeView === 'home' && (
         <HomeView
+          user={auth.user}
+          authStatus={authStatus}
+          onLogout={handleLogout}
           gatewayBaseUrl={gatewayBaseUrl}
           gatewayToken={gatewayToken}
           setGatewayBaseUrl={setGatewayBaseUrl}
@@ -201,8 +407,12 @@ export default function App() {
           setMessage={setMessage}
           sendMessage={handleSendMessage}
           fetchReplies={handleFetchReplies}
+          requestLocationUpdate={handleRequestLocation}
+          locationResult={locationResult}
           status={status}
           formattedReplies={formattedReplies}
+          repliesCount={replies.length}
+          authToken={auth.token}
         />
       )}
     </main>
