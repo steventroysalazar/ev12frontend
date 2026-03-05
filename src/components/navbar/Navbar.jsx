@@ -1,17 +1,19 @@
 import './navbar.css'
-export default function Navbar({ activeView, authStatus, onChangeView }) {
+
+export default function Navbar({ user }) {
+  const firstName = user?.firstName || 'Jane'
+  const lastName = user?.lastName || 'Doe'
+
   return (
-    <header className="card topbar">
-      <div>
-        <h1>EV12 Frontend Console</h1>
-        <p className="subtitle">Professional workspace with separated authentication and dashboard modules.</p>
+    <header className="dashboard-topbar">
+      <div className="brand">EV12 LOGO</div>
+      <div className="profile">
+        <div>
+          <strong>{firstName} {lastName}</strong>
+          <small>Admin</small>
+        </div>
+        <span className="avatar-dot" />
       </div>
-      <nav className="tabs">
-        <button className={activeView === 'login' ? 'tab active' : 'tab'} onClick={() => onChangeView('login')}>Login</button>
-        <button className={activeView === 'register' ? 'tab active' : 'tab'} onClick={() => onChangeView('register')}>Register</button>
-        <button className={activeView === 'home' ? 'tab active' : 'tab'} onClick={() => onChangeView('home')}>Home</button>
-      </nav>
-      <div className="status">{authStatus}</div>
     </header>
   )
 }
