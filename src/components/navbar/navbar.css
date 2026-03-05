@@ -1,0 +1,22 @@
+.topbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tab {
+  margin-top: 0;
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.tab.active {
+  background: #0b57d0;
+  color: #fff;
+}
