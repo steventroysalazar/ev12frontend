@@ -135,21 +135,45 @@ export default function App() {
   }
 
   const handleFetchReplies = async () => {
+    const phoneFilter = (lastSentPhone || phone.trim() || configForm.contactNumber?.trim() || '').trim()
     setLoading(true)
-    try {
-      const response = await fetch(
-        `/api/messages/replies?phone=${encodeURIComponent(lastSentPhone)}&since=${lastSeenTimestamp}`,
-        { headers: commonHeaders() }
-      )
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Unable to fetch replies')
 
-      const incoming = Array.isArray(data.messages) ? data.messages : []
-      const newTimestamp = Number(data.lastSeenTimestamp || lastSeenTimestamp)
+    try {
+      const params = new URLSearchParams({ since: String(lastSeenTimestamp), limit: '50' })
+      if (phoneFilter) params.set('phone', phoneFilter)
+
+      const endpoints = [`/api/messages/replies?${params.toString()}`, `/api/inbound-messages?${params.toString()}`]
+
+      let data = null
+      let lastError = null
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint, { headers: commonHeaders() })
+          const body = await response.json().catch(() => ({}))
+          if (!response.ok) throw new Error(body.error || body.message || `Unable to fetch replies from ${endpoint}`)
+          data = body
+          break
+        } catch (error) {
+          lastError = error
+        }
+      }
+
+      if (!data) throw lastError || new Error('Unable to fetch replies')
+
+      const incoming = Array.isArray(data.messages)
+        ? data.messages
+        : Array.isArray(data.replies)
+          ? data.replies
+          : Array.isArray(data)
+            ? data
+            : []
+
+      const newTimestamp = Number(data.lastSeenTimestamp || data.since || Date.now())
 
       setReplies(incoming)
-      setLastSeenTimestamp(newTimestamp)
-      setStatus(`Loaded ${incoming.length} replies.`)
+      setLastSeenTimestamp(Number.isFinite(newTimestamp) ? newTimestamp : Date.now())
+      setStatus(`Loaded ${incoming.length} replies${phoneFilter ? ` for ${phoneFilter}` : ''}.`)
     } catch (error) {
       setStatus(`Fetch failed: ${error.message}`)
     } finally {

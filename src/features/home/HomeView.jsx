@@ -66,6 +66,7 @@ export default function HomeView({
 
   const [dataStatus, setDataStatus] = useState('')
   const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
+  const [autoFetchReplies, setAutoFetchReplies] = useState(false)
 
   const metrics = useMemo(
     () => [
@@ -138,6 +139,17 @@ export default function HomeView({
 
     load()
   }, [activeSection, loadUsers, loadLocations, loadDevices])
+
+  useEffect(() => {
+    if (activeSection !== 'replies' || !autoFetchReplies) return undefined
+
+    fetchReplies()
+    const intervalId = setInterval(() => {
+      fetchReplies()
+    }, 5000)
+
+    return () => clearInterval(intervalId)
+  }, [activeSection, autoFetchReplies, fetchReplies])
 
   const openDeviceSettings = (device) => {
     setSelectedDevice(device)
@@ -380,7 +392,17 @@ export default function HomeView({
         )}
 
         {activeSection === 'replies' && (
-          <section className="card-like section-panel"><h2 className="section-title">Replies</h2><button className="mini-action" disabled={loading} onClick={fetchReplies}>Manual Refresh</button><pre className="replies conversation-box">{formattedReplies}</pre></section>
+          <section className="card-like section-panel">
+            <h2 className="section-title">Replies</h2>
+            <div className="section-head">
+              <button className="mini-action" disabled={loading} onClick={fetchReplies}>Manual Refresh</button>
+              <button className="mini-action" type="button" onClick={() => setAutoFetchReplies((prev) => !prev)}>
+                {autoFetchReplies ? 'Stop Auto Refresh' : 'Start Auto Refresh (5s)'}
+              </button>
+            </div>
+            <p className="status">{autoFetchReplies ? 'Auto refresh is running every 5 seconds.' : 'Auto refresh is off.'}</p>
+            <pre className="replies conversation-box">{formattedReplies}</pre>
+          </section>
         )}
       </div>
 
