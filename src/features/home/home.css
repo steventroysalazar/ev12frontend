@@ -108,3 +108,13 @@ input,select,textarea { background: #f3f5f8; border: 1px solid #cfd6de; border-r
   color: #b91c1c;
   font-weight: 700;
 }
+
+.table-link {
+  background: transparent;
+  color: #0f766e;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-weight: 700;
+}

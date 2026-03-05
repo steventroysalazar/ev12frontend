@@ -50,6 +50,7 @@ export default function HomeView({
   authToken
 }) {
   const [activeSection, setActiveSection] = useState('dashboard')
+  const [selectedDevice, setSelectedDevice] = useState(null)
 
   const [showUserModal, setShowUserModal] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
@@ -66,8 +67,6 @@ export default function HomeView({
   const [dataStatus, setDataStatus] = useState('')
   const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
 
-  const toggle = (key) => setConfigForm((prev) => ({ ...prev, [key]: !prev[key] }))
-
   const metrics = useMemo(
     () => [
       { label: 'TOTAL USERS', value: users.length },
@@ -77,6 +76,8 @@ export default function HomeView({
     ],
     [users.length, devices.length, locations.length, repliesCount]
   )
+
+  const toggle = (key) => setConfigForm((prev) => ({ ...prev, [key]: !prev[key] }))
 
   const fetchJson = useCallback(
     async (url, options = {}) => {
@@ -114,9 +115,7 @@ export default function HomeView({
       const data = await fetchJson('/api/users', { headers: {} })
       const usersList = Array.isArray(data) ? data : data.users || []
       const flattened = usersList.flatMap((user) =>
-        Array.isArray(user.devices)
-          ? user.devices.map((device) => ({ ...device, owner: user }))
-          : []
+        Array.isArray(user.devices) ? user.devices.map((device) => ({ ...device, owner: user })) : []
       )
       setDevices(flattened)
     }
@@ -140,15 +139,25 @@ export default function HomeView({
     load()
   }, [activeSection, loadUsers, loadLocations, loadDevices])
 
+  const openDeviceSettings = (device) => {
+    setSelectedDevice(device)
+    setConfigForm((prev) => ({
+      ...prev,
+      imei: device.imei || prev.imei,
+      prefixName: device.name || device.deviceName || prev.prefixName,
+      contactNumber: device.phoneNumber || prev.contactNumber,
+      contactName: device.ownerName || device.owner?.firstName || prev.contactName
+    }))
+    setActionStatus({ type: 'success', message: `Opened settings for ${device.name || device.deviceName || 'device'}.` })
+    setActiveSection('settings-basic')
+  }
+
   const handleCreateLocation = async () => {
     try {
       if (!locationForm.name.trim()) throw new Error('Location name is required')
       await fetchJson('/api/locations', {
         method: 'POST',
-        body: JSON.stringify({
-          name: locationForm.name.trim(),
-          details: locationForm.details.trim()
-        })
+        body: JSON.stringify({ name: locationForm.name.trim(), details: locationForm.details.trim() })
       })
       setActionStatus({ type: 'success', message: 'Location created successfully.' })
       setLocationForm(initialLocationForm)
@@ -161,10 +170,7 @@ export default function HomeView({
 
   const handleCreateUser = async () => {
     try {
-      if (!userForm.email.trim() || !userForm.password.trim()) {
-        throw new Error('Email and password are required')
-      }
-
+      if (!userForm.email.trim() || !userForm.password.trim()) throw new Error('Email and password are required')
       const payload = {
         ...userForm,
         userRole: Number(userForm.userRole),
@@ -190,9 +196,7 @@ export default function HomeView({
   const handleCreateDevice = async () => {
     try {
       if (!deviceForm.ownerUserId) throw new Error('Owner user is required')
-      if (!deviceForm.name.trim() || !deviceForm.phoneNumber.trim()) {
-        throw new Error('Device name and phone number are required')
-      }
+      if (!deviceForm.name.trim() || !deviceForm.phoneNumber.trim()) throw new Error('Device name and phone number are required')
 
       const payload = {
         name: deviceForm.name.trim(),
@@ -202,15 +206,9 @@ export default function HomeView({
       }
 
       try {
-        await fetchJson(`/api/users/${payload.ownerUserId}/devices`, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        })
+        await fetchJson(`/api/users/${payload.ownerUserId}/devices`, { method: 'POST', body: JSON.stringify(payload) })
       } catch {
-        await fetchJson('/api/devices', {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        })
+        await fetchJson('/api/devices', { method: 'POST', body: JSON.stringify(payload) })
       }
 
       setActionStatus({ type: 'success', message: 'Device created successfully.' })
@@ -230,9 +228,7 @@ export default function HomeView({
 
       <div className="dashboard-content">
         {dataStatus ? <p className="status">{dataStatus}</p> : null}
-        {actionStatus.message ? (
-          <p className={actionStatus.type === 'error' ? 'status-error' : 'status-success'}>{actionStatus.message}</p>
-        ) : null}
+        {actionStatus.message ? <p className={actionStatus.type === 'error' ? 'status-error' : 'status-success'}>{actionStatus.message}</p> : null}
 
         {activeSection === 'dashboard' && (
           <>
@@ -324,7 +320,7 @@ export default function HomeView({
               <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}>+ Add Device</button>
             </div>
             <table className="data-table">
-              <thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead>
+              <thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
               <tbody>
                 {devices.map((d) => (
                   <tr key={d.id || d.phoneNumber || d.name}>
@@ -333,6 +329,7 @@ export default function HomeView({
                     <td>{d.ownerName || d.owner?.firstName || '-'}</td>
                     <td>{d.ownerRole || d.owner?.userRole || '-'}</td>
                     <td>{d.locationName || d.owner?.location?.name || '-'}</td>
+                    <td><button className="table-link" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -343,6 +340,7 @@ export default function HomeView({
         {activeSection === 'settings-basic' && (
           <section className="card-like section-panel">
             <h2 className="section-title">Settings &gt; Basic Configuration</h2>
+            {selectedDevice ? <p className="status-success">Editing {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Select a device from Devices list to configure.</p>}
             <div className="field-grid two-col">
               <div><label>IMEI</label><input value={configForm.imei} readOnly /></div>
               <div><label>Device Name / Identity</label><input value={configForm.prefixName} onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
@@ -356,6 +354,7 @@ export default function HomeView({
         {activeSection === 'settings-alarm' && (
           <section className="card-like section-panel">
             <h2 className="section-title">Settings &gt; Alarm Settings</h2>
+            {selectedDevice ? <p className="status-success">Alarm settings for {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Select a device from Devices list to configure alarms.</p>}
             <div className="alarm-card"><h3>SOS Action</h3><div className="alarm-row"><label>Mode</label><select value={configForm.sosMode} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosMode: event.target.value }))}><option value="1">Long Press</option><option value="2">Double Click</option></select><label>Action Time</label><input type="range" min="5" max="60" value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div></div>
             <div className="alarm-card"><h3>Fall Detection</h3><div className="alarm-row"><label>Enable</label><label className="switch-row"><input type="checkbox" checked={configForm.fallDownEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, fallDownEnabled: prev.fallDownEnabled === '1' ? '0' : '1' }))} /><span>{configForm.fallDownEnabled === '1' ? 'On' : 'Off'}</span></label><label>Sensitivity</label><input type="range" min="1" max="9" value={configForm.fallDownSensitivity} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} /></div></div>
             <div className="alarm-card"><h3>Motion / No Motion</h3><div className="alarm-row"><label>Enable</label><label className="switch-row"><input type="checkbox" checked={configForm.motionEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, motionEnabled: prev.motionEnabled === '1' ? '0' : '1' }))} /><span>{configForm.motionEnabled === '1' ? 'On' : 'Off'}</span></label><label>Duration</label><input value={configForm.motionDurationTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionDurationTime: event.target.value }))} /></div></div>
