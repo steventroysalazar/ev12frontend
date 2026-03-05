@@ -44,6 +44,8 @@ export default function HomeView({
   setMessage,
   sendMessage,
   fetchReplies,
+  requestLocationUpdate,
+  locationResult,
   status,
   formattedReplies,
   repliesCount,
@@ -376,7 +378,28 @@ export default function HomeView({
         {activeSection === 'location' && (
           <section className="section-panel">
             <h2 className="page-title">Location</h2>
-            <article className="card-like map-panel"><div className="map-placeholder"><span className="map-chip">Lat: -33.8698439 Lon: 151.2082848</span></div><button className="mini-action request-btn" disabled={loading} onClick={sendMessage}>Request Location</button></article>
+            <article className="card-like map-panel">
+              {locationResult ? (
+                <>
+                  <div className="map-placeholder map-embed-wrap">
+                    <iframe
+                      title="Device location map"
+                      className="map-embed"
+                      src={`https://maps.google.com/maps?q=${locationResult.latitude},${locationResult.longitude}&z=15&output=embed`}
+                    />
+                  </div>
+                  <div className="location-meta">
+                    <span className="map-chip">Lat: {locationResult.latitude} Lon: {locationResult.longitude}</span>
+                    <a href={locationResult.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
+                  </div>
+                  <pre className="preview-box">{locationResult.rawMessage}</pre>
+                </>
+              ) : (
+                <div className="map-placeholder"><span className="map-chip">No location reply yet. Click request to send Loc.</span></div>
+              )}
+              <button className="mini-action request-btn" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
+              <p className="status">{status}</p>
+            </article>
           </section>
         )}
 
