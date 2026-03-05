@@ -180,7 +180,7 @@ export default function App() {
 
   return (
     <main className="container">
-      {activeView === 'home' ? <Navbar user={auth.user} onLogout={handleLogout} /> : null}
+      {activeView === 'home' ? <Navbar user={auth.user} /> : null}
 
       {activeView === 'login' && (
         <LoginView
@@ -225,6 +225,7 @@ export default function App() {
           fetchReplies={handleFetchReplies}
           status={status}
           formattedReplies={formattedReplies}
+          repliesCount={replies.length}
           authToken={auth.token}
         />
       )}

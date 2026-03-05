@@ -2,13 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
 import './home.css'
 
-const metrics = [
-  { label: 'TOTAL USERS', value: '200' },
-  { label: 'TOTAL DEVICES', value: '683' },
-  { label: 'TOTAL LOCATIONS', value: '42' },
-  { label: 'RECENT REPLIES', value: '28' }
-]
-
 const deviceRows = [
   ['Device Name', 'Lorem - EV12'],
   ['Device Phone Number', '+639108653532'],
@@ -39,6 +32,7 @@ export default function HomeView({
   fetchReplies,
   status,
   formattedReplies,
+  repliesCount,
   authToken
 }) {
   const [activeSection, setActiveSection] = useState('dashboard')
@@ -51,6 +45,13 @@ export default function HomeView({
   const [dataStatus, setDataStatus] = useState('')
 
   const toggle = (key) => setConfigForm((prev) => ({ ...prev, [key]: !prev[key] }))
+
+  const metrics = [
+    { label: 'TOTAL USERS', value: users.length },
+    { label: 'TOTAL DEVICES', value: devices.length },
+    { label: 'TOTAL LOCATIONS', value: locations.length },
+    { label: 'RECENT REPLIES', value: repliesCount || 0 }
+  ]
 
   const fetchJson = useCallback(async (url) => {
     const response = await fetch(url, {
@@ -119,7 +120,7 @@ export default function HomeView({
                   <div className="metric-icon" />
                   <div>
                     <p>{metric.label}</p>
-                    <h3>{metric.value}</h3>
+                    <h3>{Number(metric.value || 0)}</h3>
                   </div>
                 </article>
               ))}

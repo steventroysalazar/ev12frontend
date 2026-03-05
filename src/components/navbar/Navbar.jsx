@@ -1,6 +1,6 @@
 import './navbar.css'
 
-export default function Navbar({ user, onLogout }) {
+export default function Navbar({ user }) {
   const firstName = user?.firstName || 'Jane'
   const lastName = user?.lastName || 'Doe'
 
@@ -14,7 +14,6 @@ export default function Navbar({ user, onLogout }) {
         </div>
         <span className="avatar-dot" />
       </div>
-      <button className="logout-top" type="button" onClick={onLogout}>Logout</button>
     </header>
   )
 }
