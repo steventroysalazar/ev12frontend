@@ -1,22 +1,43 @@
-.topbar {
+.dashboard-topbar {
+  border: 1px solid #e8edf2;
+  border-radius: 2px;
+  background: #fff;
+  padding: 1.1rem 2rem;
+  margin-bottom: 0.7rem;
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.tabs {
+.brand {
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.profile {
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
 }
 
-.tab {
-  margin-top: 0;
-  background: #e2e8f0;
-  color: #1e293b;
+.profile strong {
+  display: block;
+  font-size: 1.55rem;
+  line-height: 1.1;
+  text-align: right;
 }
 
-.tab.active {
-  background: #0b57d0;
-  color: #fff;
+.profile small {
+  display: block;
+  font-size: 1.1rem;
+  color: #a0a5af;
+  text-align: right;
+}
+
+.avatar-dot {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #d9dde2;
 }
