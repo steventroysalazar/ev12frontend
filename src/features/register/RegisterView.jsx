@@ -1,3 +1,5 @@
+import './register.css'
+
 const roleOptions = [
   { label: 'Super Admin', value: 1 },
   { label: 'Manager', value: 2 },
@@ -6,7 +8,7 @@ const roleOptions = [
 
 export default function RegisterView({ registerForm, setRegisterForm, onRegister }) {
   return (
-    <section className="card auth-card">
+    <section className="card auth-card register-view">
       <h2>Create account</h2>
       <p className="subtitle">Register a new user profile before accessing the Home dashboard.</p>
       <input

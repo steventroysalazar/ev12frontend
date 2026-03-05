@@ -1,3 +1,4 @@
+import './navbar.css'
 export default function Navbar({ activeView, authStatus, onChangeView }) {
   return (
     <header className="card topbar">

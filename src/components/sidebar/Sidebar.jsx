@@ -1,3 +1,5 @@
+import './sidebar.css'
+
 const sidebarSections = [
   { id: 'gateway', label: 'Gateway Overrides' },
   { id: 'builder', label: 'EV12 Command Builder' },

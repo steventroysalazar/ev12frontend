@@ -4,6 +4,7 @@ import HomeView from './features/home/HomeView'
 import LoginView from './features/login/LoginView'
 import RegisterView from './features/register/RegisterView'
 import { buildEv12Preview, formatReply, initialConfigForm } from './features/home/ev12'
+import './App.css'
 
 const initialRegisterForm = {
   email: '',
