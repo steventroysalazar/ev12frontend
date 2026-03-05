@@ -1,5 +1,27 @@
+import { useMemo, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
 import './home.css'
+
+const users = [
+  ['Markwayne', 'mark@mail.com', 'User', '+639111111111', 'Sydney, AU', 'Mark Wayne'],
+  ['Karen Anne', 'karen@mail.com', 'User', '+639122222222', 'Sydney, AU', 'Mark Wayne'],
+  ['John Doe', 'john@mail.com', 'Super Admin', '+639133333333', 'Sydney, AU', 'N/A']
+]
+
+const locations = [
+  ['Sydney, Australia', 'Lorem ipsum dolor sit amet', '35', '104'],
+  ['Melbourne, Australia', 'Lorem ipsum dolor sit amet', '26', '94']
+]
+
+const devices = [
+  ['LOREM-EV12', '+63 917 111 111', 'Markwayne', 'Manager', 'Sydney, Australia'],
+  ['LOREM-CT12', '+63 917 222 222', 'Karen Anne', 'User', 'Melbourne, Australia']
+]
+
+const repliesRows = [
+  ['2026-03-03 04:20', '+63 917 111 111', 'Hi there', 'received'],
+  ['2026-03-03 04:32', '+63 917 222 222', 'Location updated', 'received']
+]
 
 export default function HomeView({
   gatewayBaseUrl,
@@ -22,104 +44,151 @@ export default function HomeView({
   status,
   formattedReplies
 }) {
+  const [activeSection, setActiveSection] = useState('settings-basic')
+
+  const headerTitle = useMemo(() => {
+    if (activeSection.startsWith('settings')) return 'Settings'
+    if (activeSection === 'commands') return 'Command Page'
+    return activeSection.charAt(0).toUpperCase() + activeSection.slice(1)
+  }, [activeSection])
+
   return (
-    <div className="home-layout">
-      <Sidebar />
+    <div className="home-shell">
+      <Sidebar activeSection={activeSection} onChangeSection={setActiveSection} />
 
-      <div className="home-content">
-        <section id="gateway" className="card">
-          <h2>Gateway Overrides</h2>
-          <div className="field-grid two-col">
-            <div>
-              <label>Gateway Base URL</label>
-              <input
-                placeholder="https://example.com (optional)"
-                value={gatewayBaseUrl}
-                onChange={(event) => setGatewayBaseUrl(event.target.value)}
-              />
-            </div>
-            <div>
-              <label>Gateway Token</label>
-              <input
-                placeholder="Authorization token (optional)"
-                value={gatewayToken}
-                onChange={(event) => setGatewayToken(event.target.value)}
-              />
-            </div>
-          </div>
+      <div className="dashboard-content">
+        <section className="dashboard-header-row">
+          <h2>{headerTitle}</h2>
         </section>
 
-        <section id="builder" className="card command-builder">
-          <div className="section-heading">
-            <h2>EV12 Command Builder</h2>
-            <p className="subtitle">Structured device configuration with live command preview.</p>
-          </div>
-
-          <div className="builder-layout">
-            <div className="builder-column">
-              <article className="panel">
-                <h3>Device & Contact</h3>
-                <div className="field-grid">
-                  <div><label>Device ID</label><input value={configForm.deviceId} onChange={(event) => setConfigForm((prev) => ({ ...prev, deviceId: event.target.value }))} /></div>
-                  <div><label>IMEI</label><input value={configForm.imei} onChange={(event) => setConfigForm((prev) => ({ ...prev, imei: event.target.value }))} /></div>
-                  <div><label>Contact Number</label><input value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} /></div>
-                  <div><label>Contact Name</label><input value={configForm.contactName} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactName: event.target.value }))} /></div>
-                  <div><label>SMS Password</label><input value={configForm.smsPassword} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} /></div>
-                  <div><label>Prefix Name</label><input value={configForm.prefixName} onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
-                </div>
-              </article>
-
-              <article className="panel">
-                <h3>Safety & Tracking</h3>
-                <div className="field-grid">
-                  <div><label>Over Speed Limit</label><input value={configForm.overSpeedLimit} onChange={(event) => setConfigForm((prev) => ({ ...prev, overSpeedLimit: event.target.value }))} /></div>
-                  <div><label>Geo Fence Radius</label><input value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div>
-                  <div><label>Locate Interval</label><input value={configForm.continuousLocateInterval} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateInterval: event.target.value }))} /></div>
-                  <div><label>Locate Duration</label><input value={configForm.continuousLocateDuration} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateDuration: event.target.value }))} /></div>
-                  <div><label>Time Zone</label><input value={configForm.timeZone} onChange={(event) => setConfigForm((prev) => ({ ...prev, timeZone: event.target.value }))} /></div>
-                  <div><label>Speaker Volume</label><input value={configForm.speakerVolume} onChange={(event) => setConfigForm((prev) => ({ ...prev, speakerVolume: event.target.value }))} /></div>
-                </div>
-              </article>
+        {activeSection === 'settings-basic' && (
+          <section className="card-like settings-panel">
+            <h3>Settings &gt; Basic Configuration</h3>
+            <div className="field-grid two-col">
+              <div>
+                <label>Device ID</label>
+                <input value={configForm.deviceId} onChange={(event) => setConfigForm((prev) => ({ ...prev, deviceId: event.target.value }))} />
+              </div>
+              <div>
+                <label>Device Name</label>
+                <input value={configForm.contactName} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactName: event.target.value }))} />
+              </div>
             </div>
 
-            <div className="builder-column">
-              <article className="panel">
-                <h3>Feature Toggles</h3>
-                <div className="toggle-grid">
-                  <label className="toggle-item"><input type="checkbox" checked={configForm.requestLocation} onChange={(event) => setConfigForm((prev) => ({ ...prev, requestLocation: event.target.checked }))} /> Request location (loc)</label>
-                  <label className="toggle-item"><input type="checkbox" checked={configForm.requestGpsLocation} onChange={(event) => setConfigForm((prev) => ({ ...prev, requestGpsLocation: event.target.checked }))} /> Request GPS (loc,gps)</label>
-                  <label className="toggle-item"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsWhitelistEnabled: event.target.checked }))} /> SMS whitelist</label>
-                  <label className="toggle-item"><input type="checkbox" checked={configForm.fallDownCall} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownCall: event.target.checked }))} /> Fall detection call</label>
-                  <label className="toggle-item"><input type="checkbox" checked={configForm.motionCall} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionCall: event.target.checked }))} /> Motion alarm call</label>
-                  <label className="toggle-item"><input type="checkbox" checked={configForm.checkStatus} onChange={(event) => setConfigForm((prev) => ({ ...prev, checkStatus: event.target.checked }))} /> Include status</label>
-                </div>
-              </article>
-
-              <article className="panel">
-                <h3>Command Preview</h3>
-                <p className="hint">Preview uses comma separators. Backend chunking is still respected.</p>
-                <pre className="replies command-preview">{commandPreview || 'No commands yet.'}</pre>
-                <button disabled={loading} className="primary-action" onClick={sendConfig}>Send EV12 Config</button>
-                <div className="status">{configStatus}</div>
-                {configResult ? <pre className="replies">{JSON.stringify(configResult, null, 2)}</pre> : null}
-              </article>
+            <h4>Contact Information</h4>
+            <div className="field-grid four-col">
+              <div>
+                <label>Contact Number</label>
+                <input value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
+              </div>
+              <div>
+                <label>Name</label>
+                <input value={configForm.contactName} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactName: event.target.value }))} />
+              </div>
+              <div>
+                <label>SMS</label>
+                <select value={configForm.contactSmsEnabled ? '1' : '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactSmsEnabled: event.target.value === '1' }))}>
+                  <option value="1">On</option><option value="0">Off</option>
+                </select>
+              </div>
+              <div>
+                <label>Call</label>
+                <select value={configForm.contactCallEnabled ? '1' : '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactCallEnabled: event.target.value === '1' }))}>
+                  <option value="1">On</option><option value="0">Off</option>
+                </select>
+              </div>
             </div>
-          </div>
-        </section>
 
-        <section id="messaging" className="card">
-          <h2>Send Single Message</h2>
-          <input placeholder="Phone Number" value={phone} onChange={(event) => setPhone(event.target.value)} />
-          <textarea rows={4} placeholder="Type your message" value={message} onChange={(event) => setMessage(event.target.value)} />
-          <button disabled={loading} onClick={sendMessage}>Send</button>
-        </section>
+            <div className="field-grid two-col">
+              <div>
+                <label>SMS Password</label>
+                <input value={configForm.smsPassword} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} />
+              </div>
+              <div>
+                <label>SMS Whitelist</label>
+                <select value={configForm.smsWhitelistEnabled ? '1' : '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsWhitelistEnabled: event.target.value === '1' }))}>
+                  <option value="1">On</option><option value="0">Off</option>
+                </select>
+              </div>
+            </div>
+          </section>
+        )}
 
-        <section id="replies" className="card">
-          <h2>Fetch Replies</h2>
-          <button disabled={loading} onClick={fetchReplies}>Manually Fetch Replies</button>
-          <div className="status">{status}</div>
-          <pre className="replies">{formattedReplies}</pre>
-        </section>
+        {activeSection === 'settings-alarm' && (
+          <section className="card-like settings-panel">
+            <h3>Settings &gt; Alarm Settings</h3>
+            <div className="alarm-row"><label>SOS Mode</label><input value={configForm.sosMode} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosMode: event.target.value }))} /><label>Action Time</label><input value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div>
+            <div className="alarm-row"><label>Fall Detection</label><select value={configForm.fallDownEnabled} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownEnabled: event.target.value }))}><option value="1">Enable</option><option value="0">Disable</option></select><label>Sensitivity</label><input value={configForm.fallDownSensitivity} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} /></div>
+            <div className="alarm-row"><label>Over-speed</label><select value={configForm.overSpeedEnabled} onChange={(event) => setConfigForm((prev) => ({ ...prev, overSpeedEnabled: event.target.value }))}><option value="1">Enable</option><option value="0">Disable</option></select><label>Speed Limit</label><input value={configForm.overSpeedLimit} onChange={(event) => setConfigForm((prev) => ({ ...prev, overSpeedLimit: event.target.value }))} /></div>
+            <div className="alarm-row"><label>Geo-fence</label><select value={configForm.geoFenceEnabled} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceEnabled: event.target.value }))}><option value="1">Enable</option><option value="0">Disable</option></select><label>Radius</label><input value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div>
+          </section>
+        )}
+
+        {activeSection === 'commands' && (
+          <section className="commands-layout">
+            <article className="card-like">
+              <h3>Command Input</h3>
+              <div className="field-grid">
+                <div><label>Contact Number</label><input value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} /></div>
+                <div><label>SOS Action</label><input value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div>
+                <div><label>Geo-fence Radius</label><input value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div>
+              </div>
+              <button className="mini-action" disabled={loading} onClick={sendConfig}>Submit Config</button>
+            </article>
+            <article className="card-like">
+              <h3>Command Preview</h3>
+              <pre className="preview-box">{commandPreview || 'No command generated yet.'}</pre>
+              <div className="status">{configStatus}</div>
+              {configResult ? <pre className="replies conversation-box">{JSON.stringify(configResult, null, 2)}</pre> : null}
+            </article>
+          </section>
+        )}
+
+        {(activeSection === 'commands' || activeSection.startsWith('settings')) && (
+          <section className="card-like gateway-panel">
+            <h3>SMS Gateway & Testing</h3>
+            <div className="field-grid two-col">
+              <div><label>Gateway Base URL</label><input placeholder="https://gateway..." value={gatewayBaseUrl} onChange={(event) => setGatewayBaseUrl(event.target.value)} /></div>
+              <div><label>Gateway Token</label><input placeholder="Authorization token" value={gatewayToken} onChange={(event) => setGatewayToken(event.target.value)} /></div>
+            </div>
+            <div className="field-grid two-col">
+              <div><label>Test Phone Number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} /></div>
+              <div><label>Custom Message</label><input value={message} onChange={(event) => setMessage(event.target.value)} /></div>
+            </div>
+            <button className="mini-action" disabled={loading} onClick={sendMessage}>Send Test Message</button>
+            <div className="status">{status}</div>
+          </section>
+        )}
+
+        {activeSection === 'location' && <section className="card-like"><h3>Location</h3><p className="small-muted">Map/track controls can be integrated here.</p></section>}
+
+        {activeSection === 'users' && (
+          <section className="module-table card-like">
+            <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th></tr></thead><tbody>{users.map((row) => <tr key={row[1]}>{row.map((col) => <td key={`${row[1]}-${col}`}>{col}</td>)}</tr>)}</tbody></table>
+          </section>
+        )}
+
+        {activeSection === 'devices' && (
+          <section className="module-table card-like">
+            <table><thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead><tbody>{devices.map((row) => <tr key={row[0]}>{row.map((col) => <td key={`${row[0]}-${col}`}>{col}</td>)}</tr>)}</tbody></table>
+          </section>
+        )}
+
+        {activeSection === 'replies' && (
+          <section className="module-table card-like replies-module">
+            <button className="mini-action" disabled={loading} onClick={fetchReplies}>Refresh Replies</button>
+            <table><thead><tr><th>Date</th><th>Phone Number</th><th>Text/Info</th><th>State</th></tr></thead><tbody>{repliesRows.map((row) => <tr key={`${row[0]}-${row[1]}`}>{row.map((col) => <td key={`${row[0]}-${col}`}>{col}</td>)}</tr>)}</tbody></table>
+            <h4>Conversation</h4>
+            <pre className="replies conversation-box">{formattedReplies}</pre>
+          </section>
+        )}
+
+        {activeSection === 'dashboard' && (
+          <section className="module-table card-like">
+            <h3>Overview</h3>
+            <table><thead><tr><th>Location</th><th>Details</th><th>Total Users</th><th>Total Devices</th></tr></thead><tbody>{locations.map((row) => <tr key={row[0]}>{row.map((col) => <td key={`${row[0]}-${col}`}>{col}</td>)}</tr>)}</tbody></table>
+          </section>
+        )}
       </div>
     </div>
   )
