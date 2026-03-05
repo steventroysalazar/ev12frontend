@@ -18,7 +18,7 @@ const sidebarItems = [
   { id: 'replies', label: 'Replies' }
 ]
 
-export default function Sidebar({ activeSection, onChangeSection }) {
+export default function Sidebar({ activeSection, onChangeSection, onLogout }) {
   const isSettingsActive = activeSection.startsWith('settings')
 
   return (
@@ -58,7 +58,7 @@ export default function Sidebar({ activeSection, onChangeSection }) {
           </li>
         ))}
       </ul>
-      <button className="logout-link" type="button">Logout</button>
+      <button className="logout-link" type="button" onClick={onLogout}>Logout</button>
     </aside>
   )
 }
