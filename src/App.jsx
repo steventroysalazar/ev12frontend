@@ -74,6 +74,10 @@ export default function App() {
     persistAuth(auth)
   }, [auth])
 
+  useEffect(() => {
+    persistAuth(auth)
+  }, [auth])
+
   const commandPreview = useMemo(() => buildEv12Preview(configForm), [configForm])
   const formattedReplies = useMemo(
     () => (replies.length ? replies.map(formatReply).join('\n') : 'No replies loaded yet.'),
