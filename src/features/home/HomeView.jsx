@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
 import './home.css'
 
@@ -10,6 +10,20 @@ const deviceRows = [
   ['Last reply', '04-03-2026 23:15'],
   ['Battery status', '74%']
 ]
+
+const initialLocationForm = { name: '', details: '' }
+const initialUserForm = {
+  email: '',
+  password: '',
+  firstName: '',
+  lastName: '',
+  contactNumber: '',
+  address: '',
+  userRole: 3,
+  locationId: '',
+  managerId: ''
+}
+const initialDeviceForm = { name: '', phoneNumber: '', ownerUserId: '', locationId: '' }
 
 export default function HomeView({
   onLogout,
@@ -36,52 +50,73 @@ export default function HomeView({
   authToken
 }) {
   const [activeSection, setActiveSection] = useState('dashboard')
+
   const [showUserModal, setShowUserModal] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showDeviceModal, setShowDeviceModal] = useState(false)
+
   const [users, setUsers] = useState([])
   const [locations, setLocations] = useState([])
   const [devices, setDevices] = useState([])
+
+  const [locationForm, setLocationForm] = useState(initialLocationForm)
+  const [userForm, setUserForm] = useState(initialUserForm)
+  const [deviceForm, setDeviceForm] = useState(initialDeviceForm)
+
   const [dataStatus, setDataStatus] = useState('')
+  const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
 
   const toggle = (key) => setConfigForm((prev) => ({ ...prev, [key]: !prev[key] }))
 
-  const metrics = [
-    { label: 'TOTAL USERS', value: users.length },
-    { label: 'TOTAL DEVICES', value: devices.length },
-    { label: 'TOTAL LOCATIONS', value: locations.length },
-    { label: 'RECENT REPLIES', value: repliesCount || 0 }
-  ]
+  const metrics = useMemo(
+    () => [
+      { label: 'TOTAL USERS', value: users.length },
+      { label: 'TOTAL DEVICES', value: devices.length },
+      { label: 'TOTAL LOCATIONS', value: locations.length },
+      { label: 'RECENT REPLIES', value: repliesCount || 0 }
+    ],
+    [users.length, devices.length, locations.length, repliesCount]
+  )
 
-  const fetchJson = useCallback(async (url) => {
-    const response = await fetch(url, {
-      headers: {
-        ...(authToken ? { Authorization: authToken } : {})
-      }
-    })
-    if (!response.ok) throw new Error(`Failed ${url}`)
-    return response.json()
-  }, [authToken])
+  const fetchJson = useCallback(
+    async (url, options = {}) => {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: authToken } : {}),
+          ...(options.headers || {})
+        }
+      })
+
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || body.message || `Failed ${url}`)
+      return body
+    },
+    [authToken]
+  )
 
   const loadUsers = useCallback(async () => {
-    const data = await fetchJson('/api/users')
+    const data = await fetchJson('/api/users', { headers: {} })
     setUsers(Array.isArray(data) ? data : data.users || [])
   }, [fetchJson])
 
   const loadLocations = useCallback(async () => {
-    const data = await fetchJson('/api/locations')
+    const data = await fetchJson('/api/locations', { headers: {} })
     setLocations(Array.isArray(data) ? data : data.locations || [])
   }, [fetchJson])
 
   const loadDevices = useCallback(async () => {
     try {
-      const data = await fetchJson('/api/devices')
+      const data = await fetchJson('/api/devices', { headers: {} })
       setDevices(Array.isArray(data) ? data : data.devices || [])
     } catch {
-      const data = await fetchJson('/api/users')
+      const data = await fetchJson('/api/users', { headers: {} })
       const usersList = Array.isArray(data) ? data : data.users || []
       const flattened = usersList.flatMap((user) =>
-        Array.isArray(user.devices) ? user.devices.map((device) => ({ ...device, owner: user })) : []
+        Array.isArray(user.devices)
+          ? user.devices.map((device) => ({ ...device, owner: user }))
+          : []
       )
       setDevices(flattened)
     }
@@ -105,12 +140,100 @@ export default function HomeView({
     load()
   }, [activeSection, loadUsers, loadLocations, loadDevices])
 
+  const handleCreateLocation = async () => {
+    try {
+      if (!locationForm.name.trim()) throw new Error('Location name is required')
+      await fetchJson('/api/locations', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: locationForm.name.trim(),
+          details: locationForm.details.trim()
+        })
+      })
+      setActionStatus({ type: 'success', message: 'Location created successfully.' })
+      setLocationForm(initialLocationForm)
+      setShowLocationModal(false)
+      await loadLocations()
+    } catch (error) {
+      setActionStatus({ type: 'error', message: `Create location failed: ${error.message}` })
+    }
+  }
+
+  const handleCreateUser = async () => {
+    try {
+      if (!userForm.email.trim() || !userForm.password.trim()) {
+        throw new Error('Email and password are required')
+      }
+
+      const payload = {
+        ...userForm,
+        userRole: Number(userForm.userRole),
+        locationId: userForm.locationId ? Number(userForm.locationId) : null,
+        managerId: userForm.managerId ? Number(userForm.managerId) : null
+      }
+
+      try {
+        await fetchJson('/api/users', { method: 'POST', body: JSON.stringify(payload) })
+      } catch {
+        await fetchJson('/api/auth/register', { method: 'POST', body: JSON.stringify(payload) })
+      }
+
+      setActionStatus({ type: 'success', message: 'User created successfully.' })
+      setUserForm(initialUserForm)
+      setShowUserModal(false)
+      await loadUsers()
+    } catch (error) {
+      setActionStatus({ type: 'error', message: `Create user failed: ${error.message}` })
+    }
+  }
+
+  const handleCreateDevice = async () => {
+    try {
+      if (!deviceForm.ownerUserId) throw new Error('Owner user is required')
+      if (!deviceForm.name.trim() || !deviceForm.phoneNumber.trim()) {
+        throw new Error('Device name and phone number are required')
+      }
+
+      const payload = {
+        name: deviceForm.name.trim(),
+        phoneNumber: deviceForm.phoneNumber.trim(),
+        locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
+        ownerUserId: Number(deviceForm.ownerUserId)
+      }
+
+      try {
+        await fetchJson(`/api/users/${payload.ownerUserId}/devices`, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        })
+      } catch {
+        await fetchJson('/api/devices', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        })
+      }
+
+      setActionStatus({ type: 'success', message: 'Device created successfully.' })
+      setDeviceForm(initialDeviceForm)
+      setShowDeviceModal(false)
+      await loadDevices()
+    } catch (error) {
+      setActionStatus({ type: 'error', message: `Create device failed: ${error.message}` })
+    }
+  }
+
+  const managers = users.filter((user) => Number(user.userRole) === 2)
+
   return (
     <div className="home-shell">
       <Sidebar activeSection={activeSection} onChangeSection={setActiveSection} onLogout={onLogout} />
 
       <div className="dashboard-content">
         {dataStatus ? <p className="status">{dataStatus}</p> : null}
+        {actionStatus.message ? (
+          <p className={actionStatus.type === 'error' ? 'status-error' : 'status-success'}>{actionStatus.message}</p>
+        ) : null}
+
         {activeSection === 'dashboard' && (
           <>
             <h2 className="page-title">Dashboard</h2>
@@ -150,22 +273,70 @@ export default function HomeView({
 
         {activeSection === 'users' && (
           <section className="card-like section-panel">
-            <div className="section-head"><h2 className="section-title">Users</h2><button className="mini-action" onClick={() => setShowUserModal(true)}>+ Create User</button></div>
-            <table className="data-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th></tr></thead><tbody>{users.map((u) => <tr key={u.id || u.email}><td>{`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || '-'}</td><td>{u.email || '-'}</td><td>{u.userRole || u.role || '-'}</td><td>{u.contactNumber || '-'}</td><td>{u.locationName || u.location?.name || '-'}</td><td>{u.managerName || u.manager?.firstName || '-'}</td></tr>)}</tbody></table>
+            <div className="section-head">
+              <h2 className="section-title">Users</h2>
+              <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}>+ Create User</button>
+            </div>
+            <table className="data-table">
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th></tr></thead>
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u.id || u.email}>
+                    <td>{`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || '-'}</td>
+                    <td>{u.email || '-'}</td>
+                    <td>{u.userRole || u.role || '-'}</td>
+                    <td>{u.contactNumber || '-'}</td>
+                    <td>{u.locationName || u.location?.name || '-'}</td>
+                    <td>{u.managerName || u.manager?.firstName || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </section>
         )}
 
         {activeSection === 'locations' && (
           <section className="card-like section-panel">
-            <div className="section-head"><h2 className="section-title">Locations</h2><button className="mini-action" onClick={() => setShowLocationModal(true)}>+ Create Location</button></div>
-            <table className="data-table"><thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th></tr></thead><tbody>{locations.map((l) => <tr key={l.id || l.name}><td>{l.name || '-'}</td><td>{l.details || '-'}</td><td>{l.userCount || l.users?.length || 0}</td><td>{l.deviceCount || l.devices?.length || 0}</td></tr>)}</tbody></table>
+            <div className="section-head">
+              <h2 className="section-title">Locations</h2>
+              <button className="mini-action" onClick={() => setShowLocationModal(true)}>+ Create Location</button>
+            </div>
+            <table className="data-table">
+              <thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th></tr></thead>
+              <tbody>
+                {locations.map((l) => (
+                  <tr key={l.id || l.name}>
+                    <td>{l.name || '-'}</td>
+                    <td>{l.details || '-'}</td>
+                    <td>{l.userCount || l.users?.length || 0}</td>
+                    <td>{l.deviceCount || l.devices?.length || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </section>
         )}
 
         {activeSection === 'devices' && (
           <section className="card-like section-panel">
-            <div className="section-head"><h2 className="section-title">Devices</h2><button className="mini-action" onClick={() => setShowDeviceModal(true)}>+ Add Device</button></div>
-            <table className="data-table"><thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead><tbody>{devices.map((d) => <tr key={d.id || d.phoneNumber || d.name}><td>{d.name || d.deviceName || '-'}</td><td>{d.phoneNumber || '-'}</td><td>{d.ownerName || d.owner?.firstName || '-'}</td><td>{d.ownerRole || d.owner?.userRole || '-'}</td><td>{d.locationName || d.owner?.location?.name || '-'}</td></tr>)}</tbody></table>
+            <div className="section-head">
+              <h2 className="section-title">Devices</h2>
+              <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}>+ Add Device</button>
+            </div>
+            <table className="data-table">
+              <thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead>
+              <tbody>
+                {devices.map((d) => (
+                  <tr key={d.id || d.phoneNumber || d.name}>
+                    <td>{d.name || d.deviceName || '-'}</td>
+                    <td>{d.phoneNumber || '-'}</td>
+                    <td>{d.ownerName || d.owner?.firstName || '-'}</td>
+                    <td>{d.ownerRole || d.owner?.userRole || '-'}</td>
+                    <td>{d.locationName || d.owner?.location?.name || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </section>
         )}
 
@@ -214,9 +385,52 @@ export default function HomeView({
         )}
       </div>
 
-      {showUserModal ? <div className="overlay" onClick={() => setShowUserModal(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><h3>Create User</h3><div className="field-grid two-col"><input placeholder="First Name" /><input placeholder="Last Name" /><input placeholder="Email" /><input placeholder="Password" /><input placeholder="Contact Number" /><select><option>User</option><option>Manager</option><option>Super Admin</option></select><input placeholder="Location" /><input placeholder="Manager (required for role 3)" /></div><button className="mini-action" onClick={() => setShowUserModal(false)}>Create</button></div></div> : null}
-      {showLocationModal ? <div className="overlay" onClick={() => setShowLocationModal(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><h3>Create Location</h3><div className="field-grid"><input placeholder="Location Name" /><textarea rows={3} placeholder="Details" /></div><button className="mini-action" onClick={() => setShowLocationModal(false)}>Create</button></div></div> : null}
-      {showDeviceModal ? <div className="overlay" onClick={() => setShowDeviceModal(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><h3>Add Device</h3><div className="field-grid"><input placeholder="Device Name" /><input placeholder="Phone Number" /><input placeholder="Owner User" /></div><button className="mini-action" onClick={() => setShowDeviceModal(false)}>Add Device</button></div></div> : null}
+      {showUserModal ? (
+        <div className="overlay" onClick={() => setShowUserModal(false)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Create User</h3>
+            <div className="field-grid two-col">
+              <input placeholder="First Name" value={userForm.firstName} onChange={(event) => setUserForm((prev) => ({ ...prev, firstName: event.target.value }))} />
+              <input placeholder="Last Name" value={userForm.lastName} onChange={(event) => setUserForm((prev) => ({ ...prev, lastName: event.target.value }))} />
+              <input placeholder="Email" value={userForm.email} onChange={(event) => setUserForm((prev) => ({ ...prev, email: event.target.value }))} />
+              <input placeholder="Password" type="password" value={userForm.password} onChange={(event) => setUserForm((prev) => ({ ...prev, password: event.target.value }))} />
+              <input placeholder="Contact Number" value={userForm.contactNumber} onChange={(event) => setUserForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
+              <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>User</option><option value={2}>Manager</option><option value={1}>Super Admin</option></select>
+              <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+              <select value={userForm.managerId} onChange={(event) => setUserForm((prev) => ({ ...prev, managerId: event.target.value }))}><option value="">Manager (Optional)</option>{managers.map((manager) => <option key={manager.id || manager.email} value={manager.id || ''}>{`${manager.firstName || ''} ${manager.lastName || ''}`.trim() || manager.email}</option>)}</select>
+            </div>
+            <button className="mini-action" onClick={handleCreateUser}>Create</button>
+          </div>
+        </div>
+      ) : null}
+
+      {showLocationModal ? (
+        <div className="overlay" onClick={() => setShowLocationModal(false)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Create Location</h3>
+            <div className="field-grid">
+              <input placeholder="Location Name" value={locationForm.name} onChange={(event) => setLocationForm((prev) => ({ ...prev, name: event.target.value }))} />
+              <textarea rows={3} placeholder="Details" value={locationForm.details} onChange={(event) => setLocationForm((prev) => ({ ...prev, details: event.target.value }))} />
+            </div>
+            <button className="mini-action" onClick={handleCreateLocation}>Create</button>
+          </div>
+        </div>
+      ) : null}
+
+      {showDeviceModal ? (
+        <div className="overlay" onClick={() => setShowDeviceModal(false)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Add Device</h3>
+            <div className="field-grid">
+              <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
+              <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
+              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{users.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
+              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+            </div>
+            <button className="mini-action" onClick={handleCreateDevice}>Add Device</button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

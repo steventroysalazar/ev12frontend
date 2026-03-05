@@ -96,3 +96,15 @@ input,select,textarea { background: #f3f5f8; border: 1px solid #cfd6de; border-r
 @media (max-width: 980px) {
   .home-shell,.metric-grid,.dashboard-main-grid,.location-grid,.commands-layout,.field-grid.two-col,.alarm-row,.contact-head,.contact-row { grid-template-columns: 1fr; }
 }
+
+.status-success {
+  margin: 0 0 0.75rem;
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.status-error {
+  margin: 0 0 0.75rem;
+  color: #b91c1c;
+  font-weight: 700;
+}
