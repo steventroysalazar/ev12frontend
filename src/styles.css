@@ -64,8 +64,9 @@ h3 {
 
 .home-layout {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 1fr;
   gap: 1rem;
+  justify-items: center;
 }
 
 .sidebar {
@@ -146,6 +147,7 @@ button:disabled {
 
 .auth-card {
   max-width: 520px;
+  width: 100%;
 }
 
 .status {
@@ -244,5 +246,40 @@ button:disabled {
   .field-grid.two-col,
   .panel .field-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .auth-card {
+    max-width: 100%;
+  }
+
+  .container {
+    padding: 0 1rem;
+  }
+
+  .home-layout {
+    gap: 1.5rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  .card {
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .input-field {
+    padding: 0.75rem;
+  }
+
+  .primary-action {
+    padding: 0.75rem 1.5rem;
   }
 }
