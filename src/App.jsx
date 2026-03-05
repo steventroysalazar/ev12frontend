@@ -124,6 +124,7 @@ export default function App() {
         locationId: registerForm.locationId ? Number(registerForm.locationId) : null,
         managerId: registerForm.managerId ? Number(registerForm.managerId) : null
       }
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,6 +132,7 @@ export default function App() {
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Registration failed')
+
       setAuthStatus(`Registered ${data.email} successfully.`)
       setActiveView('login')
     } catch (error) {
@@ -147,6 +149,7 @@ export default function App() {
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Login failed')
+
       setSession(data)
       setAuthStatus(`Logged in as ${data.user.firstName} ${data.user.lastName} (role ${data.user.userRole}).`)
       setActiveView('dashboard')
@@ -158,6 +161,7 @@ export default function App() {
   const sendMessage = async () => {
     const to = phone.trim()
     const body = message.trim()
+
     if (!to || !body) {
       setStatus('Phone and message are required.')
       return
@@ -172,8 +176,10 @@ export default function App() {
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Unable to send message')
+
       setLastSentPhone(to)
-      setStatus(`Message sent to .`)    } catch (error) {
+      setStatus(`Message sent to ${to}.`)
+    } catch (error) {
       setStatus(`Send failed: ${error.message}`)
     } finally {
       setLoading(false)
@@ -213,6 +219,7 @@ export default function App() {
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Unable to send configuration')
+
       setConfigResult(data)
       setConfigStatus('Configuration sent successfully.')
     } catch (error) {
@@ -278,36 +285,72 @@ export default function App() {
         <>
           <section className="card">
             <h2>Gateway Overrides</h2>
-            <input placeholder="Gateway Base URL (optional)" value={gatewayBaseUrl} onChange={(e) => setGatewayBaseUrl(e.target.value)} />
-            <input placeholder="Gateway Token (optional)" value={gatewayToken} onChange={(e) => setGatewayToken(e.target.value)} />
-          </section>
-
-          <section className="card">
-            <h2>EV12 Command Builder</h2>
-            <div className="grid-two">
+            <div className="field-grid two-col">
               <div>
-                <input placeholder="Device ID" value={configForm.deviceId} onChange={(e) => setConfigForm((p) => ({ ...p, deviceId: e.target.value }))} />
-                <input placeholder="Device IMEI" value={configForm.imei} onChange={(e) => setConfigForm((p) => ({ ...p, imei: e.target.value }))} />
-                <input placeholder="Contact Number" value={configForm.contactNumber} onChange={(e) => setConfigForm((p) => ({ ...p, contactNumber: e.target.value }))} />
-                <input placeholder="Contact Name" value={configForm.contactName} onChange={(e) => setConfigForm((p) => ({ ...p, contactName: e.target.value }))} />
-                <input placeholder="SMS Password" value={configForm.smsPassword} onChange={(e) => setConfigForm((p) => ({ ...p, smsPassword: e.target.value }))} />
-                <input placeholder="Over speed limit" value={configForm.overSpeedLimit} onChange={(e) => setConfigForm((p) => ({ ...p, overSpeedLimit: e.target.value }))} />
-                <input placeholder="Geo radius" value={configForm.geoFenceRadius} onChange={(e) => setConfigForm((p) => ({ ...p, geoFenceRadius: e.target.value }))} />
-                <input placeholder="CL interval" value={configForm.continuousLocateInterval} onChange={(e) => setConfigForm((p) => ({ ...p, continuousLocateInterval: e.target.value }))} />
-                <input placeholder="CL duration" value={configForm.continuousLocateDuration} onChange={(e) => setConfigForm((p) => ({ ...p, continuousLocateDuration: e.target.value }))} />
-                <button disabled={loading} onClick={sendConfig}>Send EV12 Config</button>
+                <label>Gateway Base URL</label>
+                <input placeholder="https://example.com (optional)" value={gatewayBaseUrl} onChange={(e) => setGatewayBaseUrl(e.target.value)} />
               </div>
               <div>
-                <label className="checkbox-row"><input type="checkbox" checked={configForm.requestLocation} onChange={(e) => setConfigForm((p) => ({ ...p, requestLocation: e.target.checked }))} /> Request location (loc)</label>
-                <label className="checkbox-row"><input type="checkbox" checked={configForm.requestGpsLocation} onChange={(e) => setConfigForm((p) => ({ ...p, requestGpsLocation: e.target.checked }))} /> Request GPS (loc,gps)</label>
-                <label className="checkbox-row"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={(e) => setConfigForm((p) => ({ ...p, smsWhitelistEnabled: e.target.checked }))} /> SMS White List</label>
-                <label className="checkbox-row"><input type="checkbox" checked={configForm.fallDownCall} onChange={(e) => setConfigForm((p) => ({ ...p, fallDownCall: e.target.checked }))} /> Fall detection call</label>
-                <label className="checkbox-row"><input type="checkbox" checked={configForm.motionCall} onChange={(e) => setConfigForm((p) => ({ ...p, motionCall: e.target.checked }))} /> Motion alarm call</label>
-                <label className="checkbox-row"><input type="checkbox" checked={configForm.checkStatus} onChange={(e) => setConfigForm((p) => ({ ...p, checkStatus: e.target.checked }))} /> Status</label>
-                <p className="hint">Preview uses comma separator and backend splits every 150 chars.</p>
-                <pre className="replies">{commandPreview || 'No commands yet.'}</pre>
-                <div className="status">{configStatus}</div>
-                {configResult ? <pre className="replies">{JSON.stringify(configResult, null, 2)}</pre> : null}
+                <label>Gateway Token</label>
+                <input placeholder="Authorization token (optional)" value={gatewayToken} onChange={(e) => setGatewayToken(e.target.value)} />
+              </div>
+            </div>
+          </section>
+
+          <section className="card command-builder">
+            <div className="section-heading">
+              <h2>EV12 Command Builder</h2>
+              <p className="subtitle">Structured device configuration with live command preview.</p>
+            </div>
+
+            <div className="builder-layout">
+              <div className="builder-column">
+                <article className="panel">
+                  <h3>Device & Contact</h3>
+                  <div className="field-grid">
+                    <div><label>Device ID</label><input value={configForm.deviceId} onChange={(e) => setConfigForm((p) => ({ ...p, deviceId: e.target.value }))} /></div>
+                    <div><label>IMEI</label><input value={configForm.imei} onChange={(e) => setConfigForm((p) => ({ ...p, imei: e.target.value }))} /></div>
+                    <div><label>Contact Number</label><input value={configForm.contactNumber} onChange={(e) => setConfigForm((p) => ({ ...p, contactNumber: e.target.value }))} /></div>
+                    <div><label>Contact Name</label><input value={configForm.contactName} onChange={(e) => setConfigForm((p) => ({ ...p, contactName: e.target.value }))} /></div>
+                    <div><label>SMS Password</label><input value={configForm.smsPassword} onChange={(e) => setConfigForm((p) => ({ ...p, smsPassword: e.target.value }))} /></div>
+                    <div><label>Prefix Name</label><input value={configForm.prefixName} onChange={(e) => setConfigForm((p) => ({ ...p, prefixName: e.target.value }))} /></div>
+                  </div>
+                </article>
+
+                <article className="panel">
+                  <h3>Safety & Tracking</h3>
+                  <div className="field-grid">
+                    <div><label>Over Speed Limit</label><input value={configForm.overSpeedLimit} onChange={(e) => setConfigForm((p) => ({ ...p, overSpeedLimit: e.target.value }))} /></div>
+                    <div><label>Geo Fence Radius</label><input value={configForm.geoFenceRadius} onChange={(e) => setConfigForm((p) => ({ ...p, geoFenceRadius: e.target.value }))} /></div>
+                    <div><label>Locate Interval</label><input value={configForm.continuousLocateInterval} onChange={(e) => setConfigForm((p) => ({ ...p, continuousLocateInterval: e.target.value }))} /></div>
+                    <div><label>Locate Duration</label><input value={configForm.continuousLocateDuration} onChange={(e) => setConfigForm((p) => ({ ...p, continuousLocateDuration: e.target.value }))} /></div>
+                    <div><label>Time Zone</label><input value={configForm.timeZone} onChange={(e) => setConfigForm((p) => ({ ...p, timeZone: e.target.value }))} /></div>
+                    <div><label>Speaker Volume</label><input value={configForm.speakerVolume} onChange={(e) => setConfigForm((p) => ({ ...p, speakerVolume: e.target.value }))} /></div>
+                  </div>
+                </article>
+              </div>
+
+              <div className="builder-column">
+                <article className="panel">
+                  <h3>Feature Toggles</h3>
+                  <div className="toggle-grid">
+                    <label className="toggle-item"><input type="checkbox" checked={configForm.requestLocation} onChange={(e) => setConfigForm((p) => ({ ...p, requestLocation: e.target.checked }))} /> Request location (loc)</label>
+                    <label className="toggle-item"><input type="checkbox" checked={configForm.requestGpsLocation} onChange={(e) => setConfigForm((p) => ({ ...p, requestGpsLocation: e.target.checked }))} /> Request GPS (loc,gps)</label>
+                    <label className="toggle-item"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={(e) => setConfigForm((p) => ({ ...p, smsWhitelistEnabled: e.target.checked }))} /> SMS whitelist</label>
+                    <label className="toggle-item"><input type="checkbox" checked={configForm.fallDownCall} onChange={(e) => setConfigForm((p) => ({ ...p, fallDownCall: e.target.checked }))} /> Fall detection call</label>
+                    <label className="toggle-item"><input type="checkbox" checked={configForm.motionCall} onChange={(e) => setConfigForm((p) => ({ ...p, motionCall: e.target.checked }))} /> Motion alarm call</label>
+                    <label className="toggle-item"><input type="checkbox" checked={configForm.checkStatus} onChange={(e) => setConfigForm((p) => ({ ...p, checkStatus: e.target.checked }))} /> Include status</label>
+                  </div>
+                </article>
+
+                <article className="panel">
+                  <h3>Command Preview</h3>
+                  <p className="hint">Preview uses comma separators. Backend chunking is still respected.</p>
+                  <pre className="replies command-preview">{commandPreview || 'No commands yet.'}</pre>
+                  <button disabled={loading} className="primary-action" onClick={sendConfig}>Send EV12 Config</button>
+                  <div className="status">{configStatus}</div>
+                  {configResult ? <pre className="replies">{JSON.stringify(configResult, null, 2)}</pre> : null}
+                </article>
               </div>
             </div>
           </section>
