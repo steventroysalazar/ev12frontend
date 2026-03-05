@@ -99,6 +99,38 @@ export default function HomeView({
                 <input value={configForm.contactName} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactName: event.target.value }))} />
               </div>
             </div>
+          </section>
+        )}
+
+        {activeSection === 'settings-alarm' && (
+          <section className="card-like settings-panel">
+            <h3>Settings &gt; Alarm Settings</h3>
+            <div className="alarm-row"><label>SOS Mode</label><input value={configForm.sosMode} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosMode: event.target.value }))} /><label>Action Time</label><input value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div>
+            <div className="alarm-row"><label>Fall Detection</label><select value={configForm.fallDownEnabled} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownEnabled: event.target.value }))}><option value="1">Enable</option><option value="0">Disable</option></select><label>Sensitivity</label><input value={configForm.fallDownSensitivity} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} /></div>
+            <div className="alarm-row"><label>Over-speed</label><select value={configForm.overSpeedEnabled} onChange={(event) => setConfigForm((prev) => ({ ...prev, overSpeedEnabled: event.target.value }))}><option value="1">Enable</option><option value="0">Disable</option></select><label>Speed Limit</label><input value={configForm.overSpeedLimit} onChange={(event) => setConfigForm((prev) => ({ ...prev, overSpeedLimit: event.target.value }))} /></div>
+            <div className="alarm-row"><label>Geo-fence</label><select value={configForm.geoFenceEnabled} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceEnabled: event.target.value }))}><option value="1">Enable</option><option value="0">Disable</option></select><label>Radius</label><input value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div>
+          </section>
+        )}
+
+        {activeSection === 'commands' && (
+          <section className="commands-layout">
+            <article className="card-like">
+              <h3>Command Input</h3>
+              <div className="field-grid">
+                <div><label>Contact Number</label><input value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} /></div>
+                <div><label>SOS Action</label><input value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div>
+                <div><label>Geo-fence Radius</label><input value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div>
+              </div>
+              <button className="mini-action" disabled={loading} onClick={sendConfig}>Submit Config</button>
+            </article>
+            <article className="card-like">
+              <h3>Command Preview</h3>
+              <pre className="preview-box">{commandPreview || 'No command generated yet.'}</pre>
+              <div className="status">{configStatus}</div>
+              {configResult ? <pre className="replies conversation-box">{JSON.stringify(configResult, null, 2)}</pre> : null}
+            </article>
+          </section>
+        )}
 
             <h3 className="block-title">Contact Information</h3>
             <div className="contact-table">
