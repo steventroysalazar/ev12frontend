@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useReducer, useState } from 'react'
 import Navbar from './components/navbar/Navbar'
 import HomeView from './features/home/HomeView'
 import LoginView from './features/login/LoginView'
 import RegisterView from './features/register/RegisterView'
 import { buildEv12Preview, formatReply, initialConfigForm } from './features/home/ev12'
+import { authReducer, initialAuthState, loadPersistedAuth, persistAuth } from './store/authStore'
 import './App.css'
 
 const initialRegisterForm = {
@@ -21,9 +22,9 @@ const initialRegisterForm = {
 const initialLoginForm = { email: '', password: '' }
 
 export default function App() {
-  const [activeView, setActiveView] = useState('login')
-  const [authStatus, setAuthStatus] = useState('Not logged in.')
-  const [session, setSession] = useState(null)
+  const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
+  const [activeView, setActiveView] = useState(auth.isAuthenticated ? 'home' : 'login')
+  const [authStatus, setAuthStatus] = useState(auth.isAuthenticated ? 'Authenticated session restored.' : 'Not logged in.')
 
   const [registerForm, setRegisterForm] = useState(initialRegisterForm)
   const [loginForm, setLoginForm] = useState(initialLoginForm)
@@ -41,6 +42,10 @@ export default function App() {
   const [configResult, setConfigResult] = useState(null)
   const [configForm, setConfigForm] = useState(initialConfigForm)
 
+  useEffect(() => {
+    persistAuth(auth)
+  }, [auth])
+
   const commandPreview = useMemo(() => buildEv12Preview(configForm), [configForm])
   const formattedReplies = useMemo(
     () => (replies.length ? replies.map(formatReply).join('\n') : 'No replies loaded yet.'),
@@ -49,7 +54,8 @@ export default function App() {
 
   const commonHeaders = () => ({
     ...(gatewayBaseUrl.trim() ? { 'X-Gateway-Base-Url': gatewayBaseUrl.trim() } : {}),
-    ...(gatewayToken.trim() ? { Authorization: gatewayToken.trim() } : {})
+    ...(gatewayToken.trim() ? { Authorization: gatewayToken.trim() } : {}),
+    ...(auth.token ? { 'X-Auth-Token': auth.token } : {})
   })
 
   const handleRegister = async () => {
@@ -86,12 +92,18 @@ export default function App() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Login failed')
 
-      setSession(data)
+      dispatchAuth({ type: 'LOGIN_SUCCESS', payload: data })
       setAuthStatus(`Logged in as ${data.user.firstName} ${data.user.lastName} (role ${data.user.userRole}).`)
       setActiveView('home')
     } catch (error) {
       setAuthStatus(`Login failed: ${error.message}`)
     }
+  }
+
+  const handleLogout = () => {
+    dispatchAuth({ type: 'LOGOUT' })
+    setAuthStatus('Logged out successfully.')
+    setActiveView('login')
   }
 
   const handleSendMessage = async () => {
@@ -168,10 +180,16 @@ export default function App() {
 
   return (
     <main className="container">
-      <Navbar activeView={activeView} authStatus={authStatus} onChangeView={setActiveView} />
+      {activeView === 'home' ? <Navbar user={auth.user} onLogout={handleLogout} /> : null}
 
       {activeView === 'login' && (
-        <LoginView loginForm={loginForm} setLoginForm={setLoginForm} onLogin={handleLogin} session={session} />
+        <LoginView
+          loginForm={loginForm}
+          setLoginForm={setLoginForm}
+          onLogin={handleLogin}
+          session={auth.isAuthenticated ? auth : null}
+          onGoRegister={() => setActiveView('register')}
+        />
       )}
 
       {activeView === 'register' && (
@@ -179,11 +197,15 @@ export default function App() {
           registerForm={registerForm}
           setRegisterForm={setRegisterForm}
           onRegister={handleRegister}
+          onGoLogin={() => setActiveView('login')}
         />
       )}
 
       {activeView === 'home' && (
         <HomeView
+          user={auth.user}
+          authStatus={authStatus}
+          onLogout={handleLogout}
           gatewayBaseUrl={gatewayBaseUrl}
           gatewayToken={gatewayToken}
           setGatewayBaseUrl={setGatewayBaseUrl}
@@ -203,6 +225,7 @@ export default function App() {
           fetchReplies={handleFetchReplies}
           status={status}
           formattedReplies={formattedReplies}
+          authToken={auth.token}
         />
       )}
     </main>
