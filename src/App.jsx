@@ -158,18 +158,53 @@ export default function App() {
   }
 
   const handleSendConfig = async () => {
+    const to = configForm.contactNumber?.trim() || phone.trim()
+    const command = commandPreview.trim()
+
+    if (!to) {
+      setConfigStatus('Config failed: device/contact number is required.')
+      return
+    }
+
+    if (!command) {
+      setConfigStatus('Config failed: no command generated yet.')
+      return
+    }
+
     setLoading(true)
     setConfigStatus('Sending configuration...')
     try {
-      const response = await fetch('/api/config/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...commonHeaders() },
-        body: JSON.stringify({ ...configForm, command: commandPreview })
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Unable to send configuration')
+      const payload = { ...configForm, to, command }
+      const endpoints = ['/api/send-config', '/api/config/send', '/api/messages/send']
+
+      let data = null
+      let lastError = null
+
+      for (const endpoint of endpoints) {
+        try {
+          const body = endpoint === '/api/messages/send' ? { to, message: command } : payload
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...commonHeaders() },
+            body: JSON.stringify(body)
+          })
+
+          const responseBody = await response.json().catch(() => ({}))
+          if (!response.ok) {
+            throw new Error(responseBody.error || responseBody.message || `Unable to send configuration via ${endpoint}`)
+          }
+
+          data = responseBody
+          break
+        } catch (error) {
+          lastError = error
+        }
+      }
+
+      if (!data) throw lastError || new Error('Unable to send configuration')
 
       setConfigResult(data)
+      setStatus(`Message sent to ${to}.`)
       setConfigStatus('Configuration sent successfully.')
     } catch (error) {
       setConfigStatus(`Config failed: ${error.message}`)
