@@ -168,10 +168,18 @@ export default function App() {
 
   return (
     <main className="container">
-      <Navbar activeView={activeView} authStatus={authStatus} onChangeView={setActiveView} />
+      {activeView === 'home' ? (
+        <Navbar />
+      ) : null}
 
       {activeView === 'login' && (
-        <LoginView loginForm={loginForm} setLoginForm={setLoginForm} onLogin={handleLogin} session={session} />
+        <LoginView
+          loginForm={loginForm}
+          setLoginForm={setLoginForm}
+          onLogin={handleLogin}
+          session={session}
+          onGoRegister={() => setActiveView('register')}
+        />
       )}
 
       {activeView === 'register' && (
@@ -179,6 +187,7 @@ export default function App() {
           registerForm={registerForm}
           setRegisterForm={setRegisterForm}
           onRegister={handleRegister}
+          onGoLogin={() => setActiveView('login')}
         />
       )}
 
