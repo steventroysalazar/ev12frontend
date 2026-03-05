@@ -2,6 +2,9 @@ import './sidebar.css'
 
 const sidebarItems = [
   { id: 'dashboard', label: 'Dashboard' },
+  { id: 'users', label: 'Users' },
+  { id: 'locations', label: 'Locations' },
+  { id: 'devices', label: 'Devices' },
   {
     id: 'settings',
     label: 'Settings',
@@ -11,7 +14,8 @@ const sidebarItems = [
     ]
   },
   { id: 'location', label: 'Location' },
-  { id: 'commands', label: 'Commands' }
+  { id: 'commands', label: 'Commands' },
+  { id: 'replies', label: 'Replies' }
 ]
 
 export default function Sidebar({ activeSection, onChangeSection }) {
