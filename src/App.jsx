@@ -74,10 +74,6 @@ export default function App() {
     persistAuth(auth)
   }, [auth])
 
-  useEffect(() => {
-    persistAuth(auth)
-  }, [auth])
-
   const commandPreview = useMemo(() => buildEv12Preview(configForm), [configForm])
   const formattedReplies = useMemo(
     () => (replies.length ? replies.map(formatReply).join('\n') : 'No replies loaded yet.'),
@@ -262,7 +258,7 @@ export default function App() {
       const response = await fetch('/api/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...commonHeaders() },
-        body: JSON.stringify({ to: targetPhone, message: 'loc' })
+        body: JSON.stringify({ to: targetPhone, message: 'Loc' })
       })
 
       const body = await response.json().catch(() => ({}))
