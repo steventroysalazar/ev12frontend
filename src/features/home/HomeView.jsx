@@ -283,6 +283,38 @@ export default function HomeView({
 
   const managers = users.filter((user) => Number(user.userRole) === 2)
 
+
+  const renderRaw = (value) => (typeof value === 'string' ? value : JSON.stringify(value, null, 2))
+
+  const tryParseJsonString = (value) => {
+    if (typeof value !== 'string') return value
+    try {
+      return JSON.parse(value)
+    } catch {
+      return value
+    }
+  }
+
+  const splitWebhookParts = (event) => {
+    const parsedPayloadJson = tryParseJsonString(event?.payloadJson)
+
+    const headers =
+      event?.headers ??
+      event?.requestHeaders ??
+      event?.rawHeaders ??
+      (parsedPayloadJson && typeof parsedPayloadJson === 'object' ? parsedPayloadJson.rawHeaders : null)
+
+    const payload =
+      event?.body ??
+      event?.payload ??
+      event?.rawBody ??
+      (parsedPayloadJson && typeof parsedPayloadJson === 'object' ? parsedPayloadJson.rawBody : parsedPayloadJson)
+
+    const timestamp = event?.receivedAt || event?.timestamp || event?.createdAt || event?.date || null
+
+    return { headers, payload, timestamp, rawEvent: event }
+  }
+
   return (
     <div className="home-shell">
       <Sidebar activeSection={activeSection} onChangeSection={setActiveSection} onLogout={onLogout} />
@@ -484,8 +516,31 @@ export default function HomeView({
             <p className="status">{webhookStatus || 'No webhook data loaded yet.'}</p>
 
             <div className="webhook-list">
-              <p className="status">Raw response from webhook endpoint (no table formatting):</p>
-              <pre className="conversation-box webhook-pre">{webhookRaw === null ? 'No webhook events found.' : typeof webhookRaw === 'string' ? webhookRaw : JSON.stringify(webhookRaw, null, 2)}</pre>
+              {webhookRaw === null ? (
+                <pre className="conversation-box webhook-pre">No webhook events found.</pre>
+              ) : Array.isArray(webhookRaw) ? (
+                webhookRaw.map((event, index) => {
+                  const parts = splitWebhookParts(event)
+                  return (
+                    <article className="webhook-event" key={event?.id || event?._id || `${parts.timestamp || 'event'}-${index}`}>
+                      {parts.timestamp ? <h3 className="webhook-time">{String(parts.timestamp)}</h3> : null}
+                      {parts.headers !== null && parts.headers !== undefined ? (
+                        <>
+                          <h4>Headers</h4>
+                          <pre className="conversation-box webhook-pre">{renderRaw(parts.headers)}</pre>
+                        </>
+                      ) : null}
+                      <h4>Payload</h4>
+                      <pre className="conversation-box webhook-pre">{renderRaw(parts.payload ?? parts.rawEvent)}</pre>
+                    </article>
+                  )
+                })
+              ) : (
+                <article className="webhook-event">
+                  <h4>Payload</h4>
+                  <pre className="conversation-box webhook-pre">{renderRaw(webhookRaw)}</pre>
+                </article>
+              )}
             </div>
           </section>
         )}

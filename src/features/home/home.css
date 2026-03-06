@@ -140,6 +140,22 @@ input,select,textarea { background: #f3f5f8; border: 1px solid #cfd6de; border-r
 }
 
 
+.webhook-event {
+  border-left: 4px solid #3b82f6;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 0.8rem;
+}
+
+.webhook-time {
+  margin: 0 0 0.5rem;
+}
+
+.webhook-event h4 {
+  margin: 0 0 0.45rem;
+}
+
+
 .map-embed-wrap { padding: 0; overflow: hidden; background: #e5e7eb; }
 .map-embed { width: 100%; height: 100%; min-height: 220px; border: 0; }
 .location-meta { margin-top: 0.6rem; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
