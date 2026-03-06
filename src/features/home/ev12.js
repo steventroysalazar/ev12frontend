@@ -46,7 +46,7 @@ export const buildEv12Preview = (form) => {
   }
   if (form.smsPassword) commands.push(`P${form.smsPassword}`)
   if (form.smsWhitelistEnabled) commands.push('sms1')
-  if (form.requestLocation) commands.push('loc')
+  if (form.requestLocation) commands.push('Loc')
   if (form.requestGpsLocation) commands.push('loc,gps')
   if (form.requestLbsLocation) commands.push('LBS1')
   if (form.sosMode && form.sosActionTime) commands.push(`SOS${form.sosMode},${form.sosActionTime}`)
