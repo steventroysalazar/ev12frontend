@@ -69,7 +69,7 @@ export default function HomeView({
   const [dataStatus, setDataStatus] = useState('')
   const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
   const [autoFetchReplies, setAutoFetchReplies] = useState(false)
-  const [webhookEvents, setWebhookEvents] = useState([])
+  const [webhookRaw, setWebhookRaw] = useState(null)
   const [webhookStatus, setWebhookStatus] = useState('')
 
   const metrics = useMemo(
@@ -181,20 +181,17 @@ export default function HomeView({
 
     if (!payload) {
       setWebhookStatus(`Webhook fetch failed: ${lastError?.message || 'Unknown error'}`)
-      setWebhookEvents([])
+      setWebhookRaw(null)
       return
     }
 
-    const events = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload.events)
-        ? payload.events
-        : Array.isArray(payload.data)
-          ? payload.data
-          : []
+    setWebhookRaw(payload)
 
-    setWebhookEvents(events)
-    setWebhookStatus(`Loaded ${events.length} webhook event(s).`)
+    if (Array.isArray(payload)) {
+      setWebhookStatus(`Loaded ${payload.length} webhook event(s).`)
+    } else {
+      setWebhookStatus('Loaded webhook payload.')
+    }
   }, [authToken])
 
   useEffect(() => {
@@ -487,22 +484,8 @@ export default function HomeView({
             <p className="status">{webhookStatus || 'No webhook data loaded yet.'}</p>
 
             <div className="webhook-list">
-              {webhookEvents.length === 0 ? <p className="status">No webhook events found.</p> : null}
-              {webhookEvents.map((event, index) => {
-                const headers = event.headers ?? event.requestHeaders ?? event.rawHeaders ?? null
-                const body = event.body ?? event.payload ?? event.rawBody ?? null
-                const timestamp = event.receivedAt || event.timestamp || event.createdAt || event.date || `Event ${index + 1}`
-
-                return (
-                  <article className="webhook-card" key={event.id || event._id || `${timestamp}-${index}`}>
-                    <h3>{String(timestamp)}</h3>
-                    <h4>Headers</h4>
-                    <pre className="conversation-box webhook-pre">{typeof headers === 'string' ? headers : JSON.stringify(headers, null, 2)}</pre>
-                    <h4>Payload</h4>
-                    <pre className="conversation-box webhook-pre">{typeof body === 'string' ? body : JSON.stringify(body, null, 2)}</pre>
-                  </article>
-                )
-              })}
+              <p className="status">Raw response from webhook endpoint (no table formatting):</p>
+              <pre className="conversation-box webhook-pre">{webhookRaw === null ? 'No webhook events found.' : typeof webhookRaw === 'string' ? webhookRaw : JSON.stringify(webhookRaw, null, 2)}</pre>
             </div>
           </section>
         )}
