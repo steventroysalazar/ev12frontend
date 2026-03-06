@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
 import { fetchJsonWithFallback, fetchWithFallback } from '../../lib/apiClient'
 import './home.css'
@@ -72,6 +72,7 @@ export default function HomeView({
   const [autoFetchReplies, setAutoFetchReplies] = useState(false)
   const [webhookRaw, setWebhookRaw] = useState(null)
   const [webhookStatus, setWebhookStatus] = useState('')
+  const webhookFingerprintRef = useRef('')
 
   const metrics = useMemo(
     () => [
@@ -152,8 +153,8 @@ export default function HomeView({
     return () => clearInterval(intervalId)
   }, [activeSection, autoFetchReplies, fetchReplies])
 
-  const loadWebhookEvents = useCallback(async () => {
-    setWebhookStatus('Loading webhook events...')
+  const loadWebhookEvents = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setWebhookStatus('Loading webhook events...')
 
     const endpoints = ['/api/webhooks/ev12/events', 'http://localhost:8090/api/webhooks/ev12/events']
     let payload = null
@@ -179,16 +180,35 @@ export default function HomeView({
     if (!payload) {
       setWebhookStatus(`Webhook fetch failed: ${lastError?.message || 'Unknown error'}`)
       setWebhookRaw(null)
+      webhookFingerprintRef.current = ''
       return
     }
 
-    setWebhookRaw(payload)
+    const getEventTime = (event) => new Date(event?.receivedAt || event?.timestamp || event?.createdAt || event?.date || 0).getTime()
 
     if (Array.isArray(payload)) {
-      setWebhookStatus(`Loaded ${payload.length} webhook event(s).`)
-    } else {
-      setWebhookStatus('Loaded webhook payload.')
+      const latestEvents = payload
+        .slice()
+        .sort((a, b) => getEventTime(b) - getEventTime(a))
+        .slice(0, 3)
+
+      const nextFingerprint = JSON.stringify(latestEvents)
+      const hadPrevious = webhookFingerprintRef.current !== ''
+      const hasNewEvent = hadPrevious && webhookFingerprintRef.current !== nextFingerprint
+
+      webhookFingerprintRef.current = nextFingerprint
+      setWebhookRaw(latestEvents)
+      setWebhookStatus(hasNewEvent ? 'New webhook event received. Showing latest 3 events.' : `Showing latest ${latestEvents.length} webhook event(s).`)
+      return
     }
+
+    const nextFingerprint = JSON.stringify(payload)
+    const hadPrevious = webhookFingerprintRef.current !== ''
+    const hasNewEvent = hadPrevious && webhookFingerprintRef.current !== nextFingerprint
+
+    webhookFingerprintRef.current = nextFingerprint
+    setWebhookRaw(payload)
+    setWebhookStatus(hasNewEvent ? 'New webhook payload received.' : 'Loaded webhook payload.')
   }, [authToken])
 
   useEffect(() => {
@@ -196,6 +216,22 @@ export default function HomeView({
       loadWebhookEvents()
     }
   }, [activeSection, loadWebhookEvents])
+
+  useEffect(() => {
+    if (activeSection !== 'webhooks') return undefined
+
+    const intervalId = setInterval(() => {
+      loadWebhookEvents({ silent: true })
+    }, 2000)
+
+    return () => clearInterval(intervalId)
+  }, [activeSection, loadWebhookEvents])
+
+  const clearWebhookEvents = () => {
+    webhookFingerprintRef.current = ''
+    setWebhookRaw(null)
+    setWebhookStatus('Webhook events cleared.')
+  }
 
   const openDeviceSettings = (device) => {
     setSelectedDevice(device)
@@ -508,8 +544,12 @@ export default function HomeView({
           <section className="card-like section-panel">
             <div className="section-head">
               <h2 className="section-title">Webhook Events</h2>
-              <button className="mini-action" type="button" onClick={loadWebhookEvents}>Refresh Events</button>
+              <div>
+                <button className="mini-action" type="button" onClick={loadWebhookEvents}>Refresh Events</button>
+                <button className="mini-action" type="button" onClick={clearWebhookEvents}>Clear Events</button>
+              </div>
             </div>
+            <p className="status">Live listener is active. New events appear automatically. Showing latest 3 events.</p>
             <p className="status">{webhookStatus || 'No webhook data loaded yet.'}</p>
 
             <div className="webhook-list">
