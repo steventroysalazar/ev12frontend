@@ -4,6 +4,7 @@ import HomeView from './features/home/HomeView'
 import LoginView from './features/login/LoginView'
 import RegisterView from './features/register/RegisterView'
 import { buildEv12Preview, formatReply, initialConfigForm } from './features/home/ev12'
+import { fetchWithFallback } from './lib/apiClient'
 import { authReducer, initialAuthState, loadPersistedAuth, persistAuth } from './store/authStore'
 import './App.css'
 
@@ -102,7 +103,7 @@ export default function App() {
 
       for (const endpoint of endpoints) {
         try {
-          const response = await fetch(endpoint, { headers: commonHeaders() })
+          const { response } = await fetchWithFallback(endpoint, { headers: commonHeaders() })
           const body = await response.json().catch(() => ({}))
           if (!response.ok) throw new Error(body.error || body.message || `Unable to fetch replies from ${endpoint}`)
           data = body
@@ -163,7 +164,7 @@ export default function App() {
         managerId: registerForm.managerId ? Number(registerForm.managerId) : null
       }
 
-      const response = await fetch('/api/auth/register', {
+      const { response } = await fetchWithFallback('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -180,7 +181,7 @@ export default function App() {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const { response } = await fetchWithFallback('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginForm)
@@ -213,7 +214,7 @@ export default function App() {
 
     setLoading(true)
     try {
-      const response = await fetch('/api/messages/send', {
+      const { response } = await fetchWithFallback('/api/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...commonHeaders() },
         body: JSON.stringify({ to, message: body })
@@ -255,7 +256,7 @@ export default function App() {
 
     setLoading(true)
     try {
-      const response = await fetch('/api/messages/send', {
+      const { response } = await fetchWithFallback('/api/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...commonHeaders() },
         body: JSON.stringify({ to: targetPhone, message: 'Loc' })
@@ -332,7 +333,7 @@ export default function App() {
       for (const endpoint of endpoints) {
         try {
           const body = endpoint === '/api/messages/send' ? { to, message: command } : payload
-          const response = await fetch(endpoint, {
+          const { response } = await fetchWithFallback(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...commonHeaders() },
             body: JSON.stringify(body)

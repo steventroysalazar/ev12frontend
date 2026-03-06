@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
+import { fetchJsonWithFallback, fetchWithFallback } from '../../lib/apiClient'
 import './home.css'
 
 const deviceRows = [
@@ -86,7 +87,7 @@ export default function HomeView({
 
   const fetchJson = useCallback(
     async (url, options = {}) => {
-      const response = await fetch(url, {
+      return fetchJsonWithFallback(url, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
@@ -94,10 +95,6 @@ export default function HomeView({
           ...(options.headers || {})
         }
       })
-
-      const body = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(body.error || body.message || `Failed ${url}`)
-      return body
     },
     [authToken]
   )
@@ -164,7 +161,7 @@ export default function HomeView({
 
     for (const endpoint of endpoints) {
       try {
-        const response = await fetch(endpoint, {
+        const { response } = await fetchWithFallback(endpoint, {
           headers: {
             ...(authToken ? { Authorization: authToken } : {})
           }
