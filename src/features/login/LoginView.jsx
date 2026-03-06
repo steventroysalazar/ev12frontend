@@ -1,6 +1,13 @@
 import './login.css'
 
-export default function LoginView({ loginForm, setLoginForm, onLogin, session, onGoRegister }) {
+const statusTone = (status) => {
+  const message = String(status || '').toLowerCase()
+  if (message.includes('failed') || message.includes('validation')) return 'error'
+  if (message.includes('logged in')) return 'success'
+  return 'info'
+}
+
+export default function LoginView({ loginForm, setLoginForm, onLogin, session, onGoRegister, authStatus, authLoading }) {
   return (
     <section className="auth-shell">
       <div className="auth-brand-panel">
@@ -8,7 +15,13 @@ export default function LoginView({ loginForm, setLoginForm, onLogin, session, o
         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
       </div>
 
-      <div className="card auth-form-card login-view">
+      <form
+        className="card auth-form-card login-view"
+        onSubmit={(event) => {
+          event.preventDefault()
+          onLogin()
+        }}
+      >
         <h2>Login</h2>
         <label>Email</label>
         <input
@@ -28,11 +41,12 @@ export default function LoginView({ loginForm, setLoginForm, onLogin, session, o
           <span>show</span>
         </div>
 
-        <button className="auth-submit" onClick={onLogin}>Sign In</button>
+        <button className="auth-submit" type="submit" disabled={authLoading}>{authLoading ? 'Signing In...' : 'Sign In'}</button>
+        {authStatus ? <p className={`auth-status auth-status-${statusTone(authStatus)}`}>{authStatus}</p> : null}
         <p className="auth-link" onClick={onGoRegister}>Need an account? Register</p>
         <p className="forgot-link">Forgot password?</p>
         {session ? <pre className="replies">{JSON.stringify(session, null, 2)}</pre> : null}
-      </div>
+      </form>
     </section>
   )
 }

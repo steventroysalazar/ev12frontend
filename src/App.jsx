@@ -52,7 +52,8 @@ const replyText = (reply) => String(reply?.message || reply?.text || reply?.body
 export default function App() {
   const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
   const [activeView, setActiveView] = useState(auth.isAuthenticated ? 'home' : 'login')
-  const [authStatus, setAuthStatus] = useState(auth.isAuthenticated ? 'Authenticated session restored.' : 'Not logged in.')
+  const [authStatus, setAuthStatus] = useState(auth.isAuthenticated ? 'Authenticated session restored.' : 'Enter your credentials to sign in.')
+  const [authLoading, setAuthLoading] = useState(false)
 
   const [registerForm, setRegisterForm] = useState(initialRegisterForm)
   const [loginForm, setLoginForm] = useState(initialLoginForm)
@@ -180,20 +181,41 @@ export default function App() {
   }
 
   const handleLogin = async () => {
+    const email = loginForm.email.trim()
+    const password = loginForm.password
+
+    if (!email || !password) {
+      setAuthStatus('Login validation: email and password are required.')
+      return
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setAuthStatus('Login validation: enter a valid email address.')
+      return
+    }
+
+    setAuthLoading(true)
+    setAuthStatus('Signing in...')
+
     try {
       const { response } = await fetchWithFallback('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginForm)
+        body: JSON.stringify({ email, password })
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Login failed')
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        const loginError = data.error || data.message || 'Login failed'
+        throw new Error(response.status === 401 ? `${loginError}. Please check your email/password.` : loginError)
+      }
 
       dispatchAuth({ type: 'LOGIN_SUCCESS', payload: data })
       setAuthStatus(`Logged in as ${data.user.firstName} ${data.user.lastName} (role ${data.user.userRole}).`)
       setActiveView('home')
     } catch (error) {
       setAuthStatus(`Login failed: ${error.message}`)
+    } finally {
+      setAuthLoading(false)
     }
   }
 
@@ -374,6 +396,8 @@ export default function App() {
           onLogin={handleLogin}
           session={auth.isAuthenticated ? auth : null}
           onGoRegister={() => setActiveView('register')}
+          authStatus={authStatus}
+          authLoading={authLoading}
         />
       )}
 
