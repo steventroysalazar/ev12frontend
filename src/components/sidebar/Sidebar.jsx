@@ -15,7 +15,8 @@ const sidebarItems = [
   },
   { id: 'location', label: 'Location' },
   { id: 'commands', label: 'Commands' },
-  { id: 'replies', label: 'Replies' }
+  { id: 'replies', label: 'Replies' },
+  { id: 'webhooks', label: 'Webhook Events' }
 ]
 
 export default function Sidebar({ activeSection, onChangeSection, onLogout }) {

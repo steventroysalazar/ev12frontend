@@ -69,6 +69,8 @@ export default function HomeView({
   const [dataStatus, setDataStatus] = useState('')
   const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
   const [autoFetchReplies, setAutoFetchReplies] = useState(false)
+  const [webhookEvents, setWebhookEvents] = useState([])
+  const [webhookStatus, setWebhookStatus] = useState('')
 
   const metrics = useMemo(
     () => [
@@ -152,6 +154,54 @@ export default function HomeView({
 
     return () => clearInterval(intervalId)
   }, [activeSection, autoFetchReplies, fetchReplies])
+
+  const loadWebhookEvents = useCallback(async () => {
+    setWebhookStatus('Loading webhook events...')
+
+    const endpoints = ['/api/webhooks/ev12/events', 'http://localhost:8090/api/webhooks/ev12/events']
+    let payload = null
+    let lastError = null
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          headers: {
+            ...(authToken ? { Authorization: authToken } : {})
+          }
+        })
+
+        const body = await response.json().catch(() => ([]))
+        if (!response.ok) throw new Error(body.error || body.message || `Failed ${endpoint}`)
+        payload = body
+        break
+      } catch (error) {
+        lastError = error
+      }
+    }
+
+    if (!payload) {
+      setWebhookStatus(`Webhook fetch failed: ${lastError?.message || 'Unknown error'}`)
+      setWebhookEvents([])
+      return
+    }
+
+    const events = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload.events)
+        ? payload.events
+        : Array.isArray(payload.data)
+          ? payload.data
+          : []
+
+    setWebhookEvents(events)
+    setWebhookStatus(`Loaded ${events.length} webhook event(s).`)
+  }, [authToken])
+
+  useEffect(() => {
+    if (activeSection === 'webhooks') {
+      loadWebhookEvents()
+    }
+  }, [activeSection, loadWebhookEvents])
 
   const openDeviceSettings = (device) => {
     setSelectedDevice(device)
@@ -425,6 +475,35 @@ export default function HomeView({
             </div>
             <p className="status">{autoFetchReplies ? 'Auto refresh is running every 5 seconds.' : 'Auto refresh is off.'}</p>
             <pre className="replies conversation-box">{formattedReplies}</pre>
+          </section>
+        )}
+
+        {activeSection === 'webhooks' && (
+          <section className="card-like section-panel">
+            <div className="section-head">
+              <h2 className="section-title">Webhook Events</h2>
+              <button className="mini-action" type="button" onClick={loadWebhookEvents}>Refresh Events</button>
+            </div>
+            <p className="status">{webhookStatus || 'No webhook data loaded yet.'}</p>
+
+            <div className="webhook-list">
+              {webhookEvents.length === 0 ? <p className="status">No webhook events found.</p> : null}
+              {webhookEvents.map((event, index) => {
+                const headers = event.headers ?? event.requestHeaders ?? event.rawHeaders ?? null
+                const body = event.body ?? event.payload ?? event.rawBody ?? null
+                const timestamp = event.receivedAt || event.timestamp || event.createdAt || event.date || `Event ${index + 1}`
+
+                return (
+                  <article className="webhook-card" key={event.id || event._id || `${timestamp}-${index}`}>
+                    <h3>{String(timestamp)}</h3>
+                    <h4>Headers</h4>
+                    <pre className="conversation-box webhook-pre">{typeof headers === 'string' ? headers : JSON.stringify(headers, null, 2)}</pre>
+                    <h4>Payload</h4>
+                    <pre className="conversation-box webhook-pre">{typeof body === 'string' ? body : JSON.stringify(body, null, 2)}</pre>
+                  </article>
+                )
+              })}
+            </div>
           </section>
         )}
       </div>
