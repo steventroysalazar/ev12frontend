@@ -4,6 +4,7 @@ import HomeView from './features/home/HomeView'
 import LoginView from './features/login/LoginView'
 import RegisterView from './features/register/RegisterView'
 import { buildEv12Preview, formatReply, initialConfigForm } from './features/home/ev12'
+import { fetchWithFallback } from './lib/apiClient'
 import { authReducer, initialAuthState, loadPersistedAuth, persistAuth } from './store/authStore'
 import './App.css'
 
@@ -51,7 +52,8 @@ const replyText = (reply) => String(reply?.message || reply?.text || reply?.body
 export default function App() {
   const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
   const [activeView, setActiveView] = useState(auth.isAuthenticated ? 'home' : 'login')
-  const [authStatus, setAuthStatus] = useState(auth.isAuthenticated ? 'Authenticated session restored.' : 'Not logged in.')
+  const [authStatus, setAuthStatus] = useState(auth.isAuthenticated ? 'Authenticated session restored.' : 'Enter your credentials to sign in.')
+  const [authLoading, setAuthLoading] = useState(false)
 
   const [registerForm, setRegisterForm] = useState(initialRegisterForm)
   const [loginForm, setLoginForm] = useState(initialLoginForm)
@@ -102,7 +104,7 @@ export default function App() {
 
       for (const endpoint of endpoints) {
         try {
-          const response = await fetch(endpoint, { headers: commonHeaders() })
+          const { response } = await fetchWithFallback(endpoint, { headers: commonHeaders() })
           const body = await response.json().catch(() => ({}))
           if (!response.ok) throw new Error(body.error || body.message || `Unable to fetch replies from ${endpoint}`)
           data = body
@@ -163,7 +165,7 @@ export default function App() {
         managerId: registerForm.managerId ? Number(registerForm.managerId) : null
       }
 
-      const response = await fetch('/api/auth/register', {
+      const { response } = await fetchWithFallback('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -179,20 +181,41 @@ export default function App() {
   }
 
   const handleLogin = async () => {
+    const email = loginForm.email.trim()
+    const password = loginForm.password
+
+    if (!email || !password) {
+      setAuthStatus('Login validation: email and password are required.')
+      return
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setAuthStatus('Login validation: enter a valid email address.')
+      return
+    }
+
+    setAuthLoading(true)
+    setAuthStatus('Signing in...')
+
     try {
-      const response = await fetch('/api/auth/login', {
+      const { response } = await fetchWithFallback('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginForm)
+        body: JSON.stringify({ email, password })
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Login failed')
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        const loginError = data.error || data.message || 'Login failed'
+        throw new Error(response.status === 401 ? `${loginError}. Please check your email/password.` : loginError)
+      }
 
       dispatchAuth({ type: 'LOGIN_SUCCESS', payload: data })
       setAuthStatus(`Logged in as ${data.user.firstName} ${data.user.lastName} (role ${data.user.userRole}).`)
       setActiveView('home')
     } catch (error) {
       setAuthStatus(`Login failed: ${error.message}`)
+    } finally {
+      setAuthLoading(false)
     }
   }
 
@@ -213,7 +236,7 @@ export default function App() {
 
     setLoading(true)
     try {
-      const response = await fetch('/api/messages/send', {
+      const { response } = await fetchWithFallback('/api/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...commonHeaders() },
         body: JSON.stringify({ to, message: body })
@@ -255,7 +278,7 @@ export default function App() {
 
     setLoading(true)
     try {
-      const response = await fetch('/api/messages/send', {
+      const { response } = await fetchWithFallback('/api/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...commonHeaders() },
         body: JSON.stringify({ to: targetPhone, message: 'Loc' })
@@ -332,7 +355,7 @@ export default function App() {
       for (const endpoint of endpoints) {
         try {
           const body = endpoint === '/api/messages/send' ? { to, message: command } : payload
-          const response = await fetch(endpoint, {
+          const { response } = await fetchWithFallback(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...commonHeaders() },
             body: JSON.stringify(body)
@@ -373,6 +396,8 @@ export default function App() {
           onLogin={handleLogin}
           session={auth.isAuthenticated ? auth : null}
           onGoRegister={() => setActiveView('register')}
+          authStatus={authStatus}
+          authLoading={authLoading}
         />
       )}
 
