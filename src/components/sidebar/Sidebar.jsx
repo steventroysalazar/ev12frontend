@@ -1,22 +1,24 @@
+import AppIcon from '../icons/AppIcon'
 import './sidebar.css'
 
 const sidebarItems = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'users', label: 'Users' },
-  { id: 'locations', label: 'Locations' },
-  { id: 'devices', label: 'Devices' },
+  { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { id: 'users', label: 'Users', icon: 'users' },
+  { id: 'locations', label: 'Location', icon: 'location' },
+  { id: 'devices', label: 'Devices', icon: 'devices' },
   {
     id: 'settings',
     label: 'Settings',
+    icon: 'settings',
     children: [
       { id: 'settings-basic', label: 'Basic Configuration' },
       { id: 'settings-alarm', label: 'Alarm Settings' }
     ]
   },
-  { id: 'location', label: 'Location' },
-  { id: 'commands', label: 'Commands' },
-  { id: 'replies', label: 'Replies' },
-  { id: 'webhooks', label: 'Webhook Events' }
+  { id: 'location', label: 'Location Request', icon: 'location' },
+  { id: 'commands', label: 'Commands', icon: 'command' },
+  { id: 'replies', label: 'Replies', icon: 'replies' },
+  { id: 'webhooks', label: 'Webhook Events', icon: 'refresh' }
 ]
 
 export default function Sidebar({ activeSection, onChangeSection, onLogout }) {
@@ -35,7 +37,8 @@ export default function Sidebar({ activeSection, onChangeSection, onLogout }) {
                 onChangeSection(item.id === 'settings' ? 'settings-basic' : item.id)
               }}
             >
-              {item.label}
+              <AppIcon name={item.icon} className="nav-icon" />
+              <span>{item.label}</span>
             </a>
 
             {item.children ? (
@@ -59,7 +62,10 @@ export default function Sidebar({ activeSection, onChangeSection, onLogout }) {
           </li>
         ))}
       </ul>
-      <button className="logout-link" type="button" onClick={onLogout}>Logout</button>
+      <button className="logout-link" type="button" onClick={onLogout}>
+        <AppIcon name="logout" className="nav-icon" />
+        <span>Logout</span>
+      </button>
     </aside>
   )
 }

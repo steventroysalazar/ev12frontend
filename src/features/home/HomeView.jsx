@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
+import AppIcon from '../../components/icons/AppIcon'
 import { fetchJsonWithFallback, fetchWithFallback } from '../../lib/apiClient'
 import './home.css'
 
@@ -49,6 +50,7 @@ export default function HomeView({
   locationResult,
   status,
   formattedReplies,
+  replies,
   repliesCount,
   authToken
 }) {
@@ -58,6 +60,10 @@ export default function HomeView({
   const [showUserModal, setShowUserModal] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showDeviceModal, setShowDeviceModal] = useState(false)
+  const [showEditUserModal, setShowEditUserModal] = useState(false)
+  const [showEditLocationModal, setShowEditLocationModal] = useState(false)
+  const [editingUserId, setEditingUserId] = useState(null)
+  const [editingLocationId, setEditingLocationId] = useState(null)
 
   const [users, setUsers] = useState([])
   const [locations, setLocations] = useState([])
@@ -76,10 +82,10 @@ export default function HomeView({
 
   const metrics = useMemo(
     () => [
-      { label: 'TOTAL USERS', value: users.length },
-      { label: 'TOTAL DEVICES', value: devices.length },
-      { label: 'TOTAL LOCATIONS', value: locations.length },
-      { label: 'RECENT REPLIES', value: repliesCount || 0 }
+      { label: 'TOTAL USERS', value: users.length, icon: 'users' },
+      { label: 'TOTAL DEVICES', value: devices.length, icon: 'devices' },
+      { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location' },
+      { label: 'RECENT REPLIES', value: repliesCount || 0, icon: 'replies' }
     ],
     [users.length, devices.length, locations.length, repliesCount]
   )
@@ -314,8 +320,158 @@ export default function HomeView({
     }
   }
 
+
+
+  const openEditUserModal = async (user) => {
+    await Promise.all([loadLocations(), loadUsers()])
+    setEditingUserId(user.id)
+    setUserForm({
+      email: user.email || '',
+      password: '',
+      firstName: user.firstName || user.first_name || '',
+      lastName: user.lastName || user.last_name || '',
+      contactNumber: user.contactNumber || user.contact_number || '',
+      address: user.address || '',
+      userRole: Number(user.userRole || user.role || user.user_role || 3),
+      locationId: user.locationId || user.location_id || user.location?.id || '',
+      managerId: user.managerId || user.manager_id || user.manager?.id || ''
+    })
+    setShowEditUserModal(true)
+  }
+
+  const openEditLocationModal = (location) => {
+    setEditingLocationId(location.id)
+    setLocationForm({
+      name: location.name || '',
+      details: location.details || ''
+    })
+    setShowEditLocationModal(true)
+  }
+
+  const handleUpdateUser = async () => {
+    try {
+      if (!editingUserId) throw new Error('User id is missing')
+      if (!userForm.email.trim()) throw new Error('Email is required')
+
+      const payload = {
+        ...userForm,
+        userRole: Number(userForm.userRole),
+        locationId: userForm.locationId ? Number(userForm.locationId) : null,
+        managerId: userForm.managerId ? Number(userForm.managerId) : null
+      }
+
+      try {
+        await fetchJson(`/api/users/${editingUserId}`, { method: 'PUT', body: JSON.stringify(payload) })
+      } catch {
+        await fetchJson(`/api/users/${editingUserId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+      }
+
+      setActionStatus({ type: 'success', message: 'User updated successfully.' })
+      setShowEditUserModal(false)
+      setEditingUserId(null)
+      setUserForm(initialUserForm)
+      await loadUsers()
+    } catch (error) {
+      setActionStatus({ type: 'error', message: `Update user failed: ${error.message}` })
+    }
+  }
+
+  const handleUpdateLocation = async () => {
+    try {
+      if (!editingLocationId) throw new Error('Location id is missing')
+      if (!locationForm.name.trim()) throw new Error('Location name is required')
+
+      const payload = { name: locationForm.name.trim(), details: locationForm.details.trim() }
+
+      try {
+        await fetchJson(`/api/locations/${editingLocationId}`, { method: 'PUT', body: JSON.stringify(payload) })
+      } catch {
+        await fetchJson(`/api/locations/${editingLocationId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+      }
+
+      setActionStatus({ type: 'success', message: 'Location updated successfully.' })
+      setShowEditLocationModal(false)
+      setEditingLocationId(null)
+      setLocationForm(initialLocationForm)
+      await loadLocations()
+    } catch (error) {
+      setActionStatus({ type: 'error', message: `Update location failed: ${error.message}` })
+    }
+  }
+
   const managers = users.filter((user) => Number(user.userRole) === 2)
 
+  const roleLabel = (value) => {
+    const normalized = String(value || '').trim().toUpperCase()
+    if (normalized === 'SUPER_ADMIN' || normalized === 'SUPER ADMIN') return 'Super Admin'
+    if (normalized === 'MANAGER') return 'Manager'
+    if (normalized === 'USER') return 'User'
+
+    const role = Number(value)
+    if (role === 1) return 'Super Admin'
+    if (role === 2) return 'Manager'
+    if (role === 3) return 'User'
+    return value || '-'
+  }
+
+  const resolveDeviceMeta = (device) => {
+    const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
+    const userById = ownerId ? users.find((user) => Number(user.id) === ownerId) : null
+    const owner = device.owner || device.user || device.app_user || userById || null
+
+    const ownerName =
+      device.ownerName ||
+      device.owner_name ||
+      owner?.fullName ||
+      `${owner?.firstName || owner?.first_name || ''} ${owner?.lastName || owner?.last_name || ''}`.trim() ||
+      owner?.name ||
+      owner?.email ||
+      '-'
+
+    const ownerRoleRaw = device.ownerRole || device.owner_role || owner?.userRole || owner?.role || owner?.user_role
+
+    const locationIdRaw =
+      device.locationId ||
+      device.location_id ||
+      owner?.locationId ||
+      owner?.location_id ||
+      owner?.location?.id ||
+      null
+
+    const locationId = Number(locationIdRaw)
+    const locationById = Number.isFinite(locationId) && locationId > 0
+      ? locations.find((loc) => Number(loc.id) === locationId)
+      : null
+
+    const ownerLocation =
+      locationById?.name ||
+      device.locationName ||
+      device.location_name ||
+      owner?.locationName ||
+      owner?.location?.name ||
+      owner?.address ||
+      '-'
+
+    return {
+      ownerName,
+      ownerRole: roleLabel(ownerRoleRaw),
+      ownerLocation
+    }
+  }
+
+  const replyRows = useMemo(
+    () =>
+      (Array.isArray(replies) ? replies : []).map((item, index) => {
+        const dateValue = Number(item?.date || item?.receivedAt || item?.timestamp || 0)
+        return {
+          key: item?.id || item?._id || `${dateValue || 'row'}-${item?.from || item?.phone || index}`,
+          receivedAt: dateValue ? new Date(dateValue).toLocaleString() : 'Unknown time',
+          from: item?.from || item?.phone || '-',
+          message: String(item?.message || item?.text || item?.body || '-').trim() || '-'
+        }
+      }),
+    [replies]
+  )
 
   const renderRaw = (value) => (typeof value === 'string' ? value : JSON.stringify(value, null, 2))
 
@@ -362,7 +518,7 @@ export default function HomeView({
             <section className="metric-grid">
               {metrics.map((metric) => (
                 <article key={metric.label} className="metric-card">
-                  <div className="metric-icon" />
+                  <div className="metric-icon"><AppIcon name={metric.icon} className="card-icon" /></div>
                   <div>
                     <p>{metric.label}</p>
                     <h3>{Number(metric.value || 0)}</h3>
@@ -385,9 +541,9 @@ export default function HomeView({
               </article>
 
               <aside className="action-stack card-like">
-                <button disabled={loading} onClick={sendConfig}>Send Command</button>
-                <button disabled={loading} onClick={sendMessage}>Request Location</button>
-                <button disabled={loading} onClick={fetchReplies}>Fetch Replies</button>
+                <button disabled={loading} onClick={sendConfig}><AppIcon name="command" className="btn-icon" />Send Command</button>
+                <button disabled={loading} onClick={sendMessage}><AppIcon name="location" className="btn-icon" />Request Location</button>
+                <button disabled={loading} onClick={fetchReplies}><AppIcon name="replies" className="btn-icon" />Fetch Replies</button>
               </aside>
             </section>
           </>
@@ -397,10 +553,11 @@ export default function HomeView({
           <section className="card-like section-panel">
             <div className="section-head">
               <h2 className="section-title">Users</h2>
-              <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}>+ Create User</button>
+              <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
             </div>
-            <table className="data-table">
-              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th></tr></thead>
+            <div className="table-shell">
+              <table className="data-table">
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th><th>Action</th></tr></thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.id || u.email}>
@@ -410,10 +567,12 @@ export default function HomeView({
                     <td>{u.contactNumber || '-'}</td>
                     <td>{u.locationName || u.location?.name || '-'}</td>
                     <td>{u.managerName || u.manager?.firstName || '-'}</td>
+                    <td><button className="table-link" type="button" onClick={() => openEditUserModal(u)}>Edit User</button></td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </section>
         )}
 
@@ -421,10 +580,11 @@ export default function HomeView({
           <section className="card-like section-panel">
             <div className="section-head">
               <h2 className="section-title">Locations</h2>
-              <button className="mini-action" onClick={() => setShowLocationModal(true)}>+ Create Location</button>
+              <button className="mini-action" onClick={() => setShowLocationModal(true)}><AppIcon name="plus" className="btn-icon" />Create Location</button>
             </div>
-            <table className="data-table">
-              <thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th></tr></thead>
+            <div className="table-shell">
+              <table className="data-table">
+              <thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th><th>Action</th></tr></thead>
               <tbody>
                 {locations.map((l) => (
                   <tr key={l.id || l.name}>
@@ -432,10 +592,12 @@ export default function HomeView({
                     <td>{l.details || '-'}</td>
                     <td>{l.userCount || l.users?.length || 0}</td>
                     <td>{l.deviceCount || l.devices?.length || 0}</td>
+                    <td><button className="table-link" type="button" onClick={() => openEditLocationModal(l)}>Edit Location</button></td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </section>
         )}
 
@@ -443,23 +605,28 @@ export default function HomeView({
           <section className="card-like section-panel">
             <div className="section-head">
               <h2 className="section-title">Devices</h2>
-              <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}>+ Add Device</button>
+              <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}><AppIcon name="plus" className="btn-icon" />Add Device</button>
             </div>
-            <table className="data-table">
+            <div className="table-shell">
+              <table className="data-table">
               <thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
               <tbody>
-                {devices.map((d) => (
-                  <tr key={d.id || d.phoneNumber || d.name}>
-                    <td>{d.name || d.deviceName || '-'}</td>
-                    <td>{d.phoneNumber || '-'}</td>
-                    <td>{d.ownerName || d.owner?.firstName || '-'}</td>
-                    <td>{d.ownerRole || d.owner?.userRole || '-'}</td>
-                    <td>{d.locationName || d.owner?.location?.name || '-'}</td>
-                    <td><button className="table-link" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
-                  </tr>
-                ))}
+                {devices.map((d) => {
+                  const deviceMeta = resolveDeviceMeta(d)
+                  return (
+                    <tr key={d.id || d.phoneNumber || d.name}>
+                      <td>{d.name || d.deviceName || '-'}</td>
+                      <td>{d.phoneNumber || '-'}</td>
+                      <td>{deviceMeta.ownerName}</td>
+                      <td>{deviceMeta.ownerRole}</td>
+                      <td>{deviceMeta.ownerLocation}</td>
+                      <td><button className="table-link" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
+                    </tr>
+                  )
+                })}
               </tbody>
-            </table>
+              </table>
+            </div>
           </section>
         )}
 
@@ -536,7 +703,30 @@ export default function HomeView({
               </button>
             </div>
             <p className="status">{autoFetchReplies ? 'Auto refresh is running every 5 seconds.' : 'Auto refresh is off.'}</p>
-            <pre className="replies conversation-box">{formattedReplies}</pre>
+            <div className="table-shell replies-shell">
+              <table className="data-table replies-table">
+                <thead>
+                  <tr><th>Received At</th><th>From</th><th>Message</th></tr>
+                </thead>
+                <tbody>
+                  {replyRows.length ? replyRows.map((row) => (
+                    <tr key={row.key}>
+                      <td>{row.receivedAt}</td>
+                      <td>{row.from}</td>
+                      <td className="reply-message">{row.message}</td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={3} className="reply-empty">No replies loaded yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <details className="reply-raw-wrap">
+              <summary>Raw Reply Log</summary>
+              <pre className="replies conversation-box">{formattedReplies}</pre>
+            </details>
           </section>
         )}
 
@@ -611,6 +801,40 @@ export default function HomeView({
               <textarea rows={3} placeholder="Details" value={locationForm.details} onChange={(event) => setLocationForm((prev) => ({ ...prev, details: event.target.value }))} />
             </div>
             <button className="mini-action" onClick={handleCreateLocation}>Create</button>
+          </div>
+        </div>
+      ) : null}
+
+
+
+      {showEditUserModal ? (
+        <div className="overlay" onClick={() => { setShowEditUserModal(false); setEditingUserId(null); setUserForm(initialUserForm) }}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Edit User</h3>
+            <div className="field-grid two-col">
+              <input placeholder="First Name" value={userForm.firstName} onChange={(event) => setUserForm((prev) => ({ ...prev, firstName: event.target.value }))} />
+              <input placeholder="Last Name" value={userForm.lastName} onChange={(event) => setUserForm((prev) => ({ ...prev, lastName: event.target.value }))} />
+              <input placeholder="Email" value={userForm.email} onChange={(event) => setUserForm((prev) => ({ ...prev, email: event.target.value }))} />
+              <input placeholder="Contact Number" value={userForm.contactNumber} onChange={(event) => setUserForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
+              <input placeholder="Address" value={userForm.address} onChange={(event) => setUserForm((prev) => ({ ...prev, address: event.target.value }))} />
+              <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>User</option><option value={2}>Manager</option><option value={1}>Super Admin</option></select>
+              <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+              <select value={userForm.managerId} onChange={(event) => setUserForm((prev) => ({ ...prev, managerId: event.target.value }))}><option value="">Manager (Optional)</option>{managers.map((manager) => <option key={manager.id || manager.email} value={manager.id || ''}>{`${manager.firstName || ''} ${manager.lastName || ''}`.trim() || manager.email}</option>)}</select>
+            </div>
+            <button className="mini-action" onClick={handleUpdateUser}>Save User</button>
+          </div>
+        </div>
+      ) : null}
+
+      {showEditLocationModal ? (
+        <div className="overlay" onClick={() => { setShowEditLocationModal(false); setEditingLocationId(null); setLocationForm(initialLocationForm) }}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Edit Location</h3>
+            <div className="field-grid">
+              <input placeholder="Location Name" value={locationForm.name} onChange={(event) => setLocationForm((prev) => ({ ...prev, name: event.target.value }))} />
+              <textarea rows={3} placeholder="Details" value={locationForm.details} onChange={(event) => setLocationForm((prev) => ({ ...prev, details: event.target.value }))} />
+            </div>
+            <button className="mini-action" onClick={handleUpdateLocation}>Save Location</button>
           </div>
         </div>
       ) : null}
