@@ -60,6 +60,10 @@ export default function HomeView({
   const [showUserModal, setShowUserModal] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showDeviceModal, setShowDeviceModal] = useState(false)
+  const [showEditUserModal, setShowEditUserModal] = useState(false)
+  const [showEditLocationModal, setShowEditLocationModal] = useState(false)
+  const [editingUserId, setEditingUserId] = useState(null)
+  const [editingLocationId, setEditingLocationId] = useState(null)
 
   const [users, setUsers] = useState([])
   const [locations, setLocations] = useState([])
@@ -316,6 +320,85 @@ export default function HomeView({
     }
   }
 
+
+
+  const openEditUserModal = async (user) => {
+    await Promise.all([loadLocations(), loadUsers()])
+    setEditingUserId(user.id)
+    setUserForm({
+      email: user.email || '',
+      password: '',
+      firstName: user.firstName || user.first_name || '',
+      lastName: user.lastName || user.last_name || '',
+      contactNumber: user.contactNumber || user.contact_number || '',
+      address: user.address || '',
+      userRole: Number(user.userRole || user.role || user.user_role || 3),
+      locationId: user.locationId || user.location_id || user.location?.id || '',
+      managerId: user.managerId || user.manager_id || user.manager?.id || ''
+    })
+    setShowEditUserModal(true)
+  }
+
+  const openEditLocationModal = (location) => {
+    setEditingLocationId(location.id)
+    setLocationForm({
+      name: location.name || '',
+      details: location.details || ''
+    })
+    setShowEditLocationModal(true)
+  }
+
+  const handleUpdateUser = async () => {
+    try {
+      if (!editingUserId) throw new Error('User id is missing')
+      if (!userForm.email.trim()) throw new Error('Email is required')
+
+      const payload = {
+        ...userForm,
+        userRole: Number(userForm.userRole),
+        locationId: userForm.locationId ? Number(userForm.locationId) : null,
+        managerId: userForm.managerId ? Number(userForm.managerId) : null
+      }
+
+      try {
+        await fetchJson(`/api/users/${editingUserId}`, { method: 'PUT', body: JSON.stringify(payload) })
+      } catch {
+        await fetchJson(`/api/users/${editingUserId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+      }
+
+      setActionStatus({ type: 'success', message: 'User updated successfully.' })
+      setShowEditUserModal(false)
+      setEditingUserId(null)
+      setUserForm(initialUserForm)
+      await loadUsers()
+    } catch (error) {
+      setActionStatus({ type: 'error', message: `Update user failed: ${error.message}` })
+    }
+  }
+
+  const handleUpdateLocation = async () => {
+    try {
+      if (!editingLocationId) throw new Error('Location id is missing')
+      if (!locationForm.name.trim()) throw new Error('Location name is required')
+
+      const payload = { name: locationForm.name.trim(), details: locationForm.details.trim() }
+
+      try {
+        await fetchJson(`/api/locations/${editingLocationId}`, { method: 'PUT', body: JSON.stringify(payload) })
+      } catch {
+        await fetchJson(`/api/locations/${editingLocationId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+      }
+
+      setActionStatus({ type: 'success', message: 'Location updated successfully.' })
+      setShowEditLocationModal(false)
+      setEditingLocationId(null)
+      setLocationForm(initialLocationForm)
+      await loadLocations()
+    } catch (error) {
+      setActionStatus({ type: 'error', message: `Update location failed: ${error.message}` })
+    }
+  }
+
   const managers = users.filter((user) => Number(user.userRole) === 2)
 
   const roleLabel = (value) => {
@@ -474,7 +557,7 @@ export default function HomeView({
             </div>
             <div className="table-shell">
               <table className="data-table">
-              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th></tr></thead>
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th><th>Action</th></tr></thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.id || u.email}>
@@ -484,6 +567,7 @@ export default function HomeView({
                     <td>{u.contactNumber || '-'}</td>
                     <td>{u.locationName || u.location?.name || '-'}</td>
                     <td>{u.managerName || u.manager?.firstName || '-'}</td>
+                    <td><button className="table-link" type="button" onClick={() => openEditUserModal(u)}>Edit User</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -500,7 +584,7 @@ export default function HomeView({
             </div>
             <div className="table-shell">
               <table className="data-table">
-              <thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th></tr></thead>
+              <thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th><th>Action</th></tr></thead>
               <tbody>
                 {locations.map((l) => (
                   <tr key={l.id || l.name}>
@@ -508,6 +592,7 @@ export default function HomeView({
                     <td>{l.details || '-'}</td>
                     <td>{l.userCount || l.users?.length || 0}</td>
                     <td>{l.deviceCount || l.devices?.length || 0}</td>
+                    <td><button className="table-link" type="button" onClick={() => openEditLocationModal(l)}>Edit Location</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -716,6 +801,40 @@ export default function HomeView({
               <textarea rows={3} placeholder="Details" value={locationForm.details} onChange={(event) => setLocationForm((prev) => ({ ...prev, details: event.target.value }))} />
             </div>
             <button className="mini-action" onClick={handleCreateLocation}>Create</button>
+          </div>
+        </div>
+      ) : null}
+
+
+
+      {showEditUserModal ? (
+        <div className="overlay" onClick={() => { setShowEditUserModal(false); setEditingUserId(null); setUserForm(initialUserForm) }}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Edit User</h3>
+            <div className="field-grid two-col">
+              <input placeholder="First Name" value={userForm.firstName} onChange={(event) => setUserForm((prev) => ({ ...prev, firstName: event.target.value }))} />
+              <input placeholder="Last Name" value={userForm.lastName} onChange={(event) => setUserForm((prev) => ({ ...prev, lastName: event.target.value }))} />
+              <input placeholder="Email" value={userForm.email} onChange={(event) => setUserForm((prev) => ({ ...prev, email: event.target.value }))} />
+              <input placeholder="Contact Number" value={userForm.contactNumber} onChange={(event) => setUserForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
+              <input placeholder="Address" value={userForm.address} onChange={(event) => setUserForm((prev) => ({ ...prev, address: event.target.value }))} />
+              <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>User</option><option value={2}>Manager</option><option value={1}>Super Admin</option></select>
+              <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+              <select value={userForm.managerId} onChange={(event) => setUserForm((prev) => ({ ...prev, managerId: event.target.value }))}><option value="">Manager (Optional)</option>{managers.map((manager) => <option key={manager.id || manager.email} value={manager.id || ''}>{`${manager.firstName || ''} ${manager.lastName || ''}`.trim() || manager.email}</option>)}</select>
+            </div>
+            <button className="mini-action" onClick={handleUpdateUser}>Save User</button>
+          </div>
+        </div>
+      ) : null}
+
+      {showEditLocationModal ? (
+        <div className="overlay" onClick={() => { setShowEditLocationModal(false); setEditingLocationId(null); setLocationForm(initialLocationForm) }}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Edit Location</h3>
+            <div className="field-grid">
+              <input placeholder="Location Name" value={locationForm.name} onChange={(event) => setLocationForm((prev) => ({ ...prev, name: event.target.value }))} />
+              <textarea rows={3} placeholder="Details" value={locationForm.details} onChange={(event) => setLocationForm((prev) => ({ ...prev, details: event.target.value }))} />
+            </div>
+            <button className="mini-action" onClick={handleUpdateLocation}>Save Location</button>
           </div>
         </div>
       ) : null}
