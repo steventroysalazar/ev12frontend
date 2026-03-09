@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
-import Navbar from './components/navbar/Navbar'
 import HomeView from './features/home/HomeView'
 import LoginView from './features/login/LoginView'
 import RegisterView from './features/register/RegisterView'
@@ -387,8 +386,6 @@ export default function App() {
 
   return (
     <main className="container">
-      {activeView === 'home' ? <Navbar user={auth.user} /> : null}
-
       {activeView === 'login' && (
         <LoginView
           loginForm={loginForm}
