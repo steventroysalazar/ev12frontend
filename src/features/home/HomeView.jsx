@@ -16,7 +16,7 @@ const initialLocationForm = { name: '', details: '' }
 const initialUserForm = { email: '', password: '', firstName: '', lastName: '', contactNumber: '', address: '', userRole: 3, locationId: '', managerId: '' }
 const initialDeviceForm = { name: '', phoneNumber: '', ownerUserId: '', locationId: '' }
 
-export default function HomeView({
+function HomeView({
   onLogout,
   gatewayBaseUrl,
   gatewayToken,
@@ -420,3 +420,5 @@ export default function HomeView({ onLogout, loading, fetchReplies, requestLocat
     </div>
   )
 }
+
+export default HomeView
