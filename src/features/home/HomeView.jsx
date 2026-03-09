@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
+import AppIcon from '../../components/icons/AppIcon'
 import { fetchJsonWithFallback, fetchWithFallback } from '../../lib/apiClient'
 import './home.css'
 
@@ -49,6 +50,7 @@ export default function HomeView({
   locationResult,
   status,
   formattedReplies,
+  replies,
   repliesCount,
   authToken
 }) {
@@ -76,10 +78,10 @@ export default function HomeView({
 
   const metrics = useMemo(
     () => [
-      { label: 'TOTAL USERS', value: users.length },
-      { label: 'TOTAL DEVICES', value: devices.length },
-      { label: 'TOTAL LOCATIONS', value: locations.length },
-      { label: 'RECENT REPLIES', value: repliesCount || 0 }
+      { label: 'TOTAL USERS', value: users.length, icon: 'users' },
+      { label: 'TOTAL DEVICES', value: devices.length, icon: 'devices' },
+      { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location' },
+      { label: 'RECENT REPLIES', value: repliesCount || 0, icon: 'replies' }
     ],
     [users.length, devices.length, locations.length, repliesCount]
   )
@@ -316,6 +318,57 @@ export default function HomeView({
 
   const managers = users.filter((user) => Number(user.userRole) === 2)
 
+  const roleLabel = (value) => {
+    const role = Number(value)
+    if (role === 1) return 'Super Admin'
+    if (role === 2) return 'Manager'
+    if (role === 3) return 'User'
+    return value || '-'
+  }
+
+  const resolveDeviceMeta = (device) => {
+    const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
+    const userById = ownerId ? users.find((user) => Number(user.id) === ownerId) : null
+    const owner = device.owner || device.user || device.app_user || userById || null
+
+    const ownerName =
+      device.ownerName ||
+      device.owner_name ||
+      owner?.fullName ||
+      `${owner?.firstName || owner?.first_name || ''} ${owner?.lastName || owner?.last_name || ''}`.trim() ||
+      owner?.name ||
+      owner?.email ||
+      '-'
+
+    const ownerRoleRaw = device.ownerRole || device.owner_role || owner?.userRole || owner?.role || owner?.user_role
+    const ownerLocation =
+      device.locationName ||
+      device.location_name ||
+      owner?.locationName ||
+      owner?.location?.name ||
+      owner?.address ||
+      '-'
+
+    return {
+      ownerName,
+      ownerRole: roleLabel(ownerRoleRaw),
+      ownerLocation
+    }
+  }
+
+  const replyRows = useMemo(
+    () =>
+      (Array.isArray(replies) ? replies : []).map((item, index) => {
+        const dateValue = Number(item?.date || item?.receivedAt || item?.timestamp || 0)
+        return {
+          key: item?.id || item?._id || `${dateValue || 'row'}-${item?.from || item?.phone || index}`,
+          receivedAt: dateValue ? new Date(dateValue).toLocaleString() : 'Unknown time',
+          from: item?.from || item?.phone || '-',
+          message: String(item?.message || item?.text || item?.body || '-').trim() || '-'
+        }
+      }),
+    [replies]
+  )
 
   const renderRaw = (value) => (typeof value === 'string' ? value : JSON.stringify(value, null, 2))
 
@@ -362,7 +415,7 @@ export default function HomeView({
             <section className="metric-grid">
               {metrics.map((metric) => (
                 <article key={metric.label} className="metric-card">
-                  <div className="metric-icon" />
+                  <div className="metric-icon"><AppIcon name={metric.icon} className="card-icon" /></div>
                   <div>
                     <p>{metric.label}</p>
                     <h3>{Number(metric.value || 0)}</h3>
@@ -385,9 +438,9 @@ export default function HomeView({
               </article>
 
               <aside className="action-stack card-like">
-                <button disabled={loading} onClick={sendConfig}>Send Command</button>
-                <button disabled={loading} onClick={sendMessage}>Request Location</button>
-                <button disabled={loading} onClick={fetchReplies}>Fetch Replies</button>
+                <button disabled={loading} onClick={sendConfig}><AppIcon name="command" className="btn-icon" />Send Command</button>
+                <button disabled={loading} onClick={sendMessage}><AppIcon name="location" className="btn-icon" />Request Location</button>
+                <button disabled={loading} onClick={fetchReplies}><AppIcon name="replies" className="btn-icon" />Fetch Replies</button>
               </aside>
             </section>
           </>
@@ -397,9 +450,10 @@ export default function HomeView({
           <section className="card-like section-panel">
             <div className="section-head">
               <h2 className="section-title">Users</h2>
-              <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}>+ Create User</button>
+              <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
             </div>
-            <table className="data-table">
+            <div className="table-shell">
+              <table className="data-table">
               <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th></tr></thead>
               <tbody>
                 {users.map((u) => (
@@ -413,7 +467,8 @@ export default function HomeView({
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </section>
         )}
 
@@ -421,9 +476,10 @@ export default function HomeView({
           <section className="card-like section-panel">
             <div className="section-head">
               <h2 className="section-title">Locations</h2>
-              <button className="mini-action" onClick={() => setShowLocationModal(true)}>+ Create Location</button>
+              <button className="mini-action" onClick={() => setShowLocationModal(true)}><AppIcon name="plus" className="btn-icon" />Create Location</button>
             </div>
-            <table className="data-table">
+            <div className="table-shell">
+              <table className="data-table">
               <thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th></tr></thead>
               <tbody>
                 {locations.map((l) => (
@@ -435,7 +491,8 @@ export default function HomeView({
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </section>
         )}
 
@@ -443,23 +500,28 @@ export default function HomeView({
           <section className="card-like section-panel">
             <div className="section-head">
               <h2 className="section-title">Devices</h2>
-              <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}>+ Add Device</button>
+              <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}><AppIcon name="plus" className="btn-icon" />Add Device</button>
             </div>
-            <table className="data-table">
+            <div className="table-shell">
+              <table className="data-table">
               <thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
               <tbody>
-                {devices.map((d) => (
-                  <tr key={d.id || d.phoneNumber || d.name}>
-                    <td>{d.name || d.deviceName || '-'}</td>
-                    <td>{d.phoneNumber || '-'}</td>
-                    <td>{d.ownerName || d.owner?.firstName || '-'}</td>
-                    <td>{d.ownerRole || d.owner?.userRole || '-'}</td>
-                    <td>{d.locationName || d.owner?.location?.name || '-'}</td>
-                    <td><button className="table-link" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
-                  </tr>
-                ))}
+                {devices.map((d) => {
+                  const deviceMeta = resolveDeviceMeta(d)
+                  return (
+                    <tr key={d.id || d.phoneNumber || d.name}>
+                      <td>{d.name || d.deviceName || '-'}</td>
+                      <td>{d.phoneNumber || '-'}</td>
+                      <td>{deviceMeta.ownerName}</td>
+                      <td>{deviceMeta.ownerRole}</td>
+                      <td>{deviceMeta.ownerLocation}</td>
+                      <td><button className="table-link" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
+                    </tr>
+                  )
+                })}
               </tbody>
-            </table>
+              </table>
+            </div>
           </section>
         )}
 
@@ -536,7 +598,30 @@ export default function HomeView({
               </button>
             </div>
             <p className="status">{autoFetchReplies ? 'Auto refresh is running every 5 seconds.' : 'Auto refresh is off.'}</p>
-            <pre className="replies conversation-box">{formattedReplies}</pre>
+            <div className="table-shell replies-shell">
+              <table className="data-table replies-table">
+                <thead>
+                  <tr><th>Received At</th><th>From</th><th>Message</th></tr>
+                </thead>
+                <tbody>
+                  {replyRows.length ? replyRows.map((row) => (
+                    <tr key={row.key}>
+                      <td>{row.receivedAt}</td>
+                      <td>{row.from}</td>
+                      <td className="reply-message">{row.message}</td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={3} className="reply-empty">No replies loaded yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <details className="reply-raw-wrap">
+              <summary>Raw Reply Log</summary>
+              <pre className="replies conversation-box">{formattedReplies}</pre>
+            </details>
           </section>
         )}
 
