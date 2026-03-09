@@ -319,6 +319,11 @@ export default function HomeView({
   const managers = users.filter((user) => Number(user.userRole) === 2)
 
   const roleLabel = (value) => {
+    const normalized = String(value || '').trim().toUpperCase()
+    if (normalized === 'SUPER_ADMIN' || normalized === 'SUPER ADMIN') return 'Super Admin'
+    if (normalized === 'MANAGER') return 'Manager'
+    if (normalized === 'USER') return 'User'
+
     const role = Number(value)
     if (role === 1) return 'Super Admin'
     if (role === 2) return 'Manager'
@@ -341,7 +346,22 @@ export default function HomeView({
       '-'
 
     const ownerRoleRaw = device.ownerRole || device.owner_role || owner?.userRole || owner?.role || owner?.user_role
+
+    const locationIdRaw =
+      device.locationId ||
+      device.location_id ||
+      owner?.locationId ||
+      owner?.location_id ||
+      owner?.location?.id ||
+      null
+
+    const locationId = Number(locationIdRaw)
+    const locationById = Number.isFinite(locationId) && locationId > 0
+      ? locations.find((loc) => Number(loc.id) === locationId)
+      : null
+
     const ownerLocation =
+      locationById?.name ||
       device.locationName ||
       device.location_name ||
       owner?.locationName ||
