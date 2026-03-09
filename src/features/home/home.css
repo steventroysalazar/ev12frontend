@@ -194,3 +194,35 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .webhook-event { border-left: 4px solid #3b82f6; background: #f8fafc; border-radius: 10px; padding: 0.8rem; }
 .webhook-time { margin: 0 0 0.5rem; }
 .webhook-event h4 { margin: 0 0 0.45rem; }
+
+
+.replies-shell {
+  max-height: 520px;
+  overflow: auto;
+}
+
+.replies-table th,
+.replies-table td {
+  vertical-align: top;
+}
+
+.reply-message {
+  white-space: pre-wrap;
+  line-height: 1.35;
+  color: #1f3354;
+}
+
+.reply-empty {
+  text-align: center;
+  color: #7b8798;
+}
+
+.reply-raw-wrap {
+  margin-top: 0.6rem;
+}
+
+.reply-raw-wrap summary {
+  cursor: pointer;
+  color: #446186;
+  font-weight: 700;
+}
