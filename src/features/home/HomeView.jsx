@@ -400,7 +400,8 @@ export default function HomeView({
               <h2 className="section-title">Users</h2>
               <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
             </div>
-            <table className="data-table">
+            <div className="table-shell">
+              <table className="data-table">
               <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th></tr></thead>
               <tbody>
                 {users.map((u) => (
@@ -414,7 +415,8 @@ export default function HomeView({
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </section>
         )}
 
@@ -424,7 +426,8 @@ export default function HomeView({
               <h2 className="section-title">Locations</h2>
               <button className="mini-action" onClick={() => setShowLocationModal(true)}><AppIcon name="plus" className="btn-icon" />Create Location</button>
             </div>
-            <table className="data-table">
+            <div className="table-shell">
+              <table className="data-table">
               <thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th></tr></thead>
               <tbody>
                 {locations.map((l) => (
@@ -436,7 +439,8 @@ export default function HomeView({
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </section>
         )}
 
@@ -446,7 +450,8 @@ export default function HomeView({
               <h2 className="section-title">Devices</h2>
               <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}><AppIcon name="plus" className="btn-icon" />Add Device</button>
             </div>
-            <table className="data-table">
+            <div className="table-shell">
+              <table className="data-table">
               <thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
               <tbody>
                 {devices.map((d) => (
@@ -460,7 +465,8 @@ export default function HomeView({
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </section>
         )}
 
