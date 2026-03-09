@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
-import { fetchJsonWithFallback, fetchWithFallback } from '../../lib/apiClient'
+import { fetchJsonWithFallback } from '../../lib/apiClient'
 import './home.css'
 
 const deviceRows = [
@@ -13,17 +13,7 @@ const deviceRows = [
 ]
 
 const initialLocationForm = { name: '', details: '' }
-const initialUserForm = {
-  email: '',
-  password: '',
-  firstName: '',
-  lastName: '',
-  contactNumber: '',
-  address: '',
-  userRole: 3,
-  locationId: '',
-  managerId: ''
-}
+const initialUserForm = { email: '', password: '', firstName: '', lastName: '', contactNumber: '', address: '', userRole: 3, locationId: '', managerId: '' }
 const initialDeviceForm = { name: '', phoneNumber: '', ownerUserId: '', locationId: '' }
 
 const HomeView = ({
@@ -60,46 +50,25 @@ const HomeView = ({
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showDeviceModal, setShowDeviceModal] = useState(false)
 
+export default function HomeView({ onLogout, loading, fetchReplies, requestLocationUpdate, repliesCount, authToken, sendConfig, user }) {
+  const [activeSection, setActiveSection] = useState('dashboard')
   const [users, setUsers] = useState([])
   const [locations, setLocations] = useState([])
   const [devices, setDevices] = useState([])
+  const [dataStatus, setDataStatus] = useState('')
+  const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
 
+  const [showUserModal, setShowUserModal] = useState(false)
+  const [showLocationModal, setShowLocationModal] = useState(false)
+  const [showDeviceModal, setShowDeviceModal] = useState(false)
   const [locationForm, setLocationForm] = useState(initialLocationForm)
   const [userForm, setUserForm] = useState(initialUserForm)
   const [deviceForm, setDeviceForm] = useState(initialDeviceForm)
 
-  const [dataStatus, setDataStatus] = useState('')
-  const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
-  const [autoFetchReplies, setAutoFetchReplies] = useState(false)
-  const [webhookRaw, setWebhookRaw] = useState(null)
-  const [webhookStatus, setWebhookStatus] = useState('')
-  const webhookFingerprintRef = useRef('')
-
-  const metrics = useMemo(
-    () => [
-      { label: 'TOTAL USERS', value: users.length },
-      { label: 'TOTAL DEVICES', value: devices.length },
-      { label: 'TOTAL LOCATIONS', value: locations.length },
-      { label: 'RECENT REPLIES', value: repliesCount || 0 }
-    ],
-    [users.length, devices.length, locations.length, repliesCount]
-  )
-
-  const toggle = (key) => setConfigForm((prev) => ({ ...prev, [key]: !prev[key] }))
-
-  const fetchJson = useCallback(
-    async (url, options = {}) => {
-      return fetchJsonWithFallback(url, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: authToken } : {}),
-          ...(options.headers || {})
-        }
-      })
-    },
-    [authToken]
-  )
+  const fetchJson = useCallback(async (url, options = {}) => fetchJsonWithFallback(url, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: authToken } : {}), ...(options.headers || {}) }
+  }), [authToken])
 
   const loadUsers = useCallback(async () => {
     const data = await fetchJson('/api/users', { headers: {} })
@@ -118,10 +87,7 @@ const HomeView = ({
     } catch {
       const data = await fetchJson('/api/users', { headers: {} })
       const usersList = Array.isArray(data) ? data : data.users || []
-      const flattened = usersList.flatMap((user) =>
-        Array.isArray(user.devices) ? user.devices.map((device) => ({ ...device, owner: user })) : []
-      )
-      setDevices(flattened)
+      setDevices(usersList.flatMap((u) => Array.isArray(u.devices) ? u.devices.map((d) => ({ ...d, owner: u })) : []))
     }
   }, [fetchJson])
 
@@ -131,222 +97,58 @@ const HomeView = ({
         if (activeSection === 'users') await loadUsers()
         if (activeSection === 'locations') await loadLocations()
         if (activeSection === 'devices') await loadDevices()
-        if (activeSection === 'dashboard') {
-          await Promise.all([loadUsers(), loadLocations(), loadDevices()])
-        }
+        if (activeSection === 'dashboard') await Promise.all([loadUsers(), loadLocations(), loadDevices()])
         setDataStatus('')
       } catch (error) {
         setDataStatus(`Data fetch failed: ${error.message}`)
       }
     }
-
     load()
   }, [activeSection, loadUsers, loadLocations, loadDevices])
 
-  useEffect(() => {
-    if (activeSection !== 'replies' || !autoFetchReplies) return undefined
+  const metrics = useMemo(() => [
+    { label: 'TOTAL USERS', value: users.length },
+    { label: 'TOTAL DEVICES', value: devices.length },
+    { label: 'TOTAL LOCATIONS', value: locations.length },
+    { label: 'RECENT REPLIES', value: repliesCount || 0 }
+  ], [users.length, devices.length, locations.length, repliesCount])
 
-    fetchReplies()
-    const intervalId = setInterval(() => {
-      fetchReplies()
-    }, 5000)
-
-    return () => clearInterval(intervalId)
-  }, [activeSection, autoFetchReplies, fetchReplies])
-
-  const loadWebhookEvents = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setWebhookStatus('Loading webhook events...')
-
-    const endpoints = ['/api/webhooks/ev12/events', 'http://localhost:8090/api/webhooks/ev12/events']
-    let payload = null
-    let lastError = null
-
-    for (const endpoint of endpoints) {
-      try {
-        const { response } = await fetchWithFallback(endpoint, {
-          headers: {
-            ...(authToken ? { Authorization: authToken } : {})
-          }
-        })
-
-        const body = await response.json().catch(() => ([]))
-        if (!response.ok) throw new Error(body.error || body.message || `Failed ${endpoint}`)
-        payload = body
-        break
-      } catch (error) {
-        lastError = error
-      }
-    }
-
-    if (!payload) {
-      setWebhookStatus(`Webhook fetch failed: ${lastError?.message || 'Unknown error'}`)
-      setWebhookRaw(null)
-      webhookFingerprintRef.current = ''
-      return
-    }
-
-    const getEventTime = (event) => new Date(event?.receivedAt || event?.timestamp || event?.createdAt || event?.date || 0).getTime()
-
-    if (Array.isArray(payload)) {
-      const latestEvents = payload
-        .slice()
-        .sort((a, b) => getEventTime(b) - getEventTime(a))
-        .slice(0, 3)
-
-      const nextFingerprint = JSON.stringify(latestEvents)
-      const hadPrevious = webhookFingerprintRef.current !== ''
-      const hasNewEvent = hadPrevious && webhookFingerprintRef.current !== nextFingerprint
-
-      webhookFingerprintRef.current = nextFingerprint
-      setWebhookRaw(latestEvents)
-      setWebhookStatus(hasNewEvent ? 'New webhook event received. Showing latest 3 events.' : `Showing latest ${latestEvents.length} webhook event(s).`)
-      return
-    }
-
-    const nextFingerprint = JSON.stringify(payload)
-    const hadPrevious = webhookFingerprintRef.current !== ''
-    const hasNewEvent = hadPrevious && webhookFingerprintRef.current !== nextFingerprint
-
-    webhookFingerprintRef.current = nextFingerprint
-    setWebhookRaw(payload)
-    setWebhookStatus(hasNewEvent ? 'New webhook payload received.' : 'Loaded webhook payload.')
-  }, [authToken])
-
-  useEffect(() => {
-    if (activeSection === 'webhooks') {
-      loadWebhookEvents()
-    }
-  }, [activeSection, loadWebhookEvents])
-
-  useEffect(() => {
-    if (activeSection !== 'webhooks') return undefined
-
-    const intervalId = setInterval(() => {
-      loadWebhookEvents({ silent: true })
-    }, 2000)
-
-    return () => clearInterval(intervalId)
-  }, [activeSection, loadWebhookEvents])
-
-  const clearWebhookEvents = () => {
-    webhookFingerprintRef.current = ''
-    setWebhookRaw(null)
-    setWebhookStatus('Webhook events cleared.')
-  }
-
-  const openDeviceSettings = (device) => {
-    setSelectedDevice(device)
-    setConfigForm((prev) => ({
-      ...prev,
-      imei: device.imei || prev.imei,
-      prefixName: device.name || device.deviceName || prev.prefixName,
-      contactNumber: device.phoneNumber || prev.contactNumber,
-      contactName: device.ownerName || device.owner?.firstName || prev.contactName
-    }))
-    setActionStatus({ type: 'success', message: `Opened settings for ${device.name || device.deviceName || 'device'}.` })
-    setActiveSection('settings-basic')
-  }
+  const managers = users.filter((u) => Number(u.userRole) === 2)
 
   const handleCreateLocation = async () => {
     try {
       if (!locationForm.name.trim()) throw new Error('Location name is required')
-      await fetchJson('/api/locations', {
-        method: 'POST',
-        body: JSON.stringify({ name: locationForm.name.trim(), details: locationForm.details.trim() })
-      })
+      await fetchJson('/api/locations', { method: 'POST', body: JSON.stringify({ name: locationForm.name.trim(), details: locationForm.details.trim() }) })
       setActionStatus({ type: 'success', message: 'Location created successfully.' })
       setLocationForm(initialLocationForm)
       setShowLocationModal(false)
       await loadLocations()
-    } catch (error) {
-      setActionStatus({ type: 'error', message: `Create location failed: ${error.message}` })
-    }
+    } catch (error) { setActionStatus({ type: 'error', message: `Create location failed: ${error.message}` }) }
   }
 
   const handleCreateUser = async () => {
     try {
       if (!userForm.email.trim() || !userForm.password.trim()) throw new Error('Email and password are required')
-      const payload = {
-        ...userForm,
-        userRole: Number(userForm.userRole),
-        locationId: userForm.locationId ? Number(userForm.locationId) : null,
-        managerId: userForm.managerId ? Number(userForm.managerId) : null
-      }
-
-      try {
-        await fetchJson('/api/users', { method: 'POST', body: JSON.stringify(payload) })
-      } catch {
-        await fetchJson('/api/auth/register', { method: 'POST', body: JSON.stringify(payload) })
-      }
-
+      const payload = { ...userForm, userRole: Number(userForm.userRole), locationId: userForm.locationId ? Number(userForm.locationId) : null, managerId: userForm.managerId ? Number(userForm.managerId) : null }
+      await fetchJson('/api/users', { method: 'POST', body: JSON.stringify(payload) })
       setActionStatus({ type: 'success', message: 'User created successfully.' })
       setUserForm(initialUserForm)
       setShowUserModal(false)
       await loadUsers()
-    } catch (error) {
-      setActionStatus({ type: 'error', message: `Create user failed: ${error.message}` })
-    }
+    } catch (error) { setActionStatus({ type: 'error', message: `Create user failed: ${error.message}` }) }
   }
 
   const handleCreateDevice = async () => {
     try {
       if (!deviceForm.ownerUserId) throw new Error('Owner user is required')
       if (!deviceForm.name.trim() || !deviceForm.phoneNumber.trim()) throw new Error('Device name and phone number are required')
-
-      const payload = {
-        name: deviceForm.name.trim(),
-        phoneNumber: deviceForm.phoneNumber.trim(),
-        locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
-        ownerUserId: Number(deviceForm.ownerUserId)
-      }
-
-      try {
-        await fetchJson(`/api/users/${payload.ownerUserId}/devices`, { method: 'POST', body: JSON.stringify(payload) })
-      } catch {
-        await fetchJson('/api/devices', { method: 'POST', body: JSON.stringify(payload) })
-      }
-
+      const payload = { name: deviceForm.name.trim(), phoneNumber: deviceForm.phoneNumber.trim(), locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null, ownerUserId: Number(deviceForm.ownerUserId) }
+      await fetchJson('/api/devices', { method: 'POST', body: JSON.stringify(payload) })
       setActionStatus({ type: 'success', message: 'Device created successfully.' })
       setDeviceForm(initialDeviceForm)
       setShowDeviceModal(false)
       await loadDevices()
-    } catch (error) {
-      setActionStatus({ type: 'error', message: `Create device failed: ${error.message}` })
-    }
-  }
-
-  const managers = users.filter((user) => Number(user.userRole) === 2)
-
-
-  const renderRaw = (value) => (typeof value === 'string' ? value : JSON.stringify(value, null, 2))
-
-  const tryParseJsonString = (value) => {
-    if (typeof value !== 'string') return value
-    try {
-      return JSON.parse(value)
-    } catch {
-      return value
-    }
-  }
-
-  const splitWebhookParts = (event) => {
-    const parsedPayloadJson = tryParseJsonString(event?.payloadJson)
-
-    const headers =
-      event?.headers ??
-      event?.requestHeaders ??
-      event?.rawHeaders ??
-      (parsedPayloadJson && typeof parsedPayloadJson === 'object' ? parsedPayloadJson.rawHeaders : null)
-
-    const payload =
-      event?.body ??
-      event?.payload ??
-      event?.rawBody ??
-      (parsedPayloadJson && typeof parsedPayloadJson === 'object' ? parsedPayloadJson.rawBody : parsedPayloadJson)
-
-    const timestamp = event?.receivedAt || event?.timestamp || event?.createdAt || event?.date || null
-
-    return { headers, payload, timestamp, rawEvent: event }
+    } catch (error) { setActionStatus({ type: 'error', message: `Create device failed: ${error.message}` }) }
   }
 
   return (
@@ -596,37 +398,9 @@ const HomeView = ({
         )}
       </div>
 
-      {showUserModal ? (
-        <div className="overlay" onClick={() => setShowUserModal(false)}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <h3>Create User</h3>
-            <div className="field-grid two-col">
-              <input placeholder="First Name" value={userForm.firstName} onChange={(event) => setUserForm((prev) => ({ ...prev, firstName: event.target.value }))} />
-              <input placeholder="Last Name" value={userForm.lastName} onChange={(event) => setUserForm((prev) => ({ ...prev, lastName: event.target.value }))} />
-              <input placeholder="Email" value={userForm.email} onChange={(event) => setUserForm((prev) => ({ ...prev, email: event.target.value }))} />
-              <input placeholder="Password" type="password" value={userForm.password} onChange={(event) => setUserForm((prev) => ({ ...prev, password: event.target.value }))} />
-              <input placeholder="Contact Number" value={userForm.contactNumber} onChange={(event) => setUserForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
-              <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>User</option><option value={2}>Manager</option><option value={1}>Super Admin</option></select>
-              <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
-              <select value={userForm.managerId} onChange={(event) => setUserForm((prev) => ({ ...prev, managerId: event.target.value }))}><option value="">Manager (Optional)</option>{managers.map((manager) => <option key={manager.id || manager.email} value={manager.id || ''}>{`${manager.firstName || ''} ${manager.lastName || ''}`.trim() || manager.email}</option>)}</select>
-            </div>
-            <button className="mini-action" onClick={handleCreateUser}>Create</button>
-          </div>
-        </div>
-      ) : null}
+      {showUserModal && <div className="overlay" onClick={() => setShowUserModal(false)}><div className="modal" onClick={(e) => e.stopPropagation()}><h3>Create User</h3><div className="field-grid two-col"><input placeholder="First Name" value={userForm.firstName} onChange={(e) => setUserForm((p) => ({ ...p, firstName: e.target.value }))} /><input placeholder="Last Name" value={userForm.lastName} onChange={(e) => setUserForm((p) => ({ ...p, lastName: e.target.value }))} /><input placeholder="Email" value={userForm.email} onChange={(e) => setUserForm((p) => ({ ...p, email: e.target.value }))} /><input type="password" placeholder="Password" value={userForm.password} onChange={(e) => setUserForm((p) => ({ ...p, password: e.target.value }))} /><input placeholder="Address" value={userForm.address} onChange={(e) => setUserForm((p) => ({ ...p, address: e.target.value }))} /><input placeholder="Phone Number" value={userForm.contactNumber} onChange={(e) => setUserForm((p) => ({ ...p, contactNumber: e.target.value }))} /><select value={userForm.locationId} onChange={(e) => setUserForm((p) => ({ ...p, locationId: e.target.value }))}><option value="">Location (Optional)</option>{locations.map((l) => <option key={l.id || l.name} value={l.id || ''}>{l.name || 'Unknown location'}</option>)}</select><select value={userForm.userRole} onChange={(e) => setUserForm((p) => ({ ...p, userRole: Number(e.target.value) }))}><option value={3}>User</option><option value={2}>Manager</option><option value={1}>Super Admin</option></select><select value={userForm.managerId} onChange={(e) => setUserForm((p) => ({ ...p, managerId: e.target.value }))}><option value="">Manager</option>{managers.map((m) => <option key={m.id || m.email} value={m.id || ''}>{`${m.firstName || ''} ${m.lastName || ''}`.trim() || m.email}</option>)}</select></div><div className="modal-actions"><button className="ghost" onClick={() => setShowUserModal(false)}>Cancel</button><button className="mini-action" onClick={handleCreateUser}>Create Account</button></div></div></div>}
 
-      {showLocationModal ? (
-        <div className="overlay" onClick={() => setShowLocationModal(false)}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <h3>Create Location</h3>
-            <div className="field-grid">
-              <input placeholder="Location Name" value={locationForm.name} onChange={(event) => setLocationForm((prev) => ({ ...prev, name: event.target.value }))} />
-              <textarea rows={3} placeholder="Details" value={locationForm.details} onChange={(event) => setLocationForm((prev) => ({ ...prev, details: event.target.value }))} />
-            </div>
-            <button className="mini-action" onClick={handleCreateLocation}>Create</button>
-          </div>
-        </div>
-      ) : null}
+      {showLocationModal && <div className="overlay" onClick={() => setShowLocationModal(false)}><div className="modal small" onClick={(e) => e.stopPropagation()}><h3>Create Location</h3><div className="field-grid"><input placeholder="Location Name" value={locationForm.name} onChange={(e) => setLocationForm((p) => ({ ...p, name: e.target.value }))} /><textarea rows={3} placeholder="Details" value={locationForm.details} onChange={(e) => setLocationForm((p) => ({ ...p, details: e.target.value }))} /></div><div className="modal-actions"><button className="ghost" onClick={() => setShowLocationModal(false)}>Cancel</button><button className="mini-action" onClick={handleCreateLocation}>Create Location</button></div></div></div>}
 
       {showDeviceModal ? (
         <div className="overlay" onClick={() => setShowDeviceModal(false)}>
