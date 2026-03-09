@@ -49,18 +49,11 @@ export default function HomeView({
   const [showUserModal, setShowUserModal] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showDeviceModal, setShowDeviceModal] = useState(false)
-
-export default function HomeView({ onLogout, loading, fetchReplies, requestLocationUpdate, repliesCount, authToken, sendConfig, user }) {
-  const [activeSection, setActiveSection] = useState('dashboard')
   const [users, setUsers] = useState([])
   const [locations, setLocations] = useState([])
   const [devices, setDevices] = useState([])
   const [dataStatus, setDataStatus] = useState('')
   const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
-
-  const [showUserModal, setShowUserModal] = useState(false)
-  const [showLocationModal, setShowLocationModal] = useState(false)
-  const [showDeviceModal, setShowDeviceModal] = useState(false)
   const [locationForm, setLocationForm] = useState(initialLocationForm)
   const [userForm, setUserForm] = useState(initialUserForm)
   const [deviceForm, setDeviceForm] = useState(initialDeviceForm)
