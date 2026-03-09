@@ -436,6 +436,7 @@ export default function App() {
           locationResult={locationResult}
           status={status}
           formattedReplies={formattedReplies}
+          replies={replies}
           repliesCount={replies.length}
           authToken={auth.token}
         />
