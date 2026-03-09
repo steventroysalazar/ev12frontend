@@ -26,7 +26,7 @@ const initialUserForm = {
 }
 const initialDeviceForm = { name: '', phoneNumber: '', ownerUserId: '', locationId: '' }
 
-export default function HomeView({
+function HomeView({
   onLogout,
   gatewayBaseUrl,
   gatewayToken,
@@ -50,7 +50,8 @@ export default function HomeView({
   status,
   formattedReplies,
   repliesCount,
-  authToken
+  authToken,
+  user
 }) {
   const [activeSection, setActiveSection] = useState('dashboard')
   const [selectedDevice, setSelectedDevice] = useState(null)
@@ -349,10 +350,22 @@ export default function HomeView({
   }
 
   return (
-    <div className="home-shell">
-      <Sidebar activeSection={activeSection} onChangeSection={setActiveSection} onLogout={onLogout} />
+    <div className="dashboard-frame">
+      <header className="dashboard-topbar">
+        <div className="brand">EV12 LOGO</div>
+        <div className="profile">
+          <div>
+            <strong>{user?.firstName || "Jane"} {user?.lastName || "Doe"}</strong>
+            <small>Super Admin</small>
+          </div>
+          <span className="avatar-dot" />
+        </div>
+      </header>
 
-      <div className="dashboard-content">
+      <div className="home-shell">
+        <Sidebar activeSection={activeSection} onChangeSection={setActiveSection} onLogout={onLogout} />
+
+        <div className="dashboard-content">
         {dataStatus ? <p className="status">{dataStatus}</p> : null}
         {actionStatus.message ? <p className={actionStatus.type === 'error' ? 'status-error' : 'status-success'}>{actionStatus.message}</p> : null}
 
@@ -629,6 +642,9 @@ export default function HomeView({
           </div>
         </div>
       ) : null}
+      </div>
     </div>
   )
 }
+
+export default HomeView
