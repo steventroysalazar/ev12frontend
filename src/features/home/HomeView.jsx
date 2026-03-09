@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
+import AppIcon from '../../components/icons/AppIcon'
 import { fetchJsonWithFallback, fetchWithFallback } from '../../lib/apiClient'
 import './home.css'
 
@@ -76,10 +77,10 @@ export default function HomeView({
 
   const metrics = useMemo(
     () => [
-      { label: 'TOTAL USERS', value: users.length },
-      { label: 'TOTAL DEVICES', value: devices.length },
-      { label: 'TOTAL LOCATIONS', value: locations.length },
-      { label: 'RECENT REPLIES', value: repliesCount || 0 }
+      { label: 'TOTAL USERS', value: users.length, icon: 'users' },
+      { label: 'TOTAL DEVICES', value: devices.length, icon: 'devices' },
+      { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location' },
+      { label: 'RECENT REPLIES', value: repliesCount || 0, icon: 'replies' }
     ],
     [users.length, devices.length, locations.length, repliesCount]
   )
@@ -362,7 +363,7 @@ export default function HomeView({
             <section className="metric-grid">
               {metrics.map((metric) => (
                 <article key={metric.label} className="metric-card">
-                  <div className="metric-icon" />
+                  <div className="metric-icon"><AppIcon name={metric.icon} className="card-icon" /></div>
                   <div>
                     <p>{metric.label}</p>
                     <h3>{Number(metric.value || 0)}</h3>
@@ -385,9 +386,9 @@ export default function HomeView({
               </article>
 
               <aside className="action-stack card-like">
-                <button disabled={loading} onClick={sendConfig}>Send Command</button>
-                <button disabled={loading} onClick={sendMessage}>Request Location</button>
-                <button disabled={loading} onClick={fetchReplies}>Fetch Replies</button>
+                <button disabled={loading} onClick={sendConfig}><AppIcon name="command" className="btn-icon" />Send Command</button>
+                <button disabled={loading} onClick={sendMessage}><AppIcon name="location" className="btn-icon" />Request Location</button>
+                <button disabled={loading} onClick={fetchReplies}><AppIcon name="replies" className="btn-icon" />Fetch Replies</button>
               </aside>
             </section>
           </>
@@ -397,7 +398,7 @@ export default function HomeView({
           <section className="card-like section-panel">
             <div className="section-head">
               <h2 className="section-title">Users</h2>
-              <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}>+ Create User</button>
+              <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
             </div>
             <table className="data-table">
               <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th></tr></thead>
@@ -421,7 +422,7 @@ export default function HomeView({
           <section className="card-like section-panel">
             <div className="section-head">
               <h2 className="section-title">Locations</h2>
-              <button className="mini-action" onClick={() => setShowLocationModal(true)}>+ Create Location</button>
+              <button className="mini-action" onClick={() => setShowLocationModal(true)}><AppIcon name="plus" className="btn-icon" />Create Location</button>
             </div>
             <table className="data-table">
               <thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th></tr></thead>
@@ -443,7 +444,7 @@ export default function HomeView({
           <section className="card-like section-panel">
             <div className="section-head">
               <h2 className="section-title">Devices</h2>
-              <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}>+ Add Device</button>
+              <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}><AppIcon name="plus" className="btn-icon" />Add Device</button>
             </div>
             <table className="data-table">
               <thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
