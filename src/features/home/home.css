@@ -9,6 +9,36 @@
   border: 1px solid #eceff3;
 }
 
+.brand { font-size: 1.6rem; font-weight: 500; }
+.profile { display: flex; align-items: center; gap: 0.55rem; }
+.profile strong { display: block; text-align: right; font-size: 1rem; }
+.profile small { color: #98a1ac; display: block; text-align: right; font-size: 0.75rem; }
+.avatar-dot { width: 30px; height: 30px; border-radius: 50%; background: #d7dbe0; }
+
+.home-shell {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.dashboard-content {
+  background: #eef1f5;
+  border: 1px solid #edf0f3;
+  border-radius: 2px;
+  padding: 1rem;
+}
+
+.dashboard-topbar {
+  background: #fff;
+  padding: 0.85rem 1.2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #eceff3;
+}
+
 .brand { font-size: 1.65rem; font-weight: 500; }
 .profile { display: flex; align-items: center; gap: 0.55rem; }
 .profile strong { display: block; text-align: right; font-size: 1rem; }
