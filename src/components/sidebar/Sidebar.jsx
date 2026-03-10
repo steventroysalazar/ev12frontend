@@ -12,7 +12,7 @@ const sidebarItems = [
     icon: 'settings',
     children: [
       { id: 'settings-basic', label: 'Basic Configuration' },
-      { id: 'settings-alarm', label: 'Alarm Settings' }
+      { id: 'settings-advanced', label: 'Advanced Configuration' }
     ]
   },
   { id: 'location', label: 'Location Request', icon: 'location' },
