@@ -97,6 +97,10 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .switch-row { display: inline-flex; gap: 0.4rem; align-items: center; font-weight: 600; }
 .switch-row input { width: 18px; height: 18px; }
 
+.range-with-value { display: flex; align-items: center; gap: 0.6rem; }
+.range-with-value input[type="range"] { flex: 1; }
+.range-value { min-width: 36px; text-align: center; font-weight: 700; color: #204070; background: #eef3fb; border-radius: 999px; padding: 0.2rem 0.5rem; }
+
 .contact-table { border-top: 1px solid #dfe4ea; border-bottom: 1px solid #dfe4ea; padding: 0.55rem 0; }
 
 .settings-group { margin-top: 1rem; }

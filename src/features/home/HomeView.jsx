@@ -740,9 +740,64 @@ export default function HomeView({
             <h2 className="section-title">Settings &gt; Advanced Configuration</h2>
             {selectedDevice ? <p className="status-success">Advanced settings for {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Select a device from Devices list to configure advanced settings.</p>}
 
-            <article className="settings-group"><h3 className="block-title">Advanced Configurations</h3><div className="field-grid two-col"><div><label>Wi-Fi Positioning</label><label className="switch-row"><input type="checkbox" checked={configForm.wifiEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, wifiEnabled: prev.wifiEnabled === '1' ? '0' : '1' }))} /><span>{configForm.wifiEnabled === '1' ? 'On' : 'Off'}</span></label></div><div><label>Speaker Volume (0-100)</label><input value={configForm.speakerVolume} onChange={(event) => setConfigForm((prev) => ({ ...prev, speakerVolume: event.target.value }))} /></div><div><label>Continuous Tracking Interval</label><input value={configForm.continuousLocateInterval} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateInterval: event.target.value }))} /></div><div><label>Continuous Tracking Duration</label><input value={configForm.continuousLocateDuration} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateDuration: event.target.value }))} /></div><div><label>Timezone</label><input value={configForm.timeZone} onChange={(event) => setConfigForm((prev) => ({ ...prev, timeZone: event.target.value }))} /></div><div><label>Include Status Command</label><label className="switch-row"><input type="checkbox" checked={configForm.checkStatus} onChange={() => toggle('checkStatus')} /><span>{configForm.checkStatus ? 'On' : 'Off'}</span></label></div></div></article>
+            <article className="settings-group">
+              <h3 className="block-title">Advanced Configurations</h3>
+              <div className="field-grid two-col">
+                <div>
+                  <label>Wi-Fi Positioning</label>
+                  <label className="switch-row">
+                    <input type="checkbox" checked={configForm.wifiEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, wifiEnabled: prev.wifiEnabled === '1' ? '0' : '1' }))} />
+                    <span>{configForm.wifiEnabled === '1' ? 'On' : 'Off'}</span>
+                  </label>
+                </div>
+                <div>
+                  <label>Speaker Volume (0-100)</label>
+                  <div className="range-with-value">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={configForm.speakerVolume}
+                      onChange={(event) => setConfigForm((prev) => ({ ...prev, speakerVolume: event.target.value }))}
+                    />
+                    <span className="range-value">{configForm.speakerVolume}</span>
+                  </div>
+                </div>
+                <div><label>Continuous Tracking Interval</label><input value={configForm.continuousLocateInterval} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateInterval: event.target.value }))} /></div>
+                <div><label>Continuous Tracking Duration</label><input value={configForm.continuousLocateDuration} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateDuration: event.target.value }))} /></div>
+                <div><label>Timezone</label><input value={configForm.timeZone} onChange={(event) => setConfigForm((prev) => ({ ...prev, timeZone: event.target.value }))} /></div>
+                <div><label>Include Status Command</label><label className="switch-row"><input type="checkbox" checked={configForm.checkStatus} onChange={() => toggle('checkStatus')} /><span>{configForm.checkStatus ? 'On' : 'Off'}</span></label></div>
+              </div>
+            </article>
 
-            <article className="settings-group"><h3 className="block-title">Alarm Controls</h3><div className="alarm-card"><h3>SOS Action</h3><div className="alarm-row"><label>Mode</label><select value={configForm.sosMode} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosMode: event.target.value }))}><option value="1">Long Press</option><option value="2">Double Click</option></select><label>Action Time</label><input type="range" min="5" max="60" value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div></div><div className="alarm-card"><h3>Fall Detection</h3><div className="alarm-row"><label>Enable</label><label className="switch-row"><input type="checkbox" checked={configForm.fallDownEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, fallDownEnabled: prev.fallDownEnabled === '1' ? '0' : '1' }))} /><span>{configForm.fallDownEnabled === '1' ? 'On' : 'Off'}</span></label><label>Sensitivity</label><input type="range" min="1" max="9" value={configForm.fallDownSensitivity} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} /></div></div><div className="alarm-card"><h3>Motion / No Motion</h3><div className="alarm-row"><label>Enable</label><label className="switch-row"><input type="checkbox" checked={configForm.motionEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, motionEnabled: prev.motionEnabled === '1' ? '0' : '1' }))} /><span>{configForm.motionEnabled === '1' ? 'On' : 'Off'}</span></label><label>Duration</label><input value={configForm.motionDurationTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionDurationTime: event.target.value }))} /></div></div></article>
+            <article className="settings-group">
+              <h3 className="block-title">Alarm Controls</h3>
+              <div className="alarm-card">
+                <h3>SOS Action</h3>
+                <div className="alarm-row">
+                  <label>Mode</label>
+                  <select value={configForm.sosMode} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosMode: event.target.value }))}><option value="1">Long Press</option><option value="2">Double Click</option></select>
+                  <label>Action Time</label>
+                  <div className="range-with-value">
+                    <input type="range" min="5" max="60" value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} />
+                    <span className="range-value">{configForm.sosActionTime}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="alarm-card">
+                <h3>Fall Detection</h3>
+                <div className="alarm-row">
+                  <label>Enable</label>
+                  <label className="switch-row"><input type="checkbox" checked={configForm.fallDownEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, fallDownEnabled: prev.fallDownEnabled === '1' ? '0' : '1' }))} /><span>{configForm.fallDownEnabled === '1' ? 'On' : 'Off'}</span></label>
+                  <label>Sensitivity</label>
+                  <div className="range-with-value">
+                    <input type="range" min="1" max="9" value={configForm.fallDownSensitivity} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} />
+                    <span className="range-value">{configForm.fallDownSensitivity}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="alarm-card"><h3>Motion / No Motion</h3><div className="alarm-row"><label>Enable</label><label className="switch-row"><input type="checkbox" checked={configForm.motionEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, motionEnabled: prev.motionEnabled === '1' ? '0' : '1' }))} /><span>{configForm.motionEnabled === '1' ? 'On' : 'Off'}</span></label><label>Duration</label><input value={configForm.motionDurationTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionDurationTime: event.target.value }))} /></div></div>
+            </article>
           </section>
         )}
 
