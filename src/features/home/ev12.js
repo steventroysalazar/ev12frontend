@@ -6,6 +6,9 @@ export const initialConfigForm = {
   contactName: '',
   contactSmsEnabled: true,
   contactCallEnabled: true,
+  contacts: [
+    { slot: 1, name: '', phone: '', smsEnabled: true, callEnabled: true }
+  ],
   smsPassword: '',
   smsWhitelistEnabled: false,
   requestLocation: true,
@@ -36,14 +39,39 @@ export const initialConfigForm = {
 
 const boolToFlag = (value) => (value ? 1 : 0)
 
+const normalizedContacts = (form) => {
+  if (Array.isArray(form.contacts) && form.contacts.length) {
+    return form.contacts
+      .slice(0, 10)
+      .map((contact, index) => ({
+        slot: index + 1,
+        name: String(contact?.name || '').trim(),
+        phone: String(contact?.phone || '').trim(),
+        smsEnabled: contact?.smsEnabled !== false,
+        callEnabled: contact?.callEnabled !== false
+      }))
+      .filter((contact) => contact.phone)
+  }
+
+  if (!form.contactNumber) return []
+
+  return [{
+    slot: Number(form.contactSlot) || 1,
+    name: String(form.contactName || '').trim(),
+    phone: String(form.contactNumber || '').trim(),
+    smsEnabled: Boolean(form.contactSmsEnabled),
+    callEnabled: Boolean(form.contactCallEnabled)
+  }]
+}
+
 export const buildEv12Preview = (form) => {
   const commands = []
 
-  if (form.contactNumber) {
+  normalizedContacts(form).forEach((contact) => {
     commands.push(
-      `A${form.contactSlot || 1},${boolToFlag(form.contactSmsEnabled)},${boolToFlag(form.contactCallEnabled)},${form.contactNumber}${form.contactName ? `,${form.contactName}` : ''}`
+      `A${contact.slot},${boolToFlag(contact.smsEnabled)},${boolToFlag(contact.callEnabled)},${contact.phone}${contact.name ? `,${contact.name}` : ''}`
     )
-  }
+  })
   if (form.smsPassword) commands.push(`P${form.smsPassword}`)
   if (form.smsWhitelistEnabled) commands.push('sms1')
   if (form.requestLocation) commands.push('Loc')

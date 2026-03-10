@@ -98,6 +98,10 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .switch-row input { width: 18px; height: 18px; }
 
 .contact-table { border-top: 1px solid #dfe4ea; border-bottom: 1px solid #dfe4ea; padding: 0.55rem 0; }
+
+.settings-group { margin-top: 1rem; }
+.settings-group:first-of-type { margin-top: 0.2rem; }
+.contact-row input { width: 100%; }
 .contact-head,.contact-row { display: grid; grid-template-columns: 1fr 1fr 1.5fr 0.8fr 0.8fr 0.6fr; gap: 0.5rem; padding: 0.4rem 0.3rem; align-items: center; }
 .chip { background: #edf1f5; padding: 0.3rem 0.4rem; border-radius: 8px; }
 .footer-config { margin-top: 0.75rem; }

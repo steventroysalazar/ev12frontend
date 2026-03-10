@@ -92,6 +92,50 @@ export default function HomeView({
 
   const toggle = (key) => setConfigForm((prev) => ({ ...prev, [key]: !prev[key] }))
 
+  const getContacts = (form) => {
+    if (Array.isArray(form.contacts) && form.contacts.length) return form.contacts.slice(0, 10)
+
+    return [{
+      slot: 1,
+      name: form.contactName || '',
+      phone: form.contactNumber || '',
+      smsEnabled: form.contactSmsEnabled !== false,
+      callEnabled: form.contactCallEnabled !== false
+    }]
+  }
+
+  const updateContacts = (updater) => {
+    setConfigForm((prev) => {
+      const baseContacts = getContacts(prev)
+      const updatedContacts = updater(baseContacts)
+        .slice(0, 10)
+        .map((contact, index) => ({
+          slot: index + 1,
+          name: contact.name || '',
+          phone: contact.phone || '',
+          smsEnabled: contact.smsEnabled !== false,
+          callEnabled: contact.callEnabled !== false
+        }))
+
+      const primaryContact = updatedContacts.find((contact) => contact.phone.trim()) || updatedContacts[0] || {
+        name: '',
+        phone: '',
+        smsEnabled: true,
+        callEnabled: true
+      }
+
+      return {
+        ...prev,
+        contacts: updatedContacts,
+        contactSlot: primaryContact.slot || 1,
+        contactName: primaryContact.name,
+        contactNumber: primaryContact.phone,
+        contactSmsEnabled: primaryContact.smsEnabled,
+        contactCallEnabled: primaryContact.callEnabled
+      }
+    })
+  }
+
   const fetchJson = useCallback(
     async (url, options = {}) => {
       return fetchJsonWithFallback(url, {
@@ -241,13 +285,30 @@ export default function HomeView({
 
   const openDeviceSettings = (device) => {
     setSelectedDevice(device)
-    setConfigForm((prev) => ({
-      ...prev,
-      imei: device.imei || prev.imei,
-      prefixName: device.name || device.deviceName || prev.prefixName,
-      contactNumber: device.phoneNumber || prev.contactNumber,
-      contactName: device.ownerName || device.owner?.firstName || prev.contactName
-    }))
+    setConfigForm((prev) => {
+      const existingContacts = getContacts(prev)
+      const seededContacts = [...existingContacts]
+      const primaryName = device.ownerName || device.owner?.firstName || seededContacts[0]?.name || prev.contactName
+      const primaryPhone = device.phoneNumber || seededContacts[0]?.phone || prev.contactNumber
+
+      seededContacts[0] = {
+        slot: 1,
+        name: primaryName || '',
+        phone: primaryPhone || '',
+        smsEnabled: seededContacts[0]?.smsEnabled !== false,
+        callEnabled: seededContacts[0]?.callEnabled !== false
+      }
+
+      return {
+        ...prev,
+        imei: device.imei || prev.imei,
+        prefixName: device.name || device.deviceName || prev.prefixName,
+        contacts: seededContacts.slice(0, 10),
+        contactSlot: 1,
+        contactNumber: primaryPhone || '',
+        contactName: primaryName || ''
+      }
+    })
     setActionStatus({ type: 'success', message: `Opened settings for ${device.name || device.deviceName || 'device'}.` })
     setActiveSection('settings-basic')
   }
@@ -634,23 +695,54 @@ export default function HomeView({
           <section className="card-like section-panel">
             <h2 className="section-title">Settings &gt; Basic Configuration</h2>
             {selectedDevice ? <p className="status-success">Editing {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Select a device from Devices list to configure.</p>}
-            <div className="field-grid two-col">
-              <div><label>IMEI</label><input value={configForm.imei} readOnly /></div>
-              <div><label>Device Name / Identity</label><input value={configForm.prefixName} onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
-            </div>
-            <h3 className="block-title">Contact Information</h3>
-            <div className="contact-table"><div className="contact-head"><span>Contact</span><span>Name</span><span>Contact Number</span><span>SMS</span><span>Call</span><span /></div><div className="contact-row"><span className="chip">Contact 1</span><span>{configForm.contactName || 'John Doe'}</span><span>{configForm.contactNumber || '+639198765432'}</span><span>{configForm.contactSmsEnabled ? 'On' : 'Off'}</span><span>{configForm.contactCallEnabled ? 'On' : 'Off'}</span><span>✎ 🗑</span></div></div>
-            <div className="field-grid two-col footer-config"><div><label>SMS Password</label><input value={configForm.smsPassword} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} /></div><div><label>SMS White List</label><label className="switch-row"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={() => toggle('smsWhitelistEnabled')} /><span>{configForm.smsWhitelistEnabled ? 'On' : 'Off'}</span></label></div></div>
+
+            <article className="settings-group">
+              <h3 className="block-title">Basic Configurations</h3>
+              <div className="field-grid two-col">
+                <div><label>IMEI</label><input value={configForm.imei} readOnly /></div>
+                <div><label>Device Name / Identity</label><input value={configForm.prefixName} onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
+                <div><label>SMS Password</label><input value={configForm.smsPassword} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} /></div>
+                <div><label>SMS White List</label><label className="switch-row"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={() => toggle('smsWhitelistEnabled')} /><span>{configForm.smsWhitelistEnabled ? 'On' : 'Off'}</span></label></div>
+              </div>
+            </article>
+
+            <article className="settings-group">
+              <div className="section-head">
+                <h3 className="block-title">Contact Information (Max 10)</h3>
+                <button
+                  className="mini-action"
+                  type="button"
+                  onClick={() => updateContacts((contacts) => [...contacts, { name: '', phone: '', smsEnabled: true, callEnabled: true }])}
+                  disabled={(configForm.contacts?.length || 1) >= 10}
+                >
+                  Add Contact
+                </button>
+              </div>
+              <div className="contact-table">
+                <div className="contact-head"><span>Contact</span><span>Name</span><span>Contact Number</span><span>SMS</span><span>Call</span><span>Action</span></div>
+                {getContacts(configForm).map((contact, index) => (
+                  <div className="contact-row" key={`contact-${index + 1}`}>
+                    <span className="chip">Contact {index + 1}</span>
+                    <input value={contact.name} onChange={(event) => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, name: event.target.value } : entry))} placeholder="Name" />
+                    <input value={contact.phone} onChange={(event) => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, phone: event.target.value } : entry))} placeholder="Phone number" />
+                    <label className="switch-row"><input type="checkbox" checked={contact.smsEnabled !== false} onChange={() => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, smsEnabled: entry.smsEnabled === false } : entry))} /><span>{contact.smsEnabled !== false ? 'On' : 'Off'}</span></label>
+                    <label className="switch-row"><input type="checkbox" checked={contact.callEnabled !== false} onChange={() => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, callEnabled: entry.callEnabled === false } : entry))} /><span>{contact.callEnabled !== false ? 'On' : 'Off'}</span></label>
+                    <button className="table-link" type="button" onClick={() => updateContacts((contacts) => contacts.length <= 1 ? contacts : contacts.filter((_, entryIndex) => entryIndex !== index))}>Remove</button>
+                  </div>
+                ))}
+              </div>
+            </article>
           </section>
         )}
 
-        {activeSection === 'settings-alarm' && (
+        {activeSection === 'settings-advanced' && (
           <section className="card-like section-panel">
-            <h2 className="section-title">Settings &gt; Alarm Settings</h2>
-            {selectedDevice ? <p className="status-success">Alarm settings for {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Select a device from Devices list to configure alarms.</p>}
-            <div className="alarm-card"><h3>SOS Action</h3><div className="alarm-row"><label>Mode</label><select value={configForm.sosMode} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosMode: event.target.value }))}><option value="1">Long Press</option><option value="2">Double Click</option></select><label>Action Time</label><input type="range" min="5" max="60" value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div></div>
-            <div className="alarm-card"><h3>Fall Detection</h3><div className="alarm-row"><label>Enable</label><label className="switch-row"><input type="checkbox" checked={configForm.fallDownEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, fallDownEnabled: prev.fallDownEnabled === '1' ? '0' : '1' }))} /><span>{configForm.fallDownEnabled === '1' ? 'On' : 'Off'}</span></label><label>Sensitivity</label><input type="range" min="1" max="9" value={configForm.fallDownSensitivity} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} /></div></div>
-            <div className="alarm-card"><h3>Motion / No Motion</h3><div className="alarm-row"><label>Enable</label><label className="switch-row"><input type="checkbox" checked={configForm.motionEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, motionEnabled: prev.motionEnabled === '1' ? '0' : '1' }))} /><span>{configForm.motionEnabled === '1' ? 'On' : 'Off'}</span></label><label>Duration</label><input value={configForm.motionDurationTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionDurationTime: event.target.value }))} /></div></div>
+            <h2 className="section-title">Settings &gt; Advanced Configuration</h2>
+            {selectedDevice ? <p className="status-success">Advanced settings for {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Select a device from Devices list to configure advanced settings.</p>}
+
+            <article className="settings-group"><h3 className="block-title">Advanced Configurations</h3><div className="field-grid two-col"><div><label>Wi-Fi Positioning</label><label className="switch-row"><input type="checkbox" checked={configForm.wifiEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, wifiEnabled: prev.wifiEnabled === '1' ? '0' : '1' }))} /><span>{configForm.wifiEnabled === '1' ? 'On' : 'Off'}</span></label></div><div><label>Speaker Volume (0-100)</label><input value={configForm.speakerVolume} onChange={(event) => setConfigForm((prev) => ({ ...prev, speakerVolume: event.target.value }))} /></div><div><label>Continuous Tracking Interval</label><input value={configForm.continuousLocateInterval} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateInterval: event.target.value }))} /></div><div><label>Continuous Tracking Duration</label><input value={configForm.continuousLocateDuration} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateDuration: event.target.value }))} /></div><div><label>Timezone</label><input value={configForm.timeZone} onChange={(event) => setConfigForm((prev) => ({ ...prev, timeZone: event.target.value }))} /></div><div><label>Include Status Command</label><label className="switch-row"><input type="checkbox" checked={configForm.checkStatus} onChange={() => toggle('checkStatus')} /><span>{configForm.checkStatus ? 'On' : 'Off'}</span></label></div></div></article>
+
+            <article className="settings-group"><h3 className="block-title">Alarm Controls</h3><div className="alarm-card"><h3>SOS Action</h3><div className="alarm-row"><label>Mode</label><select value={configForm.sosMode} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosMode: event.target.value }))}><option value="1">Long Press</option><option value="2">Double Click</option></select><label>Action Time</label><input type="range" min="5" max="60" value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div></div><div className="alarm-card"><h3>Fall Detection</h3><div className="alarm-row"><label>Enable</label><label className="switch-row"><input type="checkbox" checked={configForm.fallDownEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, fallDownEnabled: prev.fallDownEnabled === '1' ? '0' : '1' }))} /><span>{configForm.fallDownEnabled === '1' ? 'On' : 'Off'}</span></label><label>Sensitivity</label><input type="range" min="1" max="9" value={configForm.fallDownSensitivity} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} /></div></div><div className="alarm-card"><h3>Motion / No Motion</h3><div className="alarm-row"><label>Enable</label><label className="switch-row"><input type="checkbox" checked={configForm.motionEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, motionEnabled: prev.motionEnabled === '1' ? '0' : '1' }))} /><span>{configForm.motionEnabled === '1' ? 'On' : 'Off'}</span></label><label>Duration</label><input value={configForm.motionDurationTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionDurationTime: event.target.value }))} /></div></div></article>
           </section>
         )}
 
