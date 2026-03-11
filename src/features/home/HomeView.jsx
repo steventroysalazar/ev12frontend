@@ -309,6 +309,7 @@ export default function HomeView({
 
       return {
         ...prev,
+        deviceId: device.id || device.deviceId || prev.deviceId,
         imei: device.imei || prev.imei,
         prefixName: device.name || device.deviceName || prev.prefixName,
         contacts: seededContacts.slice(0, 10),
