@@ -291,13 +291,31 @@ export default function HomeView({
     setWebhookStatus('Webhook events cleared.')
   }
 
-  const openDeviceSettings = (device) => {
-    setSelectedDevice(device)
+  const openDeviceSettings = async (device) => {
+    const selectedDeviceId = Number(device?.id || device?.deviceId)
+    let resolvedDevice = device
+
+    if (Number.isInteger(selectedDeviceId) && selectedDeviceId > 0) {
+      setActionStatus({ type: 'info', message: 'Loading latest device configuration...' })
+      try {
+        resolvedDevice = await fetchJson(`/api/devices/${selectedDeviceId}`, { headers: {} })
+      } catch (error) {
+        setActionStatus({ type: 'error', message: `Could not refresh device data, using cached row values: ${error.message}` })
+      }
+    }
+
+    const protocolSettings = resolvedDevice?.protocolSettings && typeof resolvedDevice.protocolSettings === 'object'
+      ? resolvedDevice.protocolSettings
+      : {}
+
+    setSelectedDevice(resolvedDevice)
     setConfigForm((prev) => {
-      const existingContacts = getContacts(prev)
-      const seededContacts = [...existingContacts]
-      const primaryName = device.ownerName || device.owner?.firstName || seededContacts[0]?.name || prev.contactName
-      const primaryPhone = device.phoneNumber || seededContacts[0]?.phone || prev.contactNumber
+      const seededContacts = Array.isArray(protocolSettings.contacts) && protocolSettings.contacts.length
+        ? protocolSettings.contacts.slice(0, 10)
+        : [...getContacts(prev)]
+
+      const primaryName = resolvedDevice.ownerName || resolvedDevice.owner?.firstName || protocolSettings.contactName || seededContacts[0]?.name || prev.contactName
+      const primaryPhone = resolvedDevice.phoneNumber || protocolSettings.contactNumber || seededContacts[0]?.phone || prev.contactNumber
 
       seededContacts[0] = {
         slot: 1,
@@ -309,16 +327,17 @@ export default function HomeView({
 
       return {
         ...prev,
-        deviceId: device.id || device.deviceId || prev.deviceId,
-        imei: device.imei || prev.imei,
-        prefixName: device.name || device.deviceName || prev.prefixName,
+        ...protocolSettings,
+        deviceId: resolvedDevice.id || resolvedDevice.deviceId || prev.deviceId,
+        imei: resolvedDevice.imei || protocolSettings.imei || prev.imei,
+        prefixName: resolvedDevice.name || resolvedDevice.deviceName || protocolSettings.prefixName || prev.prefixName,
         contacts: seededContacts.slice(0, 10),
-        contactSlot: 1,
+        contactSlot: protocolSettings.contactSlot || 1,
         contactNumber: primaryPhone || '',
         contactName: primaryName || ''
       }
     })
-    setActionStatus({ type: 'success', message: `Opened settings for ${device.name || device.deviceName || 'device'}.` })
+    setActionStatus({ type: 'success', message: `Opened settings for ${resolvedDevice.name || resolvedDevice.deviceName || 'device'}.` })
     setActiveSection('settings-basic')
   }
 
