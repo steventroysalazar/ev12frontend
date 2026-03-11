@@ -131,6 +131,16 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
   background: #eef2f7;
 }
 
+
+.dashboard-device-table {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.user-dashboard-grid {
+  grid-template-columns: 1fr;
+}
+
 .table-shell {
   border: 1px solid #d3dbe4;
   border-radius: 14px;

@@ -4,15 +4,6 @@ import AppIcon from '../../components/icons/AppIcon'
 import { fetchJsonWithFallback, fetchWithFallback } from '../../lib/apiClient'
 import './home.css'
 
-const deviceRows = [
-  ['Device Name', 'Lorem - EV12'],
-  ['Device Phone Number', '+639108653532'],
-  ['Owner User', 'John Doe'],
-  ['Owner Location', 'Sydney, Australia'],
-  ['Last reply', '04-03-2026 23:15'],
-  ['Battery status', '74%']
-]
-
 const initialLocationForm = { name: '', details: '' }
 const initialUserForm = {
   email: '',
@@ -28,6 +19,7 @@ const initialUserForm = {
 const initialDeviceForm = { name: '', phoneNumber: '', ownerUserId: '', locationId: '' }
 
 export default function HomeView({
+  user,
   onLogout,
   gatewayBaseUrl,
   gatewayToken,
@@ -79,6 +71,22 @@ export default function HomeView({
   const [webhookRaw, setWebhookRaw] = useState(null)
   const [webhookStatus, setWebhookStatus] = useState('')
   const webhookFingerprintRef = useRef('')
+
+  const roleLabel = useCallback((value) => {
+    const normalized = String(value || '').trim().toUpperCase()
+    if (normalized === 'SUPER_ADMIN' || normalized === 'SUPER ADMIN') return 'Super Admin'
+    if (normalized === 'MANAGER') return 'Manager'
+    if (normalized === 'USER') return 'User'
+
+    const role = Number(value)
+    if (role === 1) return 'Super Admin'
+    if (role === 2) return 'Manager'
+    if (role === 3) return 'User'
+    return value || '-'
+  }, [])
+
+  const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
+  const isAdminDashboard = normalizedRole === 'super admin' || normalizedRole === 'manager'
 
   const metrics = useMemo(
     () => [
@@ -460,20 +468,7 @@ export default function HomeView({
     }
   }
 
-  const managers = users.filter((user) => Number(user.userRole) === 2)
-
-  const roleLabel = (value) => {
-    const normalized = String(value || '').trim().toUpperCase()
-    if (normalized === 'SUPER_ADMIN' || normalized === 'SUPER ADMIN') return 'Super Admin'
-    if (normalized === 'MANAGER') return 'Manager'
-    if (normalized === 'USER') return 'User'
-
-    const role = Number(value)
-    if (role === 1) return 'Super Admin'
-    if (role === 2) return 'Manager'
-    if (role === 3) return 'User'
-    return value || '-'
-  }
+  const managers = users.filter((nextUser) => Number(nextUser.userRole) === 2)
 
   const resolveDeviceMeta = (device) => {
     const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
@@ -534,6 +529,27 @@ export default function HomeView({
     [replies]
   )
 
+  const userDeviceRows = useMemo(() => {
+    const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
+    const ownedDevices = devices.filter((device) => {
+      const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
+      return currentUserId > 0 && ownerId === currentUserId
+    })
+
+    const currentDevice = ownedDevices[0] || devices[0]
+    if (!currentDevice) return []
+
+    const deviceMeta = resolveDeviceMeta(currentDevice)
+    return [
+      ['Device Name', currentDevice.name || currentDevice.deviceName || '-'],
+      ['Device Phone Number', currentDevice.phoneNumber || '-'],
+      ['Owner User', deviceMeta.ownerName],
+      ['Owner Location', deviceMeta.ownerLocation],
+      ['Last reply', replyRows[0]?.receivedAt || 'No reply yet'],
+      ['Battery status', currentDevice.batteryStatus || currentDevice.battery || 'Unknown']
+    ]
+  }, [devices, replyRows, user, resolveDeviceMeta])
+
   const renderRaw = (value) => (typeof value === 'string' ? value : JSON.stringify(value, null, 2))
 
   const tryParseJsonString = (value) => {
@@ -575,38 +591,67 @@ export default function HomeView({
 
         {activeSection === 'dashboard' && (
           <>
-            <h2 className="page-title">Dashboard</h2>
-            <section className="metric-grid">
-              {metrics.map((metric) => (
-                <article key={metric.label} className="metric-card">
-                  <div className="metric-icon"><AppIcon name={metric.icon} className="card-icon" /></div>
-                  <div>
-                    <p>{metric.label}</p>
-                    <h3>{Number(metric.value || 0)}</h3>
+            <h2 className="page-title">{isAdminDashboard ? 'Admin Dashboard' : 'My Device Dashboard'}</h2>
+
+            {isAdminDashboard ? (
+              <>
+                <section className="metric-grid">
+                  {metrics.map((metric) => (
+                    <article key={metric.label} className="metric-card">
+                      <div className="metric-icon"><AppIcon name={metric.icon} className="card-icon" /></div>
+                      <div>
+                        <p>{metric.label}</p>
+                        <h3>{Number(metric.value || 0)}</h3>
+                      </div>
+                    </article>
+                  ))}
+                </section>
+
+                <section className="dashboard-main-grid">
+                  <article className="device-overview card-like">
+                    <h3>Recently Added Devices</h3>
+                    <div className="table-shell dashboard-device-table">
+                      <table className="data-table">
+                        <thead><tr><th>Device</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead>
+                        <tbody>
+                          {devices.slice(0, 5).map((device) => {
+                            const meta = resolveDeviceMeta(device)
+                            return (
+                              <tr key={device.id || device.phoneNumber || device.name}>
+                                <td>{device.name || device.deviceName || '-'}</td>
+                                <td>{meta.ownerName}</td>
+                                <td>{meta.ownerRole}</td>
+                                <td>{meta.ownerLocation}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </article>
+
+                  <aside className="action-stack card-like">
+                    <button disabled={loading} onClick={sendConfig}><AppIcon name="command" className="btn-icon" />Send Command</button>
+                    <button disabled={loading} onClick={sendMessage}><AppIcon name="location" className="btn-icon" />Request Location</button>
+                    <button disabled={loading} onClick={fetchReplies}><AppIcon name="replies" className="btn-icon" />Fetch Replies</button>
+                  </aside>
+                </section>
+              </>
+            ) : (
+              <section className="dashboard-main-grid user-dashboard-grid">
+                <article className="device-overview card-like">
+                  <h3>My Assigned Device</h3>
+                  <div className="device-panel">
+                    <div className="device-photo-placeholder" />
+                    <dl>
+                      {(userDeviceRows.length ? userDeviceRows : [['Status', 'No assigned device found yet.']]).map(([label, value]) => (
+                        <div className="device-row" key={label}><dt>{label}</dt><dd>{value}</dd></div>
+                      ))}
+                    </dl>
                   </div>
                 </article>
-              ))}
-            </section>
-
-            <section className="dashboard-main-grid">
-              <article className="device-overview card-like">
-                <h3>Device Overview</h3>
-                <div className="device-panel">
-                  <div className="device-photo-placeholder" />
-                  <dl>
-                    {deviceRows.map(([label, value]) => (
-                      <div className="device-row" key={label}><dt>{label}</dt><dd>{value}</dd></div>
-                    ))}
-                  </dl>
-                </div>
-              </article>
-
-              <aside className="action-stack card-like">
-                <button disabled={loading} onClick={sendConfig}><AppIcon name="command" className="btn-icon" />Send Command</button>
-                <button disabled={loading} onClick={sendMessage}><AppIcon name="location" className="btn-icon" />Request Location</button>
-                <button disabled={loading} onClick={fetchReplies}><AppIcon name="replies" className="btn-icon" />Fetch Replies</button>
-              </aside>
-            </section>
+              </section>
+            )}
           </>
         )}
 
