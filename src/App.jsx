@@ -332,6 +332,8 @@ export default function App() {
   const handleSendConfig = async () => {
     const to = configForm.contactNumber?.trim() || phone.trim()
     const command = commandPreview.trim()
+    const normalizedDeviceId = Number(configForm.deviceId)
+    const hasDeviceId = Number.isInteger(normalizedDeviceId) && normalizedDeviceId > 0
 
     if (!to) {
       setConfigStatus('Config failed: device/contact number is required.')
@@ -346,7 +348,14 @@ export default function App() {
     setLoading(true)
     setConfigStatus('Sending configuration...')
     try {
-      const payload = { ...configForm, to, command }
+      const protocolSettings = { ...configForm }
+      const payload = {
+        ...configForm,
+        deviceId: hasDeviceId ? normalizedDeviceId : configForm.deviceId,
+        protocolSettings,
+        to,
+        command
+      }
       const endpoints = ['/api/send-config', '/api/config/send', '/api/messages/send']
 
       let data = null
@@ -375,9 +384,38 @@ export default function App() {
 
       if (!data) throw lastError || new Error('Unable to send configuration')
 
+      let persisted = false
+      let persistError = null
+
+      if (hasDeviceId) {
+        try {
+          const { response } = await fetchWithFallback(`/api/devices/${normalizedDeviceId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...commonHeaders() },
+            body: JSON.stringify({ protocolSettings })
+          })
+
+          const responseBody = await response.json().catch(() => ({}))
+          if (!response.ok) {
+            throw new Error(responseBody.error || responseBody.message || 'Unable to persist device configuration')
+          }
+
+          persisted = true
+        } catch (error) {
+          persistError = error
+        }
+      }
+
       setConfigResult(data)
       setStatus(`Message sent to ${to}.`)
-      setConfigStatus('Configuration sent successfully.')
+
+      if (persisted) {
+        setConfigStatus('Configuration sent successfully and saved to the device profile.')
+      } else if (hasDeviceId && persistError) {
+        setConfigStatus(`Configuration sent, but database sync failed: ${persistError.message}`)
+      } else {
+        setConfigStatus('Configuration sent successfully.')
+      }
     } catch (error) {
       setConfigStatus(`Config failed: ${error.message}`)
     } finally {
