@@ -70,13 +70,14 @@ export default function App() {
   const [configStatus, setConfigStatus] = useState('')
   const [configResult, setConfigResult] = useState(null)
   const [configForm, setConfigForm] = useState(initialConfigForm)
+  const [configBaseline, setConfigBaseline] = useState(null)
   const [locationResult, setLocationResult] = useState(null)
 
   useEffect(() => {
     persistAuth(auth)
   }, [auth])
 
-  const commandPreview = useMemo(() => buildEv12Preview(configForm), [configForm])
+  const commandPreview = useMemo(() => buildEv12Preview(configForm, configBaseline), [configForm, configBaseline])
   const formattedReplies = useMemo(
     () => (replies.length ? replies.map(formatReply).join('\n') : 'No replies loaded yet.'),
     [replies]
@@ -341,7 +342,7 @@ export default function App() {
     }
 
     if (!command) {
-      setConfigStatus('Config failed: no command generated yet.')
+      setConfigStatus(configBaseline ? 'Config failed: no updates detected for this device.' : 'Config failed: no command generated yet.')
       return
     }
 
@@ -459,6 +460,7 @@ export default function App() {
           setGatewayToken={setGatewayToken}
           configForm={configForm}
           setConfigForm={setConfigForm}
+          setConfigBaseline={setConfigBaseline}
           commandPreview={commandPreview}
           configStatus={configStatus}
           configResult={configResult}
