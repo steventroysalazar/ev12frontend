@@ -64,32 +64,51 @@ const normalizedContacts = (form) => {
   }]
 }
 
-export const buildEv12Preview = (form) => {
-  const commands = []
+const buildCommandEntries = (form) => {
+  const entries = []
 
   normalizedContacts(form).forEach((contact) => {
-    commands.push(
-      `A${contact.slot},${boolToFlag(contact.smsEnabled)},${boolToFlag(contact.callEnabled)},${contact.phone}${contact.name ? `,${contact.name}` : ''}`
-    )
+    entries.push({
+      key: `contact-${contact.slot}`,
+      command: `A${contact.slot},${boolToFlag(contact.smsEnabled)},${boolToFlag(contact.callEnabled)},${contact.phone}${contact.name ? `,${contact.name}` : ''}`
+    })
   })
-  if (form.smsPassword) commands.push(`P${form.smsPassword}`)
-  if (form.smsWhitelistEnabled) commands.push('sms1')
-  if (form.requestLocation) commands.push('Loc')
-  if (form.requestGpsLocation) commands.push('loc,gps')
-  if (form.requestLbsLocation) commands.push('LBS1')
-  if (form.sosMode && form.sosActionTime) commands.push(`SOS${form.sosMode},${form.sosActionTime}`)
-  if (form.fallDownEnabled !== '') commands.push(`fl${form.fallDownEnabled},${form.fallDownSensitivity || 5},${boolToFlag(form.fallDownCall)}`)
-  if (form.motionEnabled !== '') commands.push(`mo${form.motionEnabled},${form.motionStaticTime || '05m'},${form.motionDurationTime || '03s'},${boolToFlag(form.motionCall)}`)
-  if (form.overSpeedEnabled !== '' && form.overSpeedLimit) commands.push(`Speed${form.overSpeedEnabled},${form.overSpeedLimit}`)
-  if (form.geoFenceEnabled !== '' && form.geoFenceRadius) commands.push(`Geo1,${form.geoFenceEnabled},${form.geoFenceMode || 0},${form.geoFenceRadius}`)
-  if (form.wifiEnabled !== '') commands.push(`Wifi${form.wifiEnabled}`)
-  if (form.speakerVolume) commands.push(`Speakervolume${form.speakerVolume}`)
-  if (form.prefixName) commands.push(`prefix1,${form.prefixName}`)
-  if (form.continuousLocateInterval && form.continuousLocateDuration) commands.push(`CL${form.continuousLocateInterval},${form.continuousLocateDuration}`)
-  if (form.timeZone) commands.push(`tz${form.timeZone}`)
-  if (form.checkStatus) commands.push('status')
 
-  return commands.join(',')
+  if (form.smsPassword) entries.push({ key: 'smsPassword', command: `P${form.smsPassword}` })
+  if (form.smsWhitelistEnabled) entries.push({ key: 'smsWhitelistEnabled', command: 'sms1' })
+  if (form.requestLocation) entries.push({ key: 'requestLocation', command: 'Loc' })
+  if (form.requestGpsLocation) entries.push({ key: 'requestGpsLocation', command: 'loc,gps' })
+  if (form.requestLbsLocation) entries.push({ key: 'requestLbsLocation', command: 'LBS1' })
+  if (form.sosMode && form.sosActionTime) entries.push({ key: 'sos', command: `SOS${form.sosMode},${form.sosActionTime}` })
+  if (form.fallDownEnabled !== '') entries.push({ key: 'fallDown', command: `fl${form.fallDownEnabled},${form.fallDownSensitivity || 5},${boolToFlag(form.fallDownCall)}` })
+  if (form.motionEnabled !== '') entries.push({ key: 'motion', command: `mo${form.motionEnabled},${form.motionStaticTime || '05m'},${form.motionDurationTime || '03s'},${boolToFlag(form.motionCall)}` })
+  if (form.overSpeedEnabled !== '' && form.overSpeedLimit) entries.push({ key: 'overSpeed', command: `Speed${form.overSpeedEnabled},${form.overSpeedLimit}` })
+  if (form.geoFenceEnabled !== '' && form.geoFenceRadius) entries.push({ key: 'geoFence', command: `Geo1,${form.geoFenceEnabled},${form.geoFenceMode || 0},${form.geoFenceRadius}` })
+  if (form.wifiEnabled !== '') entries.push({ key: 'wifiEnabled', command: `Wifi${form.wifiEnabled}` })
+  if (form.speakerVolume) entries.push({ key: 'speakerVolume', command: `Speakervolume${form.speakerVolume}` })
+  if (form.prefixName) entries.push({ key: 'prefixName', command: `prefix1,${form.prefixName}` })
+  if (form.continuousLocateInterval && form.continuousLocateDuration) entries.push({ key: 'continuousLocate', command: `CL${form.continuousLocateInterval},${form.continuousLocateDuration}` })
+  if (form.timeZone) entries.push({ key: 'timeZone', command: `tz${form.timeZone}` })
+  if (form.checkStatus) entries.push({ key: 'checkStatus', command: 'status' })
+
+  return entries
+}
+
+export const buildEv12Preview = (form, baselineForm = null) => {
+  const currentEntries = buildCommandEntries(form)
+
+  if (!baselineForm) {
+    return currentEntries.map((entry) => entry.command).join(',')
+  }
+
+  const baselineEntries = buildCommandEntries(baselineForm)
+  const baselineMap = new Map(baselineEntries.map((entry) => [entry.key, entry.command]))
+
+  const updatedOnlyCommands = currentEntries
+    .filter((entry) => baselineMap.get(entry.key) !== entry.command)
+    .map((entry) => entry.command)
+
+  return updatedOnlyCommands.join(',')
 }
 
 export const formatReply = (reply) => {

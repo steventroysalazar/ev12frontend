@@ -27,6 +27,7 @@ export default function HomeView({
   setGatewayToken,
   configForm,
   setConfigForm,
+  setConfigBaseline,
   commandPreview,
   configStatus,
   configResult,
@@ -309,34 +310,35 @@ export default function HomeView({
       : {}
 
     setSelectedDevice(resolvedDevice)
-    setConfigForm((prev) => {
-      const seededContacts = Array.isArray(protocolSettings.contacts) && protocolSettings.contacts.length
-        ? protocolSettings.contacts.slice(0, 10)
-        : [...getContacts(prev)]
+    const seededContacts = Array.isArray(protocolSettings.contacts) && protocolSettings.contacts.length
+      ? protocolSettings.contacts.slice(0, 10)
+      : [...getContacts(configForm)]
 
-      const primaryName = resolvedDevice.ownerName || resolvedDevice.owner?.firstName || protocolSettings.contactName || seededContacts[0]?.name || prev.contactName
-      const primaryPhone = resolvedDevice.phoneNumber || protocolSettings.contactNumber || seededContacts[0]?.phone || prev.contactNumber
+    const primaryName = resolvedDevice.ownerName || resolvedDevice.owner?.firstName || protocolSettings.contactName || seededContacts[0]?.name || configForm.contactName
+    const primaryPhone = resolvedDevice.phoneNumber || protocolSettings.contactNumber || seededContacts[0]?.phone || configForm.contactNumber
 
-      seededContacts[0] = {
-        slot: 1,
-        name: primaryName || '',
-        phone: primaryPhone || '',
-        smsEnabled: seededContacts[0]?.smsEnabled !== false,
-        callEnabled: seededContacts[0]?.callEnabled !== false
-      }
+    seededContacts[0] = {
+      slot: 1,
+      name: primaryName || '',
+      phone: primaryPhone || '',
+      smsEnabled: seededContacts[0]?.smsEnabled !== false,
+      callEnabled: seededContacts[0]?.callEnabled !== false
+    }
 
-      return {
-        ...prev,
-        ...protocolSettings,
-        deviceId: resolvedDevice.id || resolvedDevice.deviceId || prev.deviceId,
-        imei: resolvedDevice.imei || protocolSettings.imei || prev.imei,
-        prefixName: resolvedDevice.name || resolvedDevice.deviceName || protocolSettings.prefixName || prev.prefixName,
-        contacts: seededContacts.slice(0, 10),
-        contactSlot: protocolSettings.contactSlot || 1,
-        contactNumber: primaryPhone || '',
-        contactName: primaryName || ''
-      }
-    })
+    const nextConfigForm = {
+      ...configForm,
+      ...protocolSettings,
+      deviceId: resolvedDevice.id || resolvedDevice.deviceId || configForm.deviceId,
+      imei: resolvedDevice.imei || protocolSettings.imei || configForm.imei,
+      prefixName: resolvedDevice.name || resolvedDevice.deviceName || protocolSettings.prefixName || configForm.prefixName,
+      contacts: seededContacts.slice(0, 10),
+      contactSlot: protocolSettings.contactSlot || 1,
+      contactNumber: primaryPhone || '',
+      contactName: primaryName || ''
+    }
+
+    setConfigForm(nextConfigForm)
+    setConfigBaseline(nextConfigForm)
     setActionStatus({ type: 'success', message: `Opened settings for ${resolvedDevice.name || resolvedDevice.deviceName || 'device'}.` })
     setActiveSection('settings-basic')
   }
