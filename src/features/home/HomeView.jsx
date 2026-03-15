@@ -16,7 +16,7 @@ const initialUserForm = {
   locationId: '',
   managerId: ''
 }
-const initialDeviceForm = { name: '', phoneNumber: '', ownerUserId: '', locationId: '' }
+const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '' }
 
 export default function HomeView({
   user,
@@ -31,7 +31,10 @@ export default function HomeView({
   commandPreview,
   configStatus,
   configResult,
+  configQueue,
   sendConfig,
+  refreshConfigQueueStatus,
+  resendPendingConfig,
   loading,
   phone,
   message,
@@ -145,6 +148,21 @@ export default function HomeView({
     })
   }
 
+
+
+  const asCollection = useCallback((payload, keys = []) => {
+    if (Array.isArray(payload)) return payload
+
+    for (const key of keys) {
+      if (Array.isArray(payload?.[key])) return payload[key]
+    }
+
+    if (Array.isArray(payload?.content)) return payload.content
+    if (Array.isArray(payload?.data)) return payload.data
+    if (Array.isArray(payload?.items)) return payload.items
+    return []
+  }, [])
+
   const fetchJson = useCallback(
     async (url, options = {}) => {
       return fetchJsonWithFallback(url, {
@@ -161,27 +179,33 @@ export default function HomeView({
 
   const loadUsers = useCallback(async () => {
     const data = await fetchJson('/api/users', { headers: {} })
-    setUsers(Array.isArray(data) ? data : data.users || [])
-  }, [fetchJson])
+    setUsers(asCollection(data, ['users']))
+  }, [asCollection, fetchJson])
 
   const loadLocations = useCallback(async () => {
     const data = await fetchJson('/api/locations', { headers: {} })
-    setLocations(Array.isArray(data) ? data : data.locations || [])
-  }, [fetchJson])
+    setLocations(asCollection(data, ['locations']))
+  }, [asCollection, fetchJson])
 
   const loadDevices = useCallback(async () => {
     try {
       const data = await fetchJson('/api/devices', { headers: {} })
-      setDevices(Array.isArray(data) ? data : data.devices || [])
+      const directDevices = asCollection(data, ['devices'])
+      if (directDevices.length) {
+        setDevices(directDevices)
+        return
+      }
     } catch {
-      const data = await fetchJson('/api/users', { headers: {} })
-      const usersList = Array.isArray(data) ? data : data.users || []
-      const flattened = usersList.flatMap((user) =>
-        Array.isArray(user.devices) ? user.devices.map((device) => ({ ...device, owner: user })) : []
-      )
-      setDevices(flattened)
+      // Fallback below via users endpoint.
     }
-  }, [fetchJson])
+
+    const data = await fetchJson('/api/users', { headers: {} })
+    const usersList = asCollection(data, ['users'])
+    const flattened = usersList.flatMap((user) =>
+      Array.isArray(user.devices) ? user.devices.map((device) => ({ ...device, owner: user })) : []
+    )
+    setDevices(flattened)
+  }, [asCollection, fetchJson])
 
   useEffect(() => {
     const load = async () => {
@@ -388,10 +412,13 @@ export default function HomeView({
     try {
       if (!deviceForm.ownerUserId) throw new Error('Owner user is required')
       if (!deviceForm.name.trim() || !deviceForm.phoneNumber.trim()) throw new Error('Device name and phone number are required')
+      if (!deviceForm.eviewVersion.trim()) throw new Error('Device version is required')
 
       const payload = {
         name: deviceForm.name.trim(),
         phoneNumber: deviceForm.phoneNumber.trim(),
+        eviewVersion: deviceForm.eviewVersion.trim(),
+        version: deviceForm.eviewVersion.trim(),
         locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
         ownerUserId: Number(deviceForm.ownerUserId)
       }
@@ -603,6 +630,17 @@ export default function HomeView({
     return { headers, payload, timestamp, rawEvent: event }
   }
 
+
+  const queueStatusLabel = String(configQueue?.status || 'IDLE').toUpperCase()
+  const isQueuePending = Boolean(configQueue?.pending || queueStatusLabel === 'PENDING')
+  const nextResendAtMs = configQueue?.nextResendAt ? new Date(configQueue.nextResendAt).getTime() : null
+  const nowMs = Date.now()
+  const resendRemainingMs = nextResendAtMs ? Math.max(nextResendAtMs - nowMs, 0) : 0
+  const resendCooldownActive = isQueuePending && Boolean(nextResendAtMs) && resendRemainingMs > 0
+  const resendRemainingText = resendCooldownActive
+    ? `${Math.ceil(resendRemainingMs / 1000)}s`
+    : 'Ready now'
+
   return (
     <div className="home-shell">
       <Sidebar activeSection={activeSection} onChangeSection={setActiveSection} onLogout={onLogout} />
@@ -737,7 +775,7 @@ export default function HomeView({
             </div>
             <div className="table-shell">
               <table className="data-table">
-              <thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
+              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
               <tbody>
                 {devices.map((d) => {
                   const deviceMeta = resolveDeviceMeta(d)
@@ -745,6 +783,7 @@ export default function HomeView({
                     <tr key={d.id || d.phoneNumber || d.name}>
                       <td>{d.name || d.deviceName || '-'}</td>
                       <td>{d.phoneNumber || '-'}</td>
+                      <td>{d.eviewVersion || d.version || '-'}</td>
                       <td>{deviceMeta.ownerName}</td>
                       <td>{deviceMeta.ownerRole}</td>
                       <td>{deviceMeta.ownerLocation}</td>
@@ -901,7 +940,28 @@ export default function HomeView({
             <h2 className="page-title">Command Page</h2>
             <div className="commands-layout">
               <article className="card-like"><h3>Command Input</h3><div className="field-grid"><div><label>Contact Number</label><input value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} /></div><div><label>SOS Action</label><input value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div><div><label>Geo-fence</label><input value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div></div><button className="mini-action" disabled={loading} onClick={sendConfig}>Send Command</button></article>
-              <article className="card-like"><h3>Command Preview</h3><pre className="preview-box">{commandPreview || 'No command generated yet.'}</pre><button className="mini-action" disabled={loading} onClick={sendConfig}>Submit</button></article>
+              <article className="card-like queue-card">
+                <h3>Command Queue</h3>
+                <div className="queue-grid">
+                  <p><strong>Status:</strong> <span className={`queue-chip queue-${queueStatusLabel.toLowerCase()}`}>{queueStatusLabel}</span></p>
+                  <p><strong>Last Sent:</strong> {configQueue?.lastSentAt ? new Date(configQueue.lastSentAt).toLocaleString() : '-'}</p>
+                  <p><strong>Applied:</strong> {configQueue?.appliedAt ? new Date(configQueue.appliedAt).toLocaleString() : 'Not confirmed yet'}</p>
+                  <p><strong>Next Resend:</strong> {configQueue?.nextResendAt ? new Date(configQueue.nextResendAt).toLocaleString() : '-'}</p>
+                  <p><strong>Cooldown:</strong> {resendRemainingText}</p>
+                </div>
+                <div className="queue-actions">
+                  <button className="mini-action" disabled={loading || !configForm.deviceId} onClick={() => refreshConfigQueueStatus(configForm.deviceId)}>Refresh Queue</button>
+                  <button
+                    className="mini-action"
+                    disabled={loading || !isQueuePending || resendCooldownActive}
+                    onClick={resendPendingConfig}
+                    title={!isQueuePending ? 'Resend is available only while status is PENDING.' : resendCooldownActive ? 'Resend cooldown is active for 5 minutes after send.' : 'Resend pending SMS command'}
+                  >
+                    {resendCooldownActive ? `Resend in ${resendRemainingText}` : 'Resend SMS Command'}
+                  </button>
+                </div>
+                <pre className="preview-box queue-preview">{configQueue?.commandPreview || commandPreview || 'No command queued yet.'}</pre>
+              </article>
             </div>
             <article className="card-like gateway-panel"><h3>SMS Gateway + Test Message</h3><div className="field-grid two-col"><div><label>Gateway Base URL</label><input placeholder="https://gateway-url" value={gatewayBaseUrl} onChange={(event) => setGatewayBaseUrl(event.target.value)} /></div><div><label>Gateway Token</label><input placeholder="Authorization token" value={gatewayToken} onChange={(event) => setGatewayToken(event.target.value)} /></div><div><label>Test Phone Number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} /></div><div><label>Custom Message</label><input value={message} onChange={(event) => setMessage(event.target.value)} /></div></div><button className="mini-action" disabled={loading} onClick={sendMessage}>Send Test Message</button><div className="status">{status}</div><div className="status">{configStatus}</div>{configResult ? <pre className="replies conversation-box">{JSON.stringify(configResult, null, 2)}</pre> : null}</article>
           </section>
@@ -1060,6 +1120,7 @@ export default function HomeView({
             <div className="field-grid">
               <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
+              <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
               <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{users.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
               <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
             </div>
