@@ -69,6 +69,7 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [configStatus, setConfigStatus] = useState('')
   const [configResult, setConfigResult] = useState(null)
+  const [configQueue, setConfigQueue] = useState(null)
   const [configForm, setConfigForm] = useState(initialConfigForm)
   const [configBaseline, setConfigBaseline] = useState(null)
   const [locationResult, setLocationResult] = useState(null)
@@ -410,6 +411,20 @@ export default function App() {
       setConfigResult(data)
       setStatus(`Message sent to ${to}.`)
 
+      if (hasDeviceId) {
+        const queueStatus = {
+          deviceId: normalizedDeviceId,
+          status: String(data.status || data.configStatus || 'PENDING').toUpperCase(),
+          pending: String(data.status || data.configStatus || 'PENDING').toUpperCase() === 'PENDING',
+          lastSentAt: data.sentAt || data.lastSentAt || new Date().toISOString(),
+          appliedAt: data.appliedAt || null,
+          nextResendAt: data.nextResendAt || null,
+          commandPreview: data.commandPreview || command,
+          source: 'send'
+        }
+        setConfigQueue(queueStatus)
+      }
+
       if (persisted) {
         setConfigStatus('Configuration sent successfully and saved to the device profile.')
       } else if (hasDeviceId && persistError) {
@@ -423,6 +438,82 @@ export default function App() {
       setLoading(false)
     }
   }
+
+  const refreshConfigQueueStatus = useCallback(async (deviceIdOverride) => {
+    const resolvedId = Number(deviceIdOverride || configForm.deviceId)
+    if (!Number.isInteger(resolvedId) || resolvedId <= 0) return
+
+    try {
+      const { response } = await fetchWithFallback(`/api/devices/${resolvedId}/config-status`, {
+        headers: commonHeaders()
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || body.message || 'Unable to load config queue status')
+
+      const normalizedStatus = String(body.status || body.configStatus || 'IDLE').toUpperCase()
+      setConfigQueue({
+        deviceId: resolvedId,
+        status: normalizedStatus,
+        pending: body.pending ?? normalizedStatus === 'PENDING',
+        lastSentAt: body.lastSentAt || body.configLastSentAt || null,
+        appliedAt: body.appliedAt || body.configAppliedAt || null,
+        nextResendAt: body.nextResendAt || null,
+        commandPreview: body.commandPreview || '',
+        source: 'status'
+      })
+    } catch (error) {
+      setConfigStatus(`Queue status refresh failed: ${error.message}`)
+    }
+  }, [commonHeaders, configForm.deviceId])
+
+  const resendPendingConfig = useCallback(async () => {
+    const resolvedId = Number(configForm.deviceId)
+    if (!Number.isInteger(resolvedId) || resolvedId <= 0) {
+      setConfigStatus('Resend failed: select a device first.')
+      return
+    }
+
+    setLoading(true)
+    setConfigStatus('Resending pending configuration...')
+
+    try {
+      const { response } = await fetchWithFallback(`/api/devices/${resolvedId}/config-resend`, {
+        method: 'POST',
+        headers: commonHeaders()
+      })
+
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || body.message || 'Unable to resend pending config')
+
+      setConfigResult(body)
+      setConfigStatus('Pending command resent successfully.')
+      await refreshConfigQueueStatus(resolvedId)
+    } catch (error) {
+      setConfigStatus(`Resend failed: ${error.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }, [commonHeaders, configForm.deviceId, refreshConfigQueueStatus])
+
+  useEffect(() => {
+    const resolvedId = Number(configForm.deviceId)
+    if (!Number.isInteger(resolvedId) || resolvedId <= 0) {
+      setConfigQueue(null)
+      return
+    }
+
+    refreshConfigQueueStatus(resolvedId)
+  }, [configForm.deviceId, refreshConfigQueueStatus])
+
+  useEffect(() => {
+    if (!configQueue?.pending || !configQueue.deviceId) return undefined
+
+    const intervalId = setInterval(() => {
+      refreshConfigQueueStatus(configQueue.deviceId)
+    }, 15000)
+
+    return () => clearInterval(intervalId)
+  }, [configQueue?.pending, configQueue?.deviceId, refreshConfigQueueStatus])
 
   return (
     <main className="container">
@@ -464,7 +555,10 @@ export default function App() {
           commandPreview={commandPreview}
           configStatus={configStatus}
           configResult={configResult}
+          configQueue={configQueue}
           sendConfig={handleSendConfig}
+          refreshConfigQueueStatus={refreshConfigQueueStatus}
+          resendPendingConfig={resendPendingConfig}
           loading={loading}
           phone={phone}
           message={message}
