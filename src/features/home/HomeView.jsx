@@ -640,6 +640,11 @@ export default function HomeView({
   const resendRemainingText = resendCooldownActive
     ? `${Math.ceil(resendRemainingMs / 1000)}s`
     : 'Ready now'
+  const queuedCommandPreview = (configQueue?.commandPreview || '').trim()
+  const activeCommandPreview = (commandPreview || '').trim()
+  const hasActiveCommand = Boolean(activeCommandPreview)
+  const hasQueuedCommand = Boolean(queuedCommandPreview)
+  const hasCommandChanges = hasActiveCommand && activeCommandPreview !== queuedCommandPreview
 
   return (
     <div className="home-shell">
@@ -960,7 +965,27 @@ export default function HomeView({
                     {resendCooldownActive ? `Resend in ${resendRemainingText}` : 'Resend SMS Command'}
                   </button>
                 </div>
-                <pre className="preview-box queue-preview">{configQueue?.commandPreview || commandPreview || 'No command queued yet.'}</pre>
+                <div className="queue-previews-grid">
+                  <section className="queue-preview-panel">
+                    <div className="queue-preview-head">
+                      <h4>Queued Command</h4>
+                      <span className={`queue-mini-chip ${hasQueuedCommand ? 'queue-mini-ready' : 'queue-mini-empty'}`}>
+                        {hasQueuedCommand ? 'In Queue' : 'Empty'}
+                      </span>
+                    </div>
+                    <pre className="preview-box queue-preview">{queuedCommandPreview || 'No command queued yet.'}</pre>
+                  </section>
+
+                  <section className="queue-preview-panel">
+                    <div className="queue-preview-head">
+                      <h4>Active Draft / Changed</h4>
+                      <span className={`queue-mini-chip ${hasCommandChanges ? 'queue-mini-changed' : 'queue-mini-ready'}`}>
+                        {hasCommandChanges ? 'Unsynced Changes' : 'Synced'}
+                      </span>
+                    </div>
+                    <pre className="preview-box queue-preview">{activeCommandPreview || 'No active command changes yet.'}</pre>
+                  </section>
+                </div>
               </article>
             </div>
             <article className="card-like gateway-panel"><h3>SMS Gateway + Test Message</h3><div className="field-grid two-col"><div><label>Gateway Base URL</label><input placeholder="https://gateway-url" value={gatewayBaseUrl} onChange={(event) => setGatewayBaseUrl(event.target.value)} /></div><div><label>Gateway Token</label><input placeholder="Authorization token" value={gatewayToken} onChange={(event) => setGatewayToken(event.target.value)} /></div><div><label>Test Phone Number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} /></div><div><label>Custom Message</label><input value={message} onChange={(event) => setMessage(event.target.value)} /></div></div><button className="mini-action" disabled={loading} onClick={sendMessage}>Send Test Message</button><div className="status">{status}</div><div className="status">{configStatus}</div>{configResult ? <pre className="replies conversation-box">{JSON.stringify(configResult, null, 2)}</pre> : null}</article>
