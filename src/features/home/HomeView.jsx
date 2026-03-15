@@ -28,7 +28,7 @@ export default function HomeView({
   configForm,
   setConfigForm,
   setConfigBaseline,
-  commandPreview,
+  draftCommandPreview,
   configStatus,
   configResult,
   configQueue,
@@ -641,7 +641,7 @@ export default function HomeView({
     ? `${Math.ceil(resendRemainingMs / 1000)}s`
     : 'Ready now'
   const queuedCommandPreview = (configQueue?.commandPreview || '').trim()
-  const activeCommandPreview = (commandPreview || '').trim()
+  const activeCommandPreview = (draftCommandPreview || '').trim()
   const hasActiveCommand = Boolean(activeCommandPreview)
   const hasQueuedCommand = Boolean(queuedCommandPreview)
   const hasCommandChanges = hasActiveCommand && activeCommandPreview !== queuedCommandPreview
@@ -978,12 +978,12 @@ export default function HomeView({
 
                   <section className="queue-preview-panel">
                     <div className="queue-preview-head">
-                      <h4>Active Draft / Changed</h4>
-                      <span className={`queue-mini-chip ${hasCommandChanges ? 'queue-mini-changed' : 'queue-mini-ready'}`}>
-                        {hasCommandChanges ? 'Unsynced Changes' : 'Synced'}
+                      <h4>Active Draft (Updates Only)</h4>
+                      <span className={`queue-mini-chip ${hasCommandChanges ? 'queue-mini-changed' : 'queue-mini-empty'}`}>
+                        {hasCommandChanges ? 'Pending Updates' : 'No Updates'}
                       </span>
                     </div>
-                    <pre className="preview-box queue-preview">{activeCommandPreview || 'No active command changes yet.'}</pre>
+                    <pre className="preview-box queue-preview">{activeCommandPreview || 'No draft updates. Only changed values are shown here.'}</pre>
                   </section>
                 </div>
               </article>

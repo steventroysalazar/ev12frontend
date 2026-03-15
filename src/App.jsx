@@ -79,6 +79,10 @@ export default function App() {
   }, [auth])
 
   const commandPreview = useMemo(() => buildEv12Preview(configForm, configBaseline), [configForm, configBaseline])
+  const draftCommandPreview = useMemo(
+    () => (configBaseline ? buildEv12Preview(configForm, configBaseline) : ''),
+    [configForm, configBaseline]
+  )
   const formattedReplies = useMemo(
     () => (replies.length ? replies.map(formatReply).join('\n') : 'No replies loaded yet.'),
     [replies]
@@ -576,7 +580,7 @@ export default function App() {
           configForm={configForm}
           setConfigForm={setConfigForm}
           setConfigBaseline={setConfigBaseline}
-          commandPreview={commandPreview}
+          draftCommandPreview={draftCommandPreview}
           configStatus={configStatus}
           configResult={configResult}
           configQueue={configQueue}
