@@ -31,7 +31,10 @@ export default function HomeView({
   commandPreview,
   configStatus,
   configResult,
+  configQueue,
   sendConfig,
+  refreshConfigQueueStatus,
+  resendPendingConfig,
   loading,
   phone,
   message,
@@ -603,6 +606,17 @@ export default function HomeView({
     return { headers, payload, timestamp, rawEvent: event }
   }
 
+
+  const queueStatusLabel = String(configQueue?.status || 'IDLE').toUpperCase()
+  const isQueuePending = Boolean(configQueue?.pending || queueStatusLabel === 'PENDING')
+  const nextResendAtMs = configQueue?.nextResendAt ? new Date(configQueue.nextResendAt).getTime() : null
+  const nowMs = Date.now()
+  const resendRemainingMs = nextResendAtMs ? Math.max(nextResendAtMs - nowMs, 0) : 0
+  const resendCooldownActive = isQueuePending && Boolean(nextResendAtMs) && resendRemainingMs > 0
+  const resendRemainingText = resendCooldownActive
+    ? `${Math.ceil(resendRemainingMs / 1000)}s`
+    : 'Ready now'
+
   return (
     <div className="home-shell">
       <Sidebar activeSection={activeSection} onChangeSection={setActiveSection} onLogout={onLogout} />
@@ -901,7 +915,28 @@ export default function HomeView({
             <h2 className="page-title">Command Page</h2>
             <div className="commands-layout">
               <article className="card-like"><h3>Command Input</h3><div className="field-grid"><div><label>Contact Number</label><input value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} /></div><div><label>SOS Action</label><input value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div><div><label>Geo-fence</label><input value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div></div><button className="mini-action" disabled={loading} onClick={sendConfig}>Send Command</button></article>
-              <article className="card-like"><h3>Command Preview</h3><pre className="preview-box">{commandPreview || 'No command generated yet.'}</pre><button className="mini-action" disabled={loading} onClick={sendConfig}>Submit</button></article>
+              <article className="card-like queue-card">
+                <h3>Command Queue</h3>
+                <div className="queue-grid">
+                  <p><strong>Status:</strong> <span className={`queue-chip queue-${queueStatusLabel.toLowerCase()}`}>{queueStatusLabel}</span></p>
+                  <p><strong>Last Sent:</strong> {configQueue?.lastSentAt ? new Date(configQueue.lastSentAt).toLocaleString() : '-'}</p>
+                  <p><strong>Applied:</strong> {configQueue?.appliedAt ? new Date(configQueue.appliedAt).toLocaleString() : 'Not confirmed yet'}</p>
+                  <p><strong>Next Resend:</strong> {configQueue?.nextResendAt ? new Date(configQueue.nextResendAt).toLocaleString() : '-'}</p>
+                  <p><strong>Cooldown:</strong> {resendRemainingText}</p>
+                </div>
+                <div className="queue-actions">
+                  <button className="mini-action" disabled={loading || !configForm.deviceId} onClick={() => refreshConfigQueueStatus(configForm.deviceId)}>Refresh Queue</button>
+                  <button
+                    className="mini-action"
+                    disabled={loading || !isQueuePending || resendCooldownActive}
+                    onClick={resendPendingConfig}
+                    title={!isQueuePending ? 'Resend is available only while status is PENDING.' : resendCooldownActive ? 'Resend cooldown is active for 5 minutes after send.' : 'Resend pending SMS command'}
+                  >
+                    {resendCooldownActive ? `Resend in ${resendRemainingText}` : 'Resend SMS Command'}
+                  </button>
+                </div>
+                <pre className="preview-box queue-preview">{configQueue?.commandPreview || commandPreview || 'No command queued yet.'}</pre>
+              </article>
             </div>
             <article className="card-like gateway-panel"><h3>SMS Gateway + Test Message</h3><div className="field-grid two-col"><div><label>Gateway Base URL</label><input placeholder="https://gateway-url" value={gatewayBaseUrl} onChange={(event) => setGatewayBaseUrl(event.target.value)} /></div><div><label>Gateway Token</label><input placeholder="Authorization token" value={gatewayToken} onChange={(event) => setGatewayToken(event.target.value)} /></div><div><label>Test Phone Number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} /></div><div><label>Custom Message</label><input value={message} onChange={(event) => setMessage(event.target.value)} /></div></div><button className="mini-action" disabled={loading} onClick={sendMessage}>Send Test Message</button><div className="status">{status}</div><div className="status">{configStatus}</div>{configResult ? <pre className="replies conversation-box">{JSON.stringify(configResult, null, 2)}</pre> : null}</article>
           </section>

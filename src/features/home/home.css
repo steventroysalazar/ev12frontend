@@ -244,3 +244,53 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
   color: #446186;
   font-weight: 700;
 }
+
+
+.queue-card {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.queue-grid {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.queue-grid p {
+  margin: 0;
+}
+
+.queue-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.queue-pending {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.queue-applied {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.queue-idle {
+  background: #eef2f7;
+  color: #334155;
+}
+
+.queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.queue-preview {
+  min-height: 130px;
+}
