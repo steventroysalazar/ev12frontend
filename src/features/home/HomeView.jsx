@@ -148,6 +148,21 @@ export default function HomeView({
     })
   }
 
+
+
+  const asCollection = useCallback((payload, keys = []) => {
+    if (Array.isArray(payload)) return payload
+
+    for (const key of keys) {
+      if (Array.isArray(payload?.[key])) return payload[key]
+    }
+
+    if (Array.isArray(payload?.content)) return payload.content
+    if (Array.isArray(payload?.data)) return payload.data
+    if (Array.isArray(payload?.items)) return payload.items
+    return []
+  }, [])
+
   const fetchJson = useCallback(
     async (url, options = {}) => {
       return fetchJsonWithFallback(url, {
@@ -164,27 +179,33 @@ export default function HomeView({
 
   const loadUsers = useCallback(async () => {
     const data = await fetchJson('/api/users', { headers: {} })
-    setUsers(Array.isArray(data) ? data : data.users || [])
-  }, [fetchJson])
+    setUsers(asCollection(data, ['users']))
+  }, [asCollection, fetchJson])
 
   const loadLocations = useCallback(async () => {
     const data = await fetchJson('/api/locations', { headers: {} })
-    setLocations(Array.isArray(data) ? data : data.locations || [])
-  }, [fetchJson])
+    setLocations(asCollection(data, ['locations']))
+  }, [asCollection, fetchJson])
 
   const loadDevices = useCallback(async () => {
     try {
       const data = await fetchJson('/api/devices', { headers: {} })
-      setDevices(Array.isArray(data) ? data : data.devices || [])
+      const directDevices = asCollection(data, ['devices'])
+      if (directDevices.length) {
+        setDevices(directDevices)
+        return
+      }
     } catch {
-      const data = await fetchJson('/api/users', { headers: {} })
-      const usersList = Array.isArray(data) ? data : data.users || []
-      const flattened = usersList.flatMap((user) =>
-        Array.isArray(user.devices) ? user.devices.map((device) => ({ ...device, owner: user })) : []
-      )
-      setDevices(flattened)
+      // Fallback below via users endpoint.
     }
-  }, [fetchJson])
+
+    const data = await fetchJson('/api/users', { headers: {} })
+    const usersList = asCollection(data, ['users'])
+    const flattened = usersList.flatMap((user) =>
+      Array.isArray(user.devices) ? user.devices.map((device) => ({ ...device, owner: user })) : []
+    )
+    setDevices(flattened)
+  }, [asCollection, fetchJson])
 
   useEffect(() => {
     const load = async () => {
