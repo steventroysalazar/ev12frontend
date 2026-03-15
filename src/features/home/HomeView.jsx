@@ -16,7 +16,7 @@ const initialUserForm = {
   locationId: '',
   managerId: ''
 }
-const initialDeviceForm = { name: '', phoneNumber: '', ownerUserId: '', locationId: '' }
+const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '' }
 
 export default function HomeView({
   user,
@@ -412,10 +412,13 @@ export default function HomeView({
     try {
       if (!deviceForm.ownerUserId) throw new Error('Owner user is required')
       if (!deviceForm.name.trim() || !deviceForm.phoneNumber.trim()) throw new Error('Device name and phone number are required')
+      if (!deviceForm.eviewVersion.trim()) throw new Error('Device version is required')
 
       const payload = {
         name: deviceForm.name.trim(),
         phoneNumber: deviceForm.phoneNumber.trim(),
+        eviewVersion: deviceForm.eviewVersion.trim(),
+        version: deviceForm.eviewVersion.trim(),
         locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
         ownerUserId: Number(deviceForm.ownerUserId)
       }
@@ -772,7 +775,7 @@ export default function HomeView({
             </div>
             <div className="table-shell">
               <table className="data-table">
-              <thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
+              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
               <tbody>
                 {devices.map((d) => {
                   const deviceMeta = resolveDeviceMeta(d)
@@ -780,6 +783,7 @@ export default function HomeView({
                     <tr key={d.id || d.phoneNumber || d.name}>
                       <td>{d.name || d.deviceName || '-'}</td>
                       <td>{d.phoneNumber || '-'}</td>
+                      <td>{d.eviewVersion || d.version || '-'}</td>
                       <td>{deviceMeta.ownerName}</td>
                       <td>{deviceMeta.ownerRole}</td>
                       <td>{deviceMeta.ownerLocation}</td>
@@ -1116,6 +1120,7 @@ export default function HomeView({
             <div className="field-grid">
               <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
+              <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
               <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{users.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
               <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
             </div>
