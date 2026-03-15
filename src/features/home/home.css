@@ -176,7 +176,7 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .modal { width: min(620px, 92vw); }
 
 @media (max-width: 980px) {
-  .home-shell,.metric-grid,.dashboard-main-grid,.location-grid,.commands-layout,.field-grid.two-col,.alarm-row,.contact-head,.contact-row { grid-template-columns: 1fr; }
+  .home-shell,.metric-grid,.dashboard-main-grid,.location-grid,.commands-layout,.queue-previews-grid,.field-grid.two-col,.alarm-row,.contact-head,.contact-row { grid-template-columns: 1fr; }
 }
 
 .status-success {
@@ -293,4 +293,54 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 
 .queue-preview {
   min-height: 130px;
+}
+
+
+.queue-previews-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.queue-preview-panel {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.queue-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.queue-preview-head h4 {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #202b40;
+}
+
+.queue-mini-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.queue-mini-ready {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.queue-mini-empty {
+  background: #eef2f7;
+  color: #475569;
+}
+
+.queue-mini-changed {
+  background: #fff7ed;
+  color: #c2410c;
 }
