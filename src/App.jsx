@@ -333,17 +333,12 @@ export default function App() {
 
   const handleSendConfig = async () => {
     const to = configForm.contactNumber?.trim() || phone.trim()
-    const command = commandPreview.trim()
     const normalizedDeviceId = Number(configForm.deviceId)
     const hasDeviceId = Number.isInteger(normalizedDeviceId) && normalizedDeviceId > 0
+    let command = commandPreview.trim()
 
     if (!to) {
       setConfigStatus('Config failed: device/contact number is required.')
-      return
-    }
-
-    if (!command) {
-      setConfigStatus(configBaseline ? 'Config failed: no updates detected for this device.' : 'Config failed: no command generated yet.')
       return
     }
 
@@ -351,6 +346,34 @@ export default function App() {
     setConfigStatus('Sending configuration...')
     try {
       const protocolSettings = { ...configForm }
+
+      if (hasDeviceId) {
+        try {
+          const { response } = await fetchWithFallback(`/api/devices/${normalizedDeviceId}`, {
+            headers: commonHeaders()
+          })
+          const deviceBody = await response.json().catch(() => ({}))
+          if (response.ok && deviceBody?.protocolSettings && typeof deviceBody.protocolSettings === 'object') {
+            const baselineFromDevice = {
+              ...configForm,
+              ...deviceBody.protocolSettings,
+              deviceId: normalizedDeviceId
+            }
+            const changedOnlyCommand = buildEv12Preview(configForm, baselineFromDevice).trim()
+            if (changedOnlyCommand) {
+              command = changedOnlyCommand
+            }
+          }
+        } catch {
+          // Best effort only: continue with current preview if baseline refresh fails.
+        }
+      }
+
+      if (!command) {
+        setConfigStatus('Config failed: no updates detected for this device.')
+        return
+      }
+
       const payload = {
         ...configForm,
         deviceId: hasDeviceId ? normalizedDeviceId : configForm.deviceId,
@@ -423,6 +446,7 @@ export default function App() {
           source: 'send'
         }
         setConfigQueue(queueStatus)
+        setConfigBaseline(protocolSettings)
       }
 
       if (persisted) {
@@ -451,16 +475,16 @@ export default function App() {
       if (!response.ok) throw new Error(body.error || body.message || 'Unable to load config queue status')
 
       const normalizedStatus = String(body.status || body.configStatus || 'IDLE').toUpperCase()
-      setConfigQueue({
+      setConfigQueue((prev) => ({
         deviceId: resolvedId,
         status: normalizedStatus,
         pending: body.pending ?? normalizedStatus === 'PENDING',
         lastSentAt: body.lastSentAt || body.configLastSentAt || null,
         appliedAt: body.appliedAt || body.configAppliedAt || null,
         nextResendAt: body.nextResendAt || null,
-        commandPreview: body.commandPreview || '',
+        commandPreview: body.commandPreview || prev?.commandPreview || '',
         source: 'status'
-      })
+      }))
     } catch (error) {
       setConfigStatus(`Queue status refresh failed: ${error.message}`)
     }
