@@ -94,6 +94,7 @@ export default function HomeView({
   const [autoFetchReplies, setAutoFetchReplies] = useState(false)
   const [webhookRaw, setWebhookRaw] = useState(null)
   const [webhookStatus, setWebhookStatus] = useState('')
+  const [clearingWebhookEvents, setClearingWebhookEvents] = useState(false)
   const webhookFingerprintRef = useRef('')
 
   const roleLabel = useCallback((value) => {
@@ -337,12 +338,92 @@ export default function HomeView({
     return () => clearInterval(intervalId)
   }, [activeSection, loadWebhookEvents])
 
-  const clearWebhookEvents = () => {
-    webhookFingerprintRef.current = ''
-    persistWebhookEvents([])
-    setWebhookRaw(null)
-    setWebhookStatus('Webhook events cleared from local storage.')
-  }
+  const clearWebhookEvents = useCallback(async () => {
+    if (clearingWebhookEvents) return
+
+    setClearingWebhookEvents(true)
+    setWebhookStatus('Clearing webhook events...')
+
+    const endpoints = ['/api/webhooks/ev12/events', 'http://localhost:8090/api/webhooks/ev12/events']
+    let deletedCount = 0
+    let lastError = null
+
+    try {
+      for (const endpoint of endpoints) {
+        try {
+          const { response } = await fetchWithFallback(endpoint, {
+            method: 'DELETE',
+            headers: {
+              ...(authToken ? { Authorization: authToken } : {}),
+              ...(gatewayToken ? { 'X-Webhook-Token': gatewayToken } : {})
+            }
+          })
+
+          const body = await response.json().catch(() => ({}))
+          if (!response.ok) throw new Error(body.error || body.message || `Failed ${endpoint}`)
+
+          deletedCount = Number(body.deleted) || 0
+          webhookFingerprintRef.current = ''
+          persistWebhookEvents([])
+          setWebhookRaw([])
+          setWebhookStatus(`Webhook events cleared. Deleted ${deletedCount} event(s).`)
+          return
+        } catch (error) {
+          lastError = error
+        }
+      }
+
+      setWebhookStatus(`Unable to clear webhook events: ${lastError?.message || 'Unknown error'}`)
+    } finally {
+      setClearingWebhookEvents(false)
+    }
+  }, [authToken, gatewayToken, clearingWebhookEvents])
+
+  const formatWebhookLabel = useCallback((value) => {
+    if (!value) return 'Unknown event'
+    return String(value)
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+  }, [])
+
+  const webhookSummary = useCallback((event, index) => {
+    const parts = splitWebhookParts(event)
+    const eventType =
+      event?.event ||
+      event?.eventType ||
+      event?.type ||
+      event?.payload?.event ||
+      event?.payload?.type ||
+      event?.rawEvent?.event ||
+      event?.rawEvent?.type
+
+    const source =
+      event?.source ||
+      event?.provider ||
+      event?.payload?.source ||
+      event?.rawEvent?.source ||
+      event?.headers?.['x-forwarded-host'] ||
+      event?.headers?.host
+
+    const phoneValue =
+      event?.phone ||
+      event?.msisdn ||
+      event?.payload?.phone ||
+      event?.payload?.msisdn ||
+      event?.rawEvent?.phone ||
+      event?.rawEvent?.msisdn ||
+      event?.payload?.contact?.phone
+
+    return {
+      parts,
+      title: formatWebhookLabel(eventType),
+      source: source || 'EV12 Webhook',
+      phone: phoneValue || null,
+      id: event?.id || event?._id || event?.messageId || event?.payload?.messageId || `event-${index + 1}`
+    }
+  }, [formatWebhookLabel])
 
   const openDeviceSettings = async (device) => {
     const selectedDeviceId = Number(device?.id || device?.deviceId)
@@ -1063,7 +1144,9 @@ export default function HomeView({
               <h2 className="section-title">Webhook Events</h2>
               <div>
                 <button className="mini-action" type="button" onClick={loadWebhookEvents}>Refresh Events</button>
-                <button className="mini-action" type="button" onClick={clearWebhookEvents}>Clear Events</button>
+                <button className="mini-action" type="button" onClick={clearWebhookEvents} disabled={clearingWebhookEvents}>
+                  {clearingWebhookEvents ? 'Clearing…' : 'Clear Events'}
+                </button>
               </div>
             </div>
             <p className="status">Live listener is active. New events appear automatically. Showing all fetched events.</p>
@@ -1074,10 +1157,19 @@ export default function HomeView({
                 <pre className="conversation-box webhook-pre">No webhook events found.</pre>
               ) : Array.isArray(webhookRaw) ? (
                 webhookRaw.map((event, index) => {
-                  const parts = splitWebhookParts(event)
+                  const summary = webhookSummary(event, index)
+                  const { parts } = summary
                   return (
                     <article className="webhook-event" key={event?.id || event?._id || `${parts.timestamp || 'event'}-${index}`}>
-                      {parts.timestamp ? <h3 className="webhook-time">{String(parts.timestamp)}</h3> : null}
+                      <header className="webhook-head">
+                        <h3 className="webhook-title">{summary.title}</h3>
+                        <div className="webhook-meta-row">
+                          <span className="webhook-chip">ID: {summary.id}</span>
+                          <span className="webhook-chip">Source: {summary.source}</span>
+                          {summary.phone ? <span className="webhook-chip">Phone: {summary.phone}</span> : null}
+                        </div>
+                        {parts.timestamp ? <p className="webhook-time">{String(parts.timestamp)}</p> : null}
+                      </header>
                       {parts.headers !== null && parts.headers !== undefined ? (
                         <>
                           <h4>Headers</h4>
