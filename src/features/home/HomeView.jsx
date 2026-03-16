@@ -305,7 +305,11 @@ export default function HomeView({
 
     webhookFingerprintRef.current = nextFingerprint
     setWebhookRaw(mergedEvents)
-    setWebhookStatus(hasNewEvent ? 'New webhook event received.' : `Showing ${mergedEvents.length} locally saved webhook event(s).`)
+    setWebhookStatus(hasNewEvent
+      ? `New webhook event received. Showing ${mergedEvents.length} saved webhook event(s).`
+      : (mergedEvents.length
+        ? `Showing ${mergedEvents.length} saved webhook event(s).`
+        : 'No webhook events fetched yet.'))
   }, [authToken])
 
   useEffect(() => {
@@ -1062,7 +1066,7 @@ export default function HomeView({
                 <button className="mini-action" type="button" onClick={clearWebhookEvents}>Clear Events</button>
               </div>
             </div>
-            <p className="status">Live listener is active. New events appear automatically. Showing latest 3 events.</p>
+            <p className="status">Live listener is active. New events appear automatically. Showing all fetched events.</p>
             <p className="status">{webhookStatus || 'No webhook data loaded yet.'}</p>
 
             <div className="webhook-list">
