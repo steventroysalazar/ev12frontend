@@ -17,6 +17,26 @@ const initialUserForm = {
   managerId: ''
 }
 const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '' }
+const WEBHOOK_STORAGE_KEY = 'ev12:webhook-events'
+
+const parseStoredWebhookEvents = () => {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const raw = window.localStorage.getItem(WEBHOOK_STORAGE_KEY)
+    if (!raw) return []
+
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+const persistWebhookEvents = (events) => {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(WEBHOOK_STORAGE_KEY, JSON.stringify(events))
+}
 
 export default function HomeView({
   user,
@@ -268,31 +288,34 @@ export default function HomeView({
     }
 
     const getEventTime = (event) => new Date(event?.receivedAt || event?.timestamp || event?.createdAt || event?.date || 0).getTime()
+    const incomingEvents = Array.isArray(payload) ? payload : [payload]
+    const previousEvents = parseStoredWebhookEvents()
+    const mergedEvents = [...incomingEvents, ...previousEvents]
+      .sort((a, b) => getEventTime(b) - getEventTime(a))
+      .filter((event, index, all) => {
+        const key = JSON.stringify(event)
+        return all.findIndex((candidate) => JSON.stringify(candidate) === key) === index
+      })
 
-    if (Array.isArray(payload)) {
-      const latestEvents = payload
-        .slice()
-        .sort((a, b) => getEventTime(b) - getEventTime(a))
-        .slice(0, 3)
+    persistWebhookEvents(mergedEvents)
 
-      const nextFingerprint = JSON.stringify(latestEvents)
-      const hadPrevious = webhookFingerprintRef.current !== ''
-      const hasNewEvent = hadPrevious && webhookFingerprintRef.current !== nextFingerprint
-
-      webhookFingerprintRef.current = nextFingerprint
-      setWebhookRaw(latestEvents)
-      setWebhookStatus(hasNewEvent ? 'New webhook event received. Showing latest 3 events.' : `Showing latest ${latestEvents.length} webhook event(s).`)
-      return
-    }
-
-    const nextFingerprint = JSON.stringify(payload)
+    const nextFingerprint = JSON.stringify(mergedEvents)
     const hadPrevious = webhookFingerprintRef.current !== ''
     const hasNewEvent = hadPrevious && webhookFingerprintRef.current !== nextFingerprint
 
     webhookFingerprintRef.current = nextFingerprint
-    setWebhookRaw(payload)
-    setWebhookStatus(hasNewEvent ? 'New webhook payload received.' : 'Loaded webhook payload.')
+    setWebhookRaw(mergedEvents)
+    setWebhookStatus(hasNewEvent ? 'New webhook event received.' : `Showing ${mergedEvents.length} locally saved webhook event(s).`)
   }, [authToken])
+
+  useEffect(() => {
+    const storedEvents = parseStoredWebhookEvents()
+    if (!storedEvents.length) return
+
+    webhookFingerprintRef.current = JSON.stringify(storedEvents)
+    setWebhookRaw(storedEvents)
+    setWebhookStatus(`Loaded ${storedEvents.length} webhook event(s) from local storage.`)
+  }, [])
 
   useEffect(() => {
     if (activeSection === 'webhooks') {
@@ -312,8 +335,9 @@ export default function HomeView({
 
   const clearWebhookEvents = () => {
     webhookFingerprintRef.current = ''
+    persistWebhookEvents([])
     setWebhookRaw(null)
-    setWebhookStatus('Webhook events cleared.')
+    setWebhookStatus('Webhook events cleared from local storage.')
   }
 
   const openDeviceSettings = async (device) => {
