@@ -16,7 +16,7 @@ const initialUserForm = {
   locationId: '',
   managerId: ''
 }
-const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '' }
+const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '', externalDeviceId: '' }
 const WEBHOOK_STORAGE_KEY = 'ev12:webhook-events'
 
 const parseStoredWebhookEvents = () => {
@@ -76,10 +76,12 @@ export default function HomeView({
   const [showUserModal, setShowUserModal] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showDeviceModal, setShowDeviceModal] = useState(false)
+  const [showEditDeviceModal, setShowEditDeviceModal] = useState(false)
   const [showEditUserModal, setShowEditUserModal] = useState(false)
   const [showEditLocationModal, setShowEditLocationModal] = useState(false)
   const [editingUserId, setEditingUserId] = useState(null)
   const [editingLocationId, setEditingLocationId] = useState(null)
+  const [editingDeviceId, setEditingDeviceId] = useState(null)
 
   const [users, setUsers] = useState([])
   const [locations, setLocations] = useState([])
@@ -529,7 +531,10 @@ export default function HomeView({
         eviewVersion: deviceForm.eviewVersion.trim(),
         version: deviceForm.eviewVersion.trim(),
         locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
-        ownerUserId: Number(deviceForm.ownerUserId)
+        ownerUserId: Number(deviceForm.ownerUserId),
+        ...(deviceForm.externalDeviceId.trim()
+          ? { externalDeviceId: deviceForm.externalDeviceId.trim(), deviceId: deviceForm.externalDeviceId.trim() }
+          : {})
       }
 
       try {
@@ -544,6 +549,53 @@ export default function HomeView({
       await loadDevices()
     } catch (error) {
       setActionStatus({ type: 'error', message: `Create device failed: ${error.message}` })
+    }
+  }
+
+  const openEditDeviceModal = async (device) => {
+    await Promise.all([loadUsers(), loadLocations()])
+
+    setEditingDeviceId(device.id || device.deviceId)
+    setDeviceForm({
+      name: device.name || device.deviceName || '',
+      phoneNumber: device.phoneNumber || '',
+      eviewVersion: device.eviewVersion || device.version || '',
+      ownerUserId: device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || '',
+      locationId: device.locationId || device.location_id || '',
+      externalDeviceId: device.externalDeviceId || device.external_device_id || device.deviceId || ''
+    })
+    setShowEditDeviceModal(true)
+  }
+
+  const handleUpdateDevice = async () => {
+    try {
+      if (!editingDeviceId) throw new Error('Device id is missing')
+      if (!deviceForm.name.trim() || !deviceForm.phoneNumber.trim()) throw new Error('Device name and phone number are required')
+
+      const payload = {
+        name: deviceForm.name.trim(),
+        phoneNumber: deviceForm.phoneNumber.trim(),
+        eviewVersion: deviceForm.eviewVersion.trim(),
+        version: deviceForm.eviewVersion.trim(),
+        userId: deviceForm.ownerUserId ? Number(deviceForm.ownerUserId) : null,
+        locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
+        externalDeviceId: deviceForm.externalDeviceId.trim() || null,
+        deviceId: deviceForm.externalDeviceId.trim() || null
+      }
+
+      try {
+        await fetchJson(`/api/devices/${editingDeviceId}`, { method: 'PUT', body: JSON.stringify(payload) })
+      } catch {
+        await fetchJson(`/api/devices/${editingDeviceId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+      }
+
+      setActionStatus({ type: 'success', message: 'Device updated successfully.' })
+      setShowEditDeviceModal(false)
+      setEditingDeviceId(null)
+      setDeviceForm(initialDeviceForm)
+      await loadDevices()
+    } catch (error) {
+      setActionStatus({ type: 'error', message: `Update device failed: ${error.message}` })
     }
   }
 
@@ -903,7 +955,7 @@ export default function HomeView({
             </div>
             <div className="table-shell">
               <table className="data-table">
-              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Alarm</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
+              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
               <tbody>
                 {devices.map((d) => {
                   const deviceMeta = resolveDeviceMeta(d)
@@ -913,11 +965,15 @@ export default function HomeView({
                       <td>{d.name || d.deviceName || '-'}</td>
                       <td>{d.phoneNumber || '-'}</td>
                       <td>{d.eviewVersion || d.version || '-'}</td>
+                      <td>{d.externalDeviceId || d.external_device_id || d.deviceId || '-'}</td>
                       <td><span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span></td>
                       <td>{deviceMeta.ownerName}</td>
                       <td>{deviceMeta.ownerRole}</td>
                       <td>{deviceMeta.ownerLocation}</td>
-                      <td><button className="table-link" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
+                      <td>
+                        <button className="table-link" type="button" onClick={() => openEditDeviceModal(d)}>Edit</button>
+                        <button className="table-link" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button>
+                      </td>
                     </tr>
                   )
                 })}
@@ -1282,10 +1338,28 @@ export default function HomeView({
               <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
               <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
+              <input placeholder="Webhook Device ID (externalDeviceId)" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
               <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{users.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
               <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
             </div>
             <button className="mini-action" onClick={handleCreateDevice}>Add Device</button>
+          </div>
+        </div>
+      ) : null}
+
+      {showEditDeviceModal ? (
+        <div className="overlay" onClick={() => { setShowEditDeviceModal(false); setEditingDeviceId(null); setDeviceForm(initialDeviceForm) }}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Edit Device</h3>
+            <div className="field-grid">
+              <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
+              <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
+              <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
+              <input placeholder="Webhook Device ID (externalDeviceId)" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
+              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{users.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
+              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+            </div>
+            <button className="mini-action" onClick={handleUpdateDevice}>Save Device</button>
           </div>
         </div>
       ) : null}
