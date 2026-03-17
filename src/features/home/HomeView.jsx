@@ -701,12 +701,24 @@ export default function HomeView({
     return [
       ['Device Name', currentDevice.name || currentDevice.deviceName || '-'],
       ['Device Phone Number', currentDevice.phoneNumber || '-'],
+      ['Alarm Status', currentDevice.alarmCode || 'No active alarm'],
       ['Owner User', deviceMeta.ownerName],
       ['Owner Location', deviceMeta.ownerLocation],
       ['Last reply', replyRows[0]?.receivedAt || 'No reply yet'],
       ['Battery status', currentDevice.batteryStatus || currentDevice.battery || 'Unknown']
     ]
   }, [devices, replyRows, user, resolveDeviceMeta])
+
+  const getAlarmMeta = useCallback((alarmCode) => {
+    const normalizedCode = String(alarmCode || '').trim()
+    if (!normalizedCode) return { label: 'No active alarm', tone: 'idle' }
+
+    const normalizedLower = normalizedCode.toLowerCase()
+    if (normalizedLower.includes('sos')) return { label: 'SOS Alert', tone: 'critical' }
+    if (normalizedLower.includes('fall')) return { label: 'Fall-Down Alert', tone: 'warning' }
+
+    return { label: normalizedCode, tone: 'active' }
+  }, [])
 
   const renderRaw = (value) => (typeof value === 'string' ? value : JSON.stringify(value, null, 2))
 
@@ -786,13 +798,15 @@ export default function HomeView({
                     <h3>Recently Added Devices</h3>
                     <div className="table-shell dashboard-device-table">
                       <table className="data-table">
-                        <thead><tr><th>Device</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead>
+                        <thead><tr><th>Device</th><th>Alarm</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead>
                         <tbody>
                           {devices.slice(0, 5).map((device) => {
                             const meta = resolveDeviceMeta(device)
+                            const alarmMeta = getAlarmMeta(device.alarmCode)
                             return (
                               <tr key={device.id || device.phoneNumber || device.name}>
                                 <td>{device.name || device.deviceName || '-'}</td>
+                                <td><span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span></td>
                                 <td>{meta.ownerName}</td>
                                 <td>{meta.ownerRole}</td>
                                 <td>{meta.ownerLocation}</td>
@@ -889,15 +903,17 @@ export default function HomeView({
             </div>
             <div className="table-shell">
               <table className="data-table">
-              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
+              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Alarm</th><th>Owner</th><th>Role</th><th>Location</th><th>Action</th></tr></thead>
               <tbody>
                 {devices.map((d) => {
                   const deviceMeta = resolveDeviceMeta(d)
+                  const alarmMeta = getAlarmMeta(d.alarmCode)
                   return (
                     <tr key={d.id || d.phoneNumber || d.name}>
                       <td>{d.name || d.deviceName || '-'}</td>
                       <td>{d.phoneNumber || '-'}</td>
                       <td>{d.eviewVersion || d.version || '-'}</td>
+                      <td><span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span></td>
                       <td>{deviceMeta.ownerName}</td>
                       <td>{deviceMeta.ownerRole}</td>
                       <td>{deviceMeta.ownerLocation}</td>
