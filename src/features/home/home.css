@@ -172,6 +172,43 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 
 .data-table tr:last-child td { border-bottom: none; }
 
+
+.alarm-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.alarm-pill-idle {
+  background: #eef2f7;
+  color: #556274;
+  border-color: #d7dee8;
+}
+
+.alarm-pill-active {
+  background: #e0ecff;
+  color: #184b9a;
+  border-color: #bdd4ff;
+}
+
+.alarm-pill-warning {
+  background: #fff4dd;
+  color: #8a4b00;
+  border-color: #f9d9a1;
+}
+
+.alarm-pill-critical {
+  background: #fee8e8;
+  color: #a31616;
+  border-color: #f7bcbc;
+}
+
 .overlay { position: fixed; inset: 0; background: rgba(12, 21, 36, 0.5); display: grid; place-items: center; z-index: 30; }
 .modal { width: min(620px, 92vw); }
 
