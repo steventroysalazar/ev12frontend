@@ -47,6 +47,38 @@ const extractLocationFromText = (text) => {
   }
 }
 
+const extractLocationFromWebhookPayload = (payload) => {
+  if (!payload || typeof payload !== 'object') return null
+
+  const gpsNode =
+    payload?.data?.['GPS Location'] ||
+    payload?.data?.gpsLocation ||
+    payload?.gpsLocation ||
+    payload?.location ||
+    payload?.payload?.data?.['GPS Location'] ||
+    payload?.payload?.gpsLocation ||
+    payload?.rawEvent?.data?.['GPS Location'] ||
+    payload?.rawEvent?.gpsLocation
+
+  const latitude = Number.parseFloat(
+    gpsNode?.latitude ?? gpsNode?.lat ?? payload?.latitude ?? payload?.lat
+  )
+  const longitude = Number.parseFloat(
+    gpsNode?.longitude ?? gpsNode?.lng ?? payload?.longitude ?? payload?.lng
+  )
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null
+
+  return {
+    latitude,
+    longitude,
+    mapUrl: `https://www.google.com/maps?q=${latitude},${longitude}`,
+    rawMessage: JSON.stringify(payload, null, 2),
+    source: 'webhook'
+  }
+}
+
 const replyText = (reply) => String(reply?.message || reply?.text || reply?.body || '')
 
 export default function App() {
@@ -161,6 +193,49 @@ export default function App() {
 
     return true
   }, [])
+
+  const fetchLocationFromWebhook = useCallback(async () => {
+    const endpoints = ['/api/webhooks/ev12/events', 'http://localhost:8090/api/webhooks/ev12/events']
+    const requestedDeviceId = String(configForm.deviceId || '').trim()
+
+    for (const endpoint of endpoints) {
+      try {
+        const { response } = await fetchWithFallback(endpoint, { headers: commonHeaders() })
+        const body = await response.json().catch(() => null)
+        if (!response.ok) continue
+
+        const events = Array.isArray(body) ? body : [body]
+        const sortedEvents = [...events].sort((a, b) => {
+          const left = new Date(a?.receivedAt || a?.timestamp || a?.createdAt || 0).getTime()
+          const right = new Date(b?.receivedAt || b?.timestamp || b?.createdAt || 0).getTime()
+          return right - left
+        })
+
+        for (const event of sortedEvents) {
+          const payload = event?.payload || event?.rawEvent || event
+          const eventDeviceId = String(
+            payload?.deviceId || payload?.data?.deviceId || event?.deviceId || ''
+          ).trim()
+
+          if (requestedDeviceId && eventDeviceId && eventDeviceId !== requestedDeviceId) continue
+
+          const extracted = extractLocationFromWebhookPayload(payload)
+          if (!extracted) continue
+
+          setLocationResult({
+            ...extracted,
+            from: event?.source || event?.provider || 'Webhook Event',
+            receivedAt: Number(new Date(event?.receivedAt || event?.timestamp || Date.now()).getTime()) || Date.now()
+          })
+          return true
+        }
+      } catch {
+        // Best effort fallback only.
+      }
+    }
+
+    return false
+  }, [commonHeaders, configForm.deviceId])
 
   const handleRegister = async () => {
     try {
@@ -325,6 +400,12 @@ export default function App() {
 
         sinceCursor = newTimestamp
         setStatus(`Waiting for location reply... (${attempt}/12)`)
+      }
+
+      const foundWebhookLocation = await fetchLocationFromWebhook()
+      if (foundWebhookLocation) {
+        setStatus('No SMS location parsed. Used latest webhook GPS coordinates instead.')
+        return
       }
 
       setStatus('No location reply received yet. You can try again or use Fetch Replies manually.')
