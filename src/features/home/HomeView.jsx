@@ -68,7 +68,9 @@ export default function HomeView({
   formattedReplies,
   replies,
   repliesCount,
-  authToken
+  authToken,
+  alarmStateByDevice,
+  alarmFeed
 }) {
   const [activeSection, setActiveSection] = useState('dashboard')
   const [selectedDevice, setSelectedDevice] = useState(null)
@@ -739,6 +741,21 @@ export default function HomeView({
     [replies]
   )
 
+  const resolveLiveAlarmCode = useCallback(
+    (device) => {
+      const deviceId = Number(device?.id || device?.deviceId || 0)
+      const externalDeviceId = String(device?.externalDeviceId || device?.external_device_id || '').trim()
+      const liveEntry =
+        (deviceId ? alarmStateByDevice?.[`id:${deviceId}`] : null) ||
+        (externalDeviceId ? alarmStateByDevice?.[`ext:${externalDeviceId}`] : null)
+
+      if (!liveEntry) return device?.alarmCode ?? null
+      if (liveEntry.alarmCode === null) return null
+      return liveEntry.alarmCode || device?.alarmCode || null
+    },
+    [alarmStateByDevice]
+  )
+
   const userDeviceRows = useMemo(() => {
     const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
     const ownedDevices = devices.filter((device) => {
@@ -753,13 +770,13 @@ export default function HomeView({
     return [
       ['Device Name', currentDevice.name || currentDevice.deviceName || '-'],
       ['Device Phone Number', currentDevice.phoneNumber || '-'],
-      ['Alarm Status', currentDevice.alarmCode || 'No active alarm'],
+      ['Alarm Status', resolveLiveAlarmCode(currentDevice) || 'No active alarm'],
       ['Owner User', deviceMeta.ownerName],
       ['Owner Location', deviceMeta.ownerLocation],
       ['Last reply', replyRows[0]?.receivedAt || 'No reply yet'],
       ['Battery status', currentDevice.batteryStatus || currentDevice.battery || 'Unknown']
     ]
-  }, [devices, replyRows, user, resolveDeviceMeta])
+  }, [devices, replyRows, user, resolveDeviceMeta, resolveLiveAlarmCode])
 
   const getAlarmMeta = useCallback((alarmCode) => {
     const normalizedCode = String(alarmCode || '').trim()
@@ -772,13 +789,15 @@ export default function HomeView({
     return { label: normalizedCode, tone: 'active' }
   }, [])
 
-  const renderRaw = (value) => (typeof value === 'string' ? value : JSON.stringify(value, null, 2))
+  const renderRaw = (value) => {
+    return typeof value === 'string' ? value : JSON.stringify(value, null, 2)
+  }
 
   const tryParseJsonString = (value) => {
     if (typeof value !== 'string') return value
     try {
       return JSON.parse(value)
-    } catch {
+    } catch (error) {
       return value
     }
   }
@@ -830,6 +849,22 @@ export default function HomeView({
         {activeSection === 'dashboard' && (
           <>
             <h2 className="page-title">{isAdminDashboard ? 'Admin Dashboard' : 'My Device Dashboard'}</h2>
+            <section className="live-alarm-strip">
+              <div>
+                <strong>Live alarm feed</strong>
+                <p>{alarmFeed.length ? 'Receiving global alarm updates in real time.' : 'Waiting for incoming alarm updates...'}</p>
+              </div>
+              <div className="live-alarm-list">
+                {alarmFeed.slice(0, 3).map((entry, index) => {
+                  const alarmMeta = getAlarmMeta(entry?.alarmCode)
+                  return (
+                    <span key={`${entry?.updatedAt || 'alarm'}-${entry?.deviceId || 'device'}-${index}`} className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>
+                      #{entry?.deviceId || entry?.externalDeviceId || '-'} · {alarmMeta.label}
+                    </span>
+                  )
+                })}
+              </div>
+            </section>
 
             {isAdminDashboard ? (
               <>
@@ -854,7 +889,7 @@ export default function HomeView({
                         <tbody>
                           {devices.slice(0, 5).map((device) => {
                             const meta = resolveDeviceMeta(device)
-                            const alarmMeta = getAlarmMeta(device.alarmCode)
+                            const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(device))
                             return (
                               <tr key={device.id || device.phoneNumber || device.name}>
                                 <td>{device.name || device.deviceName || '-'}</td>
@@ -959,7 +994,7 @@ export default function HomeView({
               <tbody>
                 {devices.map((d) => {
                   const deviceMeta = resolveDeviceMeta(d)
-                  const alarmMeta = getAlarmMeta(d.alarmCode)
+                  const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(d))
                   return (
                     <tr key={d.id || d.phoneNumber || d.name}>
                       <td>{d.name || d.deviceName || '-'}</td>
