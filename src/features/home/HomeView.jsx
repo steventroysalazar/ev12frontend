@@ -789,28 +789,15 @@ export default function HomeView({
     return { label: normalizedCode, tone: 'active' }
   }, [])
 
-  const resolveLiveAlarmCode = useCallback(
-    (device) => {
-      const deviceId = Number(device?.id || device?.deviceId || 0)
-      const externalDeviceId = String(device?.externalDeviceId || device?.external_device_id || '').trim()
-      const liveEntry =
-        (deviceId ? alarmStateByDevice?.[`id:${deviceId}`] : null) ||
-        (externalDeviceId ? alarmStateByDevice?.[`ext:${externalDeviceId}`] : null)
-
-      if (!liveEntry) return device?.alarmCode ?? null
-      if (liveEntry.alarmCode === null) return null
-      return liveEntry.alarmCode || device?.alarmCode || null
-    },
-    [alarmStateByDevice]
-  )
-
-  const renderRaw = (value) => (typeof value === 'string' ? value : JSON.stringify(value, null, 2))
+  const renderRaw = (value) => {
+    return typeof value === 'string' ? value : JSON.stringify(value, null, 2)
+  }
 
   const tryParseJsonString = (value) => {
     if (typeof value !== 'string') return value
     try {
       return JSON.parse(value)
-    } catch {
+    } catch (error) {
       return value
     }
   }
