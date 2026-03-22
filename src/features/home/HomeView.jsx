@@ -1006,8 +1006,10 @@ export default function HomeView({
                       <td>{deviceMeta.ownerRole}</td>
                       <td>{deviceMeta.ownerLocation}</td>
                       <td>
-                        <button className="table-link" type="button" onClick={() => openEditDeviceModal(d)}>Edit</button>
-                        <button className="table-link" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button>
+                        <div className="table-actions">
+                          <button className="table-link table-link-compact" type="button" onClick={() => openEditDeviceModal(d)}>Edit</button>
+                          <button className="table-link table-link-compact" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button>
+                        </div>
                       </td>
                     </tr>
                   )

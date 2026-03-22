@@ -258,6 +258,19 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
   font-weight: 700;
 }
 
+
+.table-actions {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.28rem;
+}
+
+.table-link-compact {
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
 .table-link {
   background: transparent;
   color: #0f766e;
