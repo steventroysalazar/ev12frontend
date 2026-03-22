@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://ev12-backend-dev.mangoisland-fc3c6273.australiaeast.azurecontainerapps.io/api/$1"
+    }
+  ]
+}
