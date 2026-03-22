@@ -82,6 +82,23 @@ const extractLocationFromWebhookPayload = (payload) => {
 
 const replyText = (reply) => String(reply?.message || reply?.text || reply?.body || '')
 
+const normalizeWebhookAlarmCode = (value) => {
+  if (value === null || value === undefined) return null
+
+  if (Array.isArray(value)) {
+    if (!value.length) return null
+    return normalizeWebhookAlarmCode(value[0])
+  }
+
+  const code = String(value).trim()
+  if (!code) return null
+
+  if (/sos\s*ending/i.test(code)) return null
+  if (/sos/i.test(code)) return 'SOS Alert'
+  if (/fall/i.test(code)) return 'Fall-Down Alert'
+  return code
+}
+
 export default function App() {
   const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
   const [activeView, setActiveView] = useState(auth.isAuthenticated ? 'home' : 'login')
@@ -205,13 +222,15 @@ export default function App() {
         payload?.alert_code ||
         payload?.eventCode ||
         payload?.event_code ||
+        payload?.['Alarm Code'] ||
+        payload?.alarmCodes ||
+        payload?.alarm_codes ||
         payload?.event?.code ||
         null
 
       if (alarmCodeRaw === null || alarmCodeRaw === undefined) return null
 
-      const alarmCode = String(alarmCodeRaw).trim()
-      if (!alarmCode) return null
+      const alarmCode = normalizeWebhookAlarmCode(alarmCodeRaw)
 
       const deviceId = Number(
         payload?.deviceId ||
@@ -870,6 +889,7 @@ export default function App() {
           authToken={auth.token}
           alarmStateByDevice={alarmStateByDevice}
           alarmFeed={alarmFeed}
+          alarmStreamConnected={alarmStreamConnected}
           onSectionChange={setHomeActiveSection}
         />
       )}
