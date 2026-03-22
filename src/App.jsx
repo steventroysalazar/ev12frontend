@@ -377,6 +377,15 @@ export default function App() {
         event?.rawEvent ||
         event
 
+      const generalData =
+        payload?.data?.['General Data'] ||
+        payload?.data?.generalData ||
+        payload?.data?.general_data ||
+        payload?.['General Data'] ||
+        payload?.generalData ||
+        payload?.general_data ||
+        null
+
       const alarmCodeRaw =
         payload?.alarmCode ||
         payload?.alarm_code ||
@@ -384,6 +393,15 @@ export default function App() {
         payload?.alert_code ||
         payload?.eventCode ||
         payload?.event_code ||
+        payload?.data?.['General Data']?.['Alarm Code'] ||
+        payload?.data?.['General Data']?.alarmCode ||
+        payload?.data?.['General Data']?.alarm_code ||
+        payload?.['General Data']?.['Alarm Code'] ||
+        payload?.['General Data']?.alarmCode ||
+        payload?.['General Data']?.alarm_code ||
+        generalData?.['Alarm Code'] ||
+        generalData?.alarmCode ||
+        generalData?.alarm_code ||
         payload?.data?.['Alarm Code'] ||
         payload?.data?.alarmCode ||
         payload?.data?.alarm_code ||
