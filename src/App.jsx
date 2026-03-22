@@ -206,6 +206,42 @@ export default function App() {
     let isCancelled = false
     let lastSeenWebhookTimestamp = 0
 
+    const persistWebhookAlarmCode = async (update) => {
+      const resolvedDeviceId = Number(update?.deviceId || 0)
+      const resolvedAlarmCode = normalizeWebhookAlarmCode(update?.alarmCode)
+      if (!resolvedDeviceId || resolvedAlarmCode === undefined) return
+
+      try {
+        const { response } = await fetchWithFallback(`/api/devices/${resolvedDeviceId}`, {
+          method: 'PATCH',
+          headers: {
+            ...commonHeaders(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            alarmCode: resolvedAlarmCode,
+            alarm_code: resolvedAlarmCode
+          })
+        })
+
+        if (!response.ok) {
+          await fetchWithFallback(`/api/devices/${resolvedDeviceId}`, {
+            method: 'PUT',
+            headers: {
+              ...commonHeaders(),
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              alarmCode: resolvedAlarmCode,
+              alarm_code: resolvedAlarmCode
+            })
+          })
+        }
+      } catch {
+        // Persisting alarm state from webhook events is best effort.
+      }
+    }
+
     const parseWebhookAlarmUpdate = (event) => {
       const payload =
         event?.payload?.data ||
@@ -222,6 +258,9 @@ export default function App() {
         payload?.alert_code ||
         payload?.eventCode ||
         payload?.event_code ||
+        payload?.data?.['Alarm Code'] ||
+        payload?.data?.alarmCode ||
+        payload?.data?.alarm_code ||
         payload?.['Alarm Code'] ||
         payload?.alarmCodes ||
         payload?.alarm_codes ||
@@ -283,6 +322,7 @@ export default function App() {
             const update = parseWebhookAlarmUpdate(event)
             if (update) {
               applyRealtimeAlarmUpdate(update)
+              await persistWebhookAlarmCode(update)
             }
 
             if (eventTimestamp > lastSeenWebhookTimestamp) {
