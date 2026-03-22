@@ -5,12 +5,24 @@ const isAbsoluteUrl = (value) => /^https?:\/\//i.test(value)
 
 const normalizeUrl = (base, path) => `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
 
+const isLocalDevHost = () => {
+  if (typeof window === 'undefined') return false
+  const host = window.location.hostname
+  return host === 'localhost' || host === '127.0.0.1'
+}
+
+const unique = (items) => [...new Set(items)]
+
 const candidateUrls = (url) => {
   if (isAbsoluteUrl(url)) return [url]
 
-  const primary = normalizeUrl(PRIMARY_BACKEND, url)
   const local = normalizeUrl(LOCAL_BACKEND, url)
-  return [primary, local, url]
+  const primary = normalizeUrl(PRIMARY_BACKEND, url)
+
+  // Prefer same-origin first so Vite's /api proxy can avoid browser CORS restrictions.
+  if (isLocalDevHost()) return unique([url, local, primary])
+
+  return unique([primary, local, url])
 }
 
 export async function fetchWithFallback(url, options = {}) {
