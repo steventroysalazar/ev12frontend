@@ -109,6 +109,41 @@ export default function App() {
   const [alarmStateByDevice, setAlarmStateByDevice] = useState({})
   const [alarmFeed, setAlarmFeed] = useState([])
   const [alarmStreamConnected, setAlarmStreamConnected] = useState(false)
+  const [homeActiveSection, setHomeActiveSection] = useState('dashboard')
+
+  const applyRealtimeAlarmUpdate = useCallback((update) => {
+    const deviceId = Number(update?.deviceId || 0)
+    const externalDeviceId = String(update?.externalDeviceId || '').trim()
+    if (!deviceId && !externalDeviceId) return
+
+    setAlarmStateByDevice((prev) => {
+      const next = { ...prev }
+      if (deviceId) next[`id:${deviceId}`] = update
+      if (externalDeviceId) next[`ext:${externalDeviceId}`] = update
+      return next
+    })
+
+    setAlarmFeed((prev) => {
+      const updateKey = `${update?.deviceId || '-'}:${update?.externalDeviceId || '-'}`
+      const updatedAtMs = new Date(update?.updatedAt || update?.receivedAt || update?.timestamp || Date.now()).getTime()
+      const filtered = prev.filter((entry) => {
+        const entryKey = `${entry?.deviceId || '-'}:${entry?.externalDeviceId || '-'}`
+        const entryUpdatedAtMs = new Date(entry?.updatedAt || entry?.receivedAt || entry?.timestamp || 0).getTime()
+        if (entryKey !== updateKey) return true
+        return entryUpdatedAtMs > updatedAtMs
+      })
+      return [update, ...filtered].slice(0, 30)
+    })
+  }, [])
+
+  const commonHeaders = useCallback(
+    () => ({
+      ...(gatewayBaseUrl.trim() ? { 'X-Gateway-Base-Url': gatewayBaseUrl.trim() } : {}),
+      ...(gatewayToken.trim() ? { Authorization: gatewayToken.trim() } : {}),
+      ...(auth.token ? { 'X-Auth-Token': auth.token } : {})
+    }),
+    [gatewayBaseUrl, gatewayToken, auth.token]
+  )
 
   useEffect(() => {
     persistAuth(auth)
@@ -122,18 +157,7 @@ export default function App() {
 
     const stop = startAlarmStream(
       (update) => {
-        const deviceId = Number(update?.deviceId || 0)
-        const externalDeviceId = String(update?.externalDeviceId || '').trim()
-        if (!deviceId && !externalDeviceId) return
-
-        setAlarmStateByDevice((prev) => {
-          const next = { ...prev }
-          if (deviceId) next[`id:${deviceId}`] = update
-          if (externalDeviceId) next[`ext:${externalDeviceId}`] = update
-          return next
-        })
-
-        setAlarmFeed((prev) => [update, ...prev].slice(0, 30))
+        applyRealtimeAlarmUpdate(update)
 
         const normalized = String(update?.alarmCode || '').toLowerCase()
         if (normalized.includes('sos') || normalized.includes('fall')) {
@@ -153,7 +177,115 @@ export default function App() {
       stop()
       setAlarmStreamConnected(false)
     }
-  }, [auth.isAuthenticated, activeView, gatewayBaseUrl])
+  }, [auth.isAuthenticated, activeView, gatewayBaseUrl, applyRealtimeAlarmUpdate])
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || activeView !== 'home') return undefined
+
+    const section = String(homeActiveSection || '').toLowerCase()
+    const shouldListenForWebhookAlerts = section === 'dashboard' || section === 'devices'
+    if (!shouldListenForWebhookAlerts) return undefined
+
+    let isCancelled = false
+    let lastSeenWebhookTimestamp = 0
+
+    const parseWebhookAlarmUpdate = (event) => {
+      const payload =
+        event?.payload?.data ||
+        event?.payload ||
+        event?.data ||
+        event?.rawEvent?.data ||
+        event?.rawEvent ||
+        event
+
+      const alarmCodeRaw =
+        payload?.alarmCode ||
+        payload?.alarm_code ||
+        payload?.alertCode ||
+        payload?.alert_code ||
+        payload?.eventCode ||
+        payload?.event_code ||
+        payload?.event?.code ||
+        null
+
+      if (alarmCodeRaw === null || alarmCodeRaw === undefined) return null
+
+      const alarmCode = String(alarmCodeRaw).trim()
+      if (!alarmCode) return null
+
+      const deviceId = Number(
+        payload?.deviceId ||
+        payload?.device_id ||
+        event?.deviceId ||
+        event?.device_id ||
+        0
+      )
+      const externalDeviceId = String(
+        payload?.externalDeviceId ||
+        payload?.external_device_id ||
+        payload?.imei ||
+        payload?.deviceImei ||
+        event?.externalDeviceId ||
+        ''
+      ).trim()
+
+      if (!deviceId && !externalDeviceId) return null
+
+      return {
+        deviceId: deviceId || undefined,
+        externalDeviceId: externalDeviceId || undefined,
+        alarmCode,
+        updatedAt: event?.receivedAt || event?.timestamp || event?.createdAt || new Date().toISOString(),
+        source: 'webhook-events'
+      }
+    }
+
+    const pollWebhookAlerts = async () => {
+      const endpoints = ['/api/webhooks/ev12/events', 'http://localhost:8090/api/webhooks/ev12/events']
+
+      for (const endpoint of endpoints) {
+        try {
+          const { response } = await fetchWithFallback(endpoint, { headers: commonHeaders() })
+          const body = await response.json().catch(() => null)
+          if (!response.ok || !body) continue
+
+          const events = Array.isArray(body) ? body : [body]
+          const sortedEvents = [...events].sort((left, right) => {
+            const leftMs = new Date(left?.receivedAt || left?.timestamp || left?.createdAt || 0).getTime()
+            const rightMs = new Date(right?.receivedAt || right?.timestamp || right?.createdAt || 0).getTime()
+            return rightMs - leftMs
+          })
+
+          for (const event of sortedEvents) {
+            if (isCancelled) return
+            const eventTimestamp = new Date(event?.receivedAt || event?.timestamp || event?.createdAt || 0).getTime()
+            if (eventTimestamp <= lastSeenWebhookTimestamp) continue
+
+            const update = parseWebhookAlarmUpdate(event)
+            if (update) {
+              applyRealtimeAlarmUpdate(update)
+            }
+
+            if (eventTimestamp > lastSeenWebhookTimestamp) {
+              lastSeenWebhookTimestamp = eventTimestamp
+            }
+          }
+
+          return
+        } catch {
+          // Best-effort fallback between endpoints.
+        }
+      }
+    }
+
+    pollWebhookAlerts()
+    const intervalId = setInterval(pollWebhookAlerts, 2000)
+
+    return () => {
+      isCancelled = true
+      clearInterval(intervalId)
+    }
+  }, [auth.isAuthenticated, activeView, homeActiveSection, commonHeaders, applyRealtimeAlarmUpdate])
 
   const activeAlarmCount = useMemo(
     () =>
@@ -172,15 +304,6 @@ export default function App() {
   const formattedReplies = useMemo(
     () => (replies.length ? replies.map(formatReply).join('\n') : 'No replies loaded yet.'),
     [replies]
-  )
-
-  const commonHeaders = useCallback(
-    () => ({
-      ...(gatewayBaseUrl.trim() ? { 'X-Gateway-Base-Url': gatewayBaseUrl.trim() } : {}),
-      ...(gatewayToken.trim() ? { Authorization: gatewayToken.trim() } : {}),
-      ...(auth.token ? { 'X-Auth-Token': auth.token } : {})
-    }),
-    [gatewayBaseUrl, gatewayToken, auth.token]
   )
 
   const fetchRepliesData = useCallback(
@@ -747,6 +870,7 @@ export default function App() {
           authToken={auth.token}
           alarmStateByDevice={alarmStateByDevice}
           alarmFeed={alarmFeed}
+          onSectionChange={setHomeActiveSection}
         />
       )}
     </main>
