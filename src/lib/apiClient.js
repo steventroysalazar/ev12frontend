@@ -19,10 +19,12 @@ const candidateUrls = (url) => {
   const local = normalizeUrl(LOCAL_BACKEND, url)
   const primary = normalizeUrl(PRIMARY_BACKEND, url)
 
-  // Prefer same-origin first so Vite's /api proxy can avoid browser CORS restrictions.
+  // In local development, prefer Vite's /api proxy first, then direct backends.
   if (isLocalDevHost()) return unique([url, local, primary])
 
-  return unique([primary, local, url])
+  // In deployed environments, always prefer same-origin routes first.
+  // This avoids browser CORS errors when /api is served via host-level rewrites.
+  return unique([url, primary])
 }
 
 export async function fetchWithFallback(url, options = {}) {
