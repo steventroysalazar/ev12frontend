@@ -5,6 +5,7 @@ import LoginView from './features/login/LoginView'
 import RegisterView from './features/register/RegisterView'
 import { buildEv12Preview, formatReply, initialConfigForm } from './features/home/ev12'
 import { fetchWithFallback } from './lib/apiClient'
+import { startAlarmStream } from './lib/alarmStream'
 import { authReducer, initialAuthState, loadPersistedAuth, persistAuth } from './store/authStore'
 import './App.css'
 
@@ -105,10 +106,63 @@ export default function App() {
   const [configForm, setConfigForm] = useState(initialConfigForm)
   const [configBaseline, setConfigBaseline] = useState(null)
   const [locationResult, setLocationResult] = useState(null)
+  const [alarmStateByDevice, setAlarmStateByDevice] = useState({})
+  const [alarmFeed, setAlarmFeed] = useState([])
+  const [alarmStreamConnected, setAlarmStreamConnected] = useState(false)
 
   useEffect(() => {
     persistAuth(auth)
   }, [auth])
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || activeView !== 'home') {
+      setAlarmStreamConnected(false)
+      return undefined
+    }
+
+    const stop = startAlarmStream(
+      (update) => {
+        const deviceId = Number(update?.deviceId || 0)
+        const externalDeviceId = String(update?.externalDeviceId || '').trim()
+        if (!deviceId && !externalDeviceId) return
+
+        setAlarmStateByDevice((prev) => {
+          const next = { ...prev }
+          if (deviceId) next[`id:${deviceId}`] = update
+          if (externalDeviceId) next[`ext:${externalDeviceId}`] = update
+          return next
+        })
+
+        setAlarmFeed((prev) => [update, ...prev].slice(0, 30))
+
+        const normalized = String(update?.alarmCode || '').toLowerCase()
+        if (normalized.includes('sos') || normalized.includes('fall')) {
+          if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+            navigator.vibrate([180, 120, 180, 120, 240])
+          }
+        }
+      },
+      {
+        baseUrl: gatewayBaseUrl || import.meta.env.VITE_API_URL,
+        onConnected: () => setAlarmStreamConnected(true),
+        onError: () => setAlarmStreamConnected(false)
+      }
+    )
+
+    return () => {
+      stop()
+      setAlarmStreamConnected(false)
+    }
+  }, [auth.isAuthenticated, activeView, gatewayBaseUrl])
+
+  const activeAlarmCount = useMemo(
+    () =>
+      Object.values(alarmStateByDevice).filter((entry) => {
+        const code = String(entry?.alarmCode || '').trim().toLowerCase()
+        return code.includes('sos') || code.includes('fall')
+      }).length,
+    [alarmStateByDevice]
+  )
 
   const commandPreview = useMemo(() => buildEv12Preview(configForm, configBaseline), [configForm, configBaseline])
   const draftCommandPreview = useMemo(
@@ -302,6 +356,9 @@ export default function App() {
 
   const handleLogout = () => {
     dispatchAuth({ type: 'LOGOUT' })
+    setAlarmStateByDevice({})
+    setAlarmFeed([])
+    setAlarmStreamConnected(false)
     setAuthStatus('Logged out successfully.')
     setActiveView('login')
   }
@@ -626,7 +683,13 @@ export default function App() {
 
   return (
     <main className="container">
-      {activeView === 'home' ? <Navbar user={auth.user} /> : null}
+      {activeView === 'home' ? (
+        <Navbar
+          user={auth.user}
+          activeAlarmCount={activeAlarmCount}
+          alarmStreamConnected={alarmStreamConnected}
+        />
+      ) : null}
 
       {activeView === 'login' && (
         <LoginView
@@ -682,6 +745,8 @@ export default function App() {
           replies={replies}
           repliesCount={replies.length}
           authToken={auth.token}
+          alarmStateByDevice={alarmStateByDevice}
+          alarmFeed={alarmFeed}
         />
       )}
     </main>

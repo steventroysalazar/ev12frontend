@@ -7,6 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
 }
 
 .brand {
@@ -42,6 +43,51 @@
   height: 28px;
   border-radius: 999px;
   background: radial-gradient(circle at 50% 35%, #f9fbff 18%, #c7ced8 20%, #c7ced8 43%, #b8c0cb 44%);
+}
+
+.alarm-global-state {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.stream-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+}
+
+.stream-dot.is-online {
+  background: #1d9f50;
+  box-shadow: 0 0 0 3px #d9f5e4;
+}
+
+.stream-dot.is-offline {
+  background: #d14343;
+  box-shadow: 0 0 0 3px #ffe1e1;
+}
+
+.stream-label {
+  font-size: 0.78rem;
+  color: #4b5568;
+  font-weight: 500;
+}
+
+.alarm-count-pill {
+  font-size: 0.75rem;
+  border-radius: 999px;
+  border: 1px solid #cad3df;
+  padding: 0.2rem 0.55rem;
+  color: #334155;
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.alarm-count-pill.has-alert {
+  color: #fff;
+  border-color: #b52c2c;
+  background: linear-gradient(135deg, #db4444, #b91c1c);
 }
 
 .logout-top {
