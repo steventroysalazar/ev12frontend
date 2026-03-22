@@ -380,6 +380,13 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
   line-height: 1.45;
 }
 
+.alarm-cancel-meta {
+  display: block;
+  margin-top: 0.3rem;
+  color: #5b6778;
+  font-size: 0.72rem;
+}
+
 
 .replies-shell {
   max-height: 520px;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import Navbar from './components/navbar/Navbar'
 import HomeView from './features/home/HomeView'
 import LoginView from './features/login/LoginView'
@@ -22,6 +22,7 @@ const initialRegisterForm = {
 }
 
 const initialLoginForm = { email: '', password: '' }
+const ALARM_CANCELLED_STORAGE_KEY = 'ev12:alarm-cancelled-at'
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -93,7 +94,6 @@ const normalizeWebhookAlarmCode = (value) => {
   const code = String(value).trim()
   if (!code) return null
 
-  if (/sos\s*ending/i.test(code)) return null
   if (/sos/i.test(code)) return 'SOS Alert'
   if (/fall/i.test(code)) return 'Fall-Down Alert'
   return code
@@ -127,6 +127,59 @@ export default function App() {
   const [alarmFeed, setAlarmFeed] = useState([])
   const [alarmStreamConnected, setAlarmStreamConnected] = useState(false)
   const [homeActiveSection, setHomeActiveSection] = useState('dashboard')
+  const [alarmCancelledAtByDevice, setAlarmCancelledAtByDevice] = useState({})
+  const alarmCancelledAtRef = useRef({})
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const raw = window.localStorage.getItem(ALARM_CANCELLED_STORAGE_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed === 'object') {
+        alarmCancelledAtRef.current = parsed
+        setAlarmCancelledAtByDevice(parsed)
+      }
+    } catch {
+      // Ignore malformed persisted state.
+    }
+  }, [])
+
+  const persistAlarmCancelledAtMap = useCallback((nextMap) => {
+    alarmCancelledAtRef.current = nextMap
+    setAlarmCancelledAtByDevice(nextMap)
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(ALARM_CANCELLED_STORAGE_KEY, JSON.stringify(nextMap))
+    } catch {
+      // Ignore local storage write failures.
+    }
+  }, [])
+
+  const getDeviceAlarmCancelKeys = useCallback((entry) => {
+    const keys = []
+    const internalId = Number(entry?.id || entry?.deviceId || 0)
+    const externalId = String(entry?.externalDeviceId || entry?.external_device_id || '').trim()
+    if (internalId) keys.push(`id:${internalId}`)
+    if (externalId) keys.push(`ext:${externalId}`)
+    return keys
+  }, [])
+
+  const wasAlarmCancelledAfterEvent = useCallback((update) => {
+    if (!update) return false
+    const eventMs = new Date(update?.updatedAt || update?.receivedAt || update?.timestamp || 0).getTime()
+    if (!eventMs) return false
+
+    const cancelKeys = getDeviceAlarmCancelKeys(update)
+    if (!cancelKeys.length) return false
+
+    return cancelKeys.some((key) => {
+      const cancelledAt = alarmCancelledAtRef.current?.[key]
+      if (!cancelledAt) return false
+      const cancelledMs = new Date(cancelledAt).getTime()
+      return Number.isFinite(cancelledMs) && cancelledMs >= eventMs
+    })
+  }, [getDeviceAlarmCancelKeys])
 
   const applyRealtimeAlarmUpdate = useCallback((update) => {
     const deviceId = Number(update?.deviceId || 0)
@@ -160,6 +213,53 @@ export default function App() {
       ...(auth.token ? { 'X-Auth-Token': auth.token } : {})
     }),
     [gatewayBaseUrl, gatewayToken, auth.token]
+  )
+
+  const cancelDeviceAlarm = useCallback(
+    async (device) => {
+      const internalId = Number(device?.id || device?.deviceId || 0)
+      const externalId = String(device?.externalDeviceId || device?.external_device_id || '').trim()
+      if (!internalId && !externalId) throw new Error('Unable to resolve device id for alarm cancellation.')
+
+      const cancelledAt = new Date().toISOString()
+      const payload = {
+        alarmCode: null,
+        alarm_code: null,
+        alarmCancelledAt: cancelledAt,
+        alarm_cancelled_at: cancelledAt
+      }
+
+      const resolvedInternalId = internalId
+      if (!resolvedInternalId) throw new Error('Missing internal device id for alarm cancellation.')
+
+      const { response } = await fetchWithFallback(`/api/devices/${resolvedInternalId}`, {
+        method: 'PATCH',
+        headers: {
+          ...commonHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+      if (!response.ok) {
+        throw new Error('Unable to cancel alarm for device.')
+      }
+
+      const cancelKeys = getDeviceAlarmCancelKeys(device)
+      const nextCancelledMap = { ...alarmCancelledAtRef.current }
+      cancelKeys.forEach((key) => {
+        nextCancelledMap[key] = cancelledAt
+      })
+      persistAlarmCancelledAtMap(nextCancelledMap)
+
+      applyRealtimeAlarmUpdate({
+        deviceId: resolvedInternalId || undefined,
+        externalDeviceId: externalId || undefined,
+        alarmCode: null,
+        updatedAt: cancelledAt,
+        source: 'portal-cancel'
+      })
+    },
+    [applyRealtimeAlarmUpdate, commonHeaders, getDeviceAlarmCancelKeys, persistAlarmCancelledAtMap]
   )
 
   useEffect(() => {
@@ -345,6 +445,9 @@ export default function App() {
 
             const update = parseWebhookAlarmUpdate(event)
             if (update) {
+              if (String(update?.alarmCode || '').toLowerCase().includes('sos') && wasAlarmCancelledAfterEvent(update)) {
+                continue
+              }
               applyRealtimeAlarmUpdate(update)
               await persistWebhookAlarmCode(update)
             }
@@ -955,6 +1058,8 @@ export default function App() {
           alarmFeed={alarmFeed}
           alarmStreamConnected={alarmStreamConnected}
           onSectionChange={setHomeActiveSection}
+          onCancelDeviceAlarm={cancelDeviceAlarm}
+          alarmCancelledAtByDevice={alarmCancelledAtByDevice}
         />
       )}
     </main>

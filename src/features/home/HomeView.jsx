@@ -72,7 +72,9 @@ export default function HomeView({
   alarmStateByDevice,
   alarmFeed,
   alarmStreamConnected,
-  onSectionChange
+  onSectionChange,
+  onCancelDeviceAlarm,
+  alarmCancelledAtByDevice
 }) {
   const [activeSection, setActiveSection] = useState('dashboard')
   const [selectedDevice, setSelectedDevice] = useState(null)
@@ -795,6 +797,27 @@ export default function HomeView({
     return { label: normalizedCode, tone: 'active' }
   }, [])
 
+  const getAlarmCancelledAt = useCallback((device) => {
+    const internalId = Number(device?.id || device?.deviceId || 0)
+    const externalId = String(device?.externalDeviceId || device?.external_device_id || '').trim()
+
+    return (
+      (internalId ? alarmCancelledAtByDevice?.[`id:${internalId}`] : null) ||
+      (externalId ? alarmCancelledAtByDevice?.[`ext:${externalId}`] : null) ||
+      null
+    )
+  }, [alarmCancelledAtByDevice])
+
+  const handleCancelAlarm = useCallback(async (device) => {
+    try {
+      await onCancelDeviceAlarm?.(device)
+      setActionStatus({ type: 'success', message: `Alarm cancelled for ${device?.name || device?.deviceName || 'device'}.` })
+      await loadDevices()
+    } catch (error) {
+      setActionStatus({ type: 'error', message: `Cancel alarm failed: ${error.message}` })
+    }
+  }, [loadDevices, onCancelDeviceAlarm])
+
   const renderRaw = (value) => {
     return typeof value === 'string' ? value : JSON.stringify(value, null, 2)
   }
@@ -1008,6 +1031,7 @@ export default function HomeView({
                 {devices.map((d) => {
                   const deviceMeta = resolveDeviceMeta(d)
                   const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(d))
+                  const cancelledAt = getAlarmCancelledAt(d)
                   return (
                     <tr key={d.id || d.phoneNumber || d.name}>
                       <td>{d.name || d.deviceName || '-'}</td>
@@ -1022,7 +1046,9 @@ export default function HomeView({
                         <div className="table-actions">
                           <button className="table-link table-link-compact" type="button" onClick={() => openEditDeviceModal(d)}>Edit</button>
                           <button className="table-link table-link-compact" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button>
+                          <button className="table-link table-link-compact" type="button" onClick={() => handleCancelAlarm(d)}>Cancel SOS</button>
                         </div>
+                        {cancelledAt ? <small className="alarm-cancel-meta">Cancelled: {new Date(cancelledAt).toLocaleString()}</small> : null}
                       </td>
                     </tr>
                   )
