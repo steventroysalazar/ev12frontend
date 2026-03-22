@@ -1,6 +1,6 @@
 const normalizeBaseUrl = (baseUrl) => {
   const raw = String(baseUrl || '').trim()
-  if (!raw) return 'http://localhost:8080'
+  if (!raw) return 'https://ev12-backend-dev.mangoisland-fc3c6273.australiaeast.azurecontainerapps.io'
   return raw.replace(/\/+$/, '')
 }
 
