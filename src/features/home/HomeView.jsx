@@ -272,7 +272,7 @@ export default function HomeView({
   const loadWebhookEvents = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setWebhookStatus('Loading webhook events...')
 
-    const endpoints = ['/api/webhooks/ev12/events', 'http://localhost:8090/api/webhooks/ev12/events']
+    const endpoints = ['/api/webhooks/ev12/events', 'https://ev12-backend-dev.mangoisland-fc3c6273.australiaeast.azurecontainerapps.io/api/webhooks/ev12/events']
     let payload = null
     let lastError = null
 
@@ -356,7 +356,7 @@ export default function HomeView({
     setClearingWebhookEvents(true)
     setWebhookStatus('Clearing webhook events...')
 
-    const endpoints = ['/api/webhooks/ev12/events', 'http://localhost:8090/api/webhooks/ev12/events']
+    const endpoints = ['/api/webhooks/ev12/events', 'https://ev12-backend-dev.mangoisland-fc3c6273.australiaeast.azurecontainerapps.io/api/webhooks/ev12/events']
     let deletedCount = 0
     let lastError = null
 
