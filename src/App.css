@@ -96,6 +96,25 @@ button:disabled {
   padding: 3rem 3.5rem;
 }
 
+
+.auth-brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 0.7rem;
+}
+
+.auth-brand-logo {
+  width: 120px;
+  max-width: 30vw;
+  height: auto;
+  flex-shrink: 0;
+}
+
+.auth-brand-lockup h1 {
+  margin-bottom: 0;
+}
+
 .auth-brand-panel h1 {
   font-size: 2.7rem;
   line-height: 1;

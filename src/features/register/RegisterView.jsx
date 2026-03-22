@@ -1,3 +1,4 @@
+import QViewLogo from '../../components/branding/QViewLogo'
 import './register.css'
 
 const roleOptions = [
@@ -10,7 +11,10 @@ export default function RegisterView({ registerForm, setRegisterForm, onRegister
   return (
     <section className="auth-shell">
       <div className="auth-brand-panel">
-        <h1>EV12 PORTAL</h1>
+        <div className="auth-brand-lockup">
+          <QViewLogo className="auth-brand-logo" />
+          <h1>QView PORTAL</h1>
+        </div>
         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
       </div>
 
