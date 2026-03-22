@@ -71,6 +71,7 @@ export default function HomeView({
   authToken,
   alarmStateByDevice,
   alarmFeed,
+  alarmStreamConnected,
   onSectionChange
 }) {
   const [activeSection, setActiveSection] = useState('dashboard')
@@ -857,9 +858,16 @@ export default function HomeView({
             <section className="live-alarm-strip">
               <div>
                 <strong>Live alarm feed</strong>
-                <p>{alarmFeed.length ? 'Receiving global alarm updates in real time.' : 'Waiting for incoming alarm updates...'}</p>
+                <p>
+                  {alarmStreamConnected
+                    ? (alarmFeed.length ? 'Receiving global alarm updates in real time.' : 'Connected. Waiting for incoming alarm updates...')
+                    : 'Live updates reconnecting…'}
+                </p>
               </div>
               <div className="live-alarm-list">
+                <span className={`live-connection-chip ${alarmStreamConnected ? 'is-connected' : 'is-reconnecting'}`}>
+                  {alarmStreamConnected ? 'Live connected' : 'Reconnecting…'}
+                </span>
                 {alarmFeed.slice(0, 3).map((entry, index) => {
                   const alarmMeta = getAlarmMeta(entry?.alarmCode)
                   return (
