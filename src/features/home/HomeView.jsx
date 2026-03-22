@@ -741,6 +741,21 @@ export default function HomeView({
     [replies]
   )
 
+  const resolveLiveAlarmCode = useCallback(
+    (device) => {
+      const deviceId = Number(device?.id || device?.deviceId || 0)
+      const externalDeviceId = String(device?.externalDeviceId || device?.external_device_id || '').trim()
+      const liveEntry =
+        (deviceId ? alarmStateByDevice?.[`id:${deviceId}`] : null) ||
+        (externalDeviceId ? alarmStateByDevice?.[`ext:${externalDeviceId}`] : null)
+
+      if (!liveEntry) return device?.alarmCode ?? null
+      if (liveEntry.alarmCode === null) return null
+      return liveEntry.alarmCode || device?.alarmCode || null
+    },
+    [alarmStateByDevice]
+  )
+
   const userDeviceRows = useMemo(() => {
     const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
     const ownedDevices = devices.filter((device) => {
