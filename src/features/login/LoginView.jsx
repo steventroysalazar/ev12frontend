@@ -1,3 +1,4 @@
+import QViewLogo from '../../components/branding/QViewLogo'
 import './login.css'
 
 const statusTone = (status) => {
@@ -11,7 +12,10 @@ export default function LoginView({ loginForm, setLoginForm, onLogin, session, o
   return (
     <section className="auth-shell">
       <div className="auth-brand-panel">
-        <h1>EV12 PORTAL</h1>
+        <div className="auth-brand-lockup">
+          <QViewLogo className="auth-brand-logo" />
+          <h1>QView PORTAL</h1>
+        </div>
         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
       </div>
 
