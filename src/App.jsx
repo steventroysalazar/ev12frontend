@@ -206,6 +206,68 @@ export default function App() {
     let isCancelled = false
     let lastSeenWebhookTimestamp = 0
 
+    const persistWebhookAlarmCode = async (update) => {
+      const internalDeviceId = Number(update?.deviceId || 0)
+      const externalDeviceId = String(update?.externalDeviceId || '').trim()
+      const resolvedAlarmCode = normalizeWebhookAlarmCode(update?.alarmCode)
+      if ((!internalDeviceId && !externalDeviceId) || resolvedAlarmCode === undefined) return
+
+      let resolvedDeviceId = internalDeviceId
+
+      if (!resolvedDeviceId && externalDeviceId) {
+        try {
+          const { response } = await fetchWithFallback('/api/devices', { headers: commonHeaders() })
+          const body = await response.json().catch(() => null)
+          if (response.ok && Array.isArray(body)) {
+            const match = body.find((device) => {
+              const candidateExternal = String(
+                device?.externalDeviceId ||
+                device?.external_device_id ||
+                device?.deviceId ||
+                ''
+              ).trim()
+              return candidateExternal && candidateExternal === externalDeviceId
+            })
+            resolvedDeviceId = Number(match?.id || 0)
+          }
+        } catch {
+          // Best-effort only.
+        }
+      }
+
+      if (!resolvedDeviceId) return
+
+      try {
+        const { response } = await fetchWithFallback(`/api/devices/${resolvedDeviceId}`, {
+          method: 'PATCH',
+          headers: {
+            ...commonHeaders(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            alarmCode: resolvedAlarmCode,
+            alarm_code: resolvedAlarmCode
+          })
+        })
+
+        if (!response.ok) {
+          await fetchWithFallback(`/api/devices/${resolvedDeviceId}`, {
+            method: 'PUT',
+            headers: {
+              ...commonHeaders(),
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              alarmCode: resolvedAlarmCode,
+              alarm_code: resolvedAlarmCode
+            })
+          })
+        }
+      } catch {
+        // Persisting alarm state from webhook events is best effort.
+      }
+    }
+
     const parseWebhookAlarmUpdate = (event) => {
       const payload =
         event?.payload?.data ||
@@ -222,6 +284,9 @@ export default function App() {
         payload?.alert_code ||
         payload?.eventCode ||
         payload?.event_code ||
+        payload?.data?.['Alarm Code'] ||
+        payload?.data?.alarmCode ||
+        payload?.data?.alarm_code ||
         payload?.['Alarm Code'] ||
         payload?.alarmCodes ||
         payload?.alarm_codes ||
@@ -232,18 +297,16 @@ export default function App() {
 
       const alarmCode = normalizeWebhookAlarmCode(alarmCodeRaw)
 
-      const deviceId = Number(
-        payload?.deviceId ||
-        payload?.device_id ||
-        event?.deviceId ||
-        event?.device_id ||
-        0
-      )
+      const deviceId = Number(payload?.internalDeviceId || payload?.internal_device_id || event?.internalDeviceId || 0)
       const externalDeviceId = String(
         payload?.externalDeviceId ||
         payload?.external_device_id ||
+        payload?.deviceId ||
+        payload?.device_id ||
         payload?.imei ||
         payload?.deviceImei ||
+        event?.deviceId ||
+        event?.device_id ||
         event?.externalDeviceId ||
         ''
       ).trim()
@@ -283,6 +346,7 @@ export default function App() {
             const update = parseWebhookAlarmUpdate(event)
             if (update) {
               applyRealtimeAlarmUpdate(update)
+              await persistWebhookAlarmCode(update)
             }
 
             if (eventTimestamp > lastSeenWebhookTimestamp) {
