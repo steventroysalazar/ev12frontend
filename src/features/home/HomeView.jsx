@@ -70,10 +70,15 @@ export default function HomeView({
   repliesCount,
   authToken,
   alarmStateByDevice,
-  alarmFeed
+  alarmFeed,
+  onSectionChange
 }) {
   const [activeSection, setActiveSection] = useState('dashboard')
   const [selectedDevice, setSelectedDevice] = useState(null)
+
+  useEffect(() => {
+    onSectionChange?.(activeSection)
+  }, [activeSection, onSectionChange])
 
   const [showUserModal, setShowUserModal] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
