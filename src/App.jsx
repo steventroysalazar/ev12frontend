@@ -88,7 +88,32 @@ const normalizeWebhookAlarmCode = (value) => {
 
   if (Array.isArray(value)) {
     if (!value.length) return null
-    return normalizeWebhookAlarmCode(value[0])
+    const flattened = value
+      .flatMap((entry) => {
+        if (entry === null || entry === undefined) return []
+        if (Array.isArray(entry)) return entry
+        if (typeof entry === 'object') {
+          return [
+            entry?.code,
+            entry?.eventCode,
+            entry?.alarmCode,
+            entry?.alertCode,
+            entry?.name,
+            entry?.label,
+            entry?.type
+          ].filter(Boolean)
+        }
+        return [entry]
+      })
+      .map((entry) => String(entry).trim())
+      .filter(Boolean)
+
+    if (!flattened.length) return null
+    const sosMatch = flattened.find((entry) => /sos/i.test(entry))
+    if (sosMatch) return 'SOS Alert'
+    const fallMatch = flattened.find((entry) => /fall/i.test(entry))
+    if (fallMatch) return 'Fall-Down Alert'
+    return flattened[0]
   }
 
   const code = String(value).trim()
@@ -225,6 +250,8 @@ export default function App() {
       const payload = {
         alarmCode: null,
         alarm_code: null,
+        alertCode: null,
+        alert_code: null,
         alarmCancelledAt: cancelledAt,
         alarm_cancelled_at: cancelledAt
       }
@@ -346,7 +373,9 @@ export default function App() {
           },
           body: JSON.stringify({
             alarmCode: resolvedAlarmCode,
-            alarm_code: resolvedAlarmCode
+            alarm_code: resolvedAlarmCode,
+            alertCode: resolvedAlarmCode,
+            alert_code: resolvedAlarmCode
           })
         })
 
@@ -359,7 +388,9 @@ export default function App() {
             },
             body: JSON.stringify({
               alarmCode: resolvedAlarmCode,
-              alarm_code: resolvedAlarmCode
+              alarm_code: resolvedAlarmCode,
+              alertCode: resolvedAlarmCode,
+              alert_code: resolvedAlarmCode
             })
           })
         }
@@ -405,9 +436,14 @@ export default function App() {
         payload?.data?.['Alarm Code'] ||
         payload?.data?.alarmCode ||
         payload?.data?.alarm_code ||
+        payload?.data?.alertCode ||
+        payload?.data?.alert_code ||
         payload?.['Alarm Code'] ||
+        payload?.['Alert Code'] ||
         payload?.alarmCodes ||
         payload?.alarm_codes ||
+        payload?.alertCodes ||
+        payload?.alert_codes ||
         payload?.event?.code ||
         null
 
