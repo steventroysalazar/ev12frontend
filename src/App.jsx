@@ -332,6 +332,7 @@ export default function App() {
 
     let isCancelled = false
     let lastSeenWebhookTimestamp = 0
+    const lastSeenWebhookEventKeys = new Set()
 
     const persistWebhookAlarmCode = async (update) => {
       const internalDeviceId = Number(update?.deviceId || 0)
@@ -489,13 +490,23 @@ export default function App() {
           const sortedEvents = [...events].sort((left, right) => {
             const leftMs = new Date(left?.receivedAt || left?.timestamp || left?.createdAt || 0).getTime()
             const rightMs = new Date(right?.receivedAt || right?.timestamp || right?.createdAt || 0).getTime()
-            return rightMs - leftMs
+            return leftMs - rightMs
           })
 
           for (const event of sortedEvents) {
             if (isCancelled) return
             const eventTimestamp = new Date(event?.receivedAt || event?.timestamp || event?.createdAt || 0).getTime()
-            if (eventTimestamp <= lastSeenWebhookTimestamp) continue
+            if (eventTimestamp < lastSeenWebhookTimestamp) continue
+
+            const eventKey = [
+              event?.id,
+              event?.eventId,
+              event?.receivedAt,
+              event?.timestamp,
+              JSON.stringify(event?.payload?.data || event?.payload || event?.data || event?.rawEvent?.data || event?.rawEvent || {})
+            ].join('::')
+
+            if (eventTimestamp === lastSeenWebhookTimestamp && lastSeenWebhookEventKeys.has(eventKey)) continue
 
             const update = parseWebhookAlarmUpdate(event)
             if (update) {
@@ -508,7 +519,9 @@ export default function App() {
 
             if (eventTimestamp > lastSeenWebhookTimestamp) {
               lastSeenWebhookTimestamp = eventTimestamp
+              lastSeenWebhookEventKeys.clear()
             }
+            if (eventTimestamp === lastSeenWebhookTimestamp) lastSeenWebhookEventKeys.add(eventKey)
           }
 
           return
