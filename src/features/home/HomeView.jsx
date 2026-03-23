@@ -107,6 +107,7 @@ export default function HomeView({
   const [webhookRaw, setWebhookRaw] = useState(null)
   const [webhookStatus, setWebhookStatus] = useState('')
   const [clearingWebhookEvents, setClearingWebhookEvents] = useState(false)
+  const [webhookLimit, setWebhookLimit] = useState('10')
   const webhookFingerprintRef = useRef('')
 
   const roleLabel = useCallback((value) => {
@@ -269,19 +270,26 @@ export default function HomeView({
     return () => clearInterval(intervalId)
   }, [activeSection, autoFetchReplies, fetchReplies])
 
+  const webhookHeaders = useMemo(
+    () => ({
+      ...(authToken ? { Authorization: authToken } : {}),
+      ...(gatewayToken ? { 'X-Gateway-Token': gatewayToken, 'X-Webhook-Token': gatewayToken } : {})
+    }),
+    [authToken, gatewayToken]
+  )
+
   const loadWebhookEvents = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setWebhookStatus('Loading webhook events...')
 
-    const endpoints = ['/api/webhooks/ev12/events', 'https://ev12-backend-dev.mangoisland-fc3c6273.australiaeast.azurecontainerapps.io/api/webhooks/ev12/events']
+    const suffix = webhookLimit === 'all' ? '' : `?limit=${webhookLimit}`
+    const endpoints = [`/api/webhooks/ev12/events${suffix}`, `https://ev12-backend-dev.mangoisland-fc3c6273.australiaeast.azurecontainerapps.io/api/webhooks/ev12/events${suffix}`]
     let payload = null
     let lastError = null
 
     for (const endpoint of endpoints) {
       try {
         const { response } = await fetchWithFallback(endpoint, {
-          headers: {
-            ...(authToken ? { Authorization: authToken } : {})
-          }
+          headers: webhookHeaders
         })
 
         const body = await response.json().catch(() => ([]))
@@ -301,7 +309,9 @@ export default function HomeView({
     }
 
     const getEventTime = (event) => new Date(event?.receivedAt || event?.timestamp || event?.createdAt || event?.date || 0).getTime()
-    const incomingEvents = Array.isArray(payload) ? payload : [payload]
+    const incomingEvents = Array.isArray(payload)
+      ? payload
+      : (Array.isArray(payload?.events) ? payload.events : [payload])
     const previousEvents = parseStoredWebhookEvents()
     const mergedEvents = [...incomingEvents, ...previousEvents]
       .sort((a, b) => getEventTime(b) - getEventTime(a))
@@ -323,7 +333,7 @@ export default function HomeView({
       : (mergedEvents.length
         ? `Showing ${mergedEvents.length} saved webhook event(s).`
         : 'No webhook events fetched yet.'))
-  }, [authToken])
+  }, [webhookHeaders, webhookLimit])
 
   useEffect(() => {
     const storedEvents = parseStoredWebhookEvents()
@@ -365,10 +375,7 @@ export default function HomeView({
         try {
           const { response } = await fetchWithFallback(endpoint, {
             method: 'DELETE',
-            headers: {
-              ...(authToken ? { Authorization: authToken } : {}),
-              ...(gatewayToken ? { 'X-Webhook-Token': gatewayToken } : {})
-            }
+            headers: webhookHeaders
           })
 
           const body = await response.json().catch(() => ({}))
@@ -389,7 +396,7 @@ export default function HomeView({
     } finally {
       setClearingWebhookEvents(false)
     }
-  }, [authToken, gatewayToken, clearingWebhookEvents])
+  }, [webhookHeaders, clearingWebhookEvents])
 
   const formatWebhookLabel = useCallback((value) => {
     if (!value) return 'Unknown event'
@@ -851,6 +858,18 @@ export default function HomeView({
     return { headers, payload, timestamp, rawEvent: event }
   }
 
+  const extractAlarmAttempts = useCallback((event) => {
+    if (Array.isArray(event?.alarmAttempts)) return event.alarmAttempts
+
+    const parsedPayloadJson = tryParseJsonString(event?.payloadJson)
+    if (Array.isArray(parsedPayloadJson?.alarmAttempts)) return parsedPayloadJson.alarmAttempts
+
+    const payload = tryParseJsonString(event?.payload ?? event?.body ?? event?.rawBody)
+    if (Array.isArray(payload?.alarmAttempts)) return payload.alarmAttempts
+
+    return []
+  }, [])
+
 
   const queueStatusLabel = String(configQueue?.status || 'IDLE').toUpperCase()
   const isQueuePending = Boolean(configQueue?.pending || queueStatusLabel === 'PENDING')
@@ -1290,7 +1309,16 @@ export default function HomeView({
           <section className="card-like section-panel">
             <div className="section-head">
               <h2 className="section-title">Webhook Events</h2>
-              <div>
+              <div className="webhook-actions">
+                <label className="webhook-limit-control" htmlFor="webhook-limit-select">
+                  <span>Limit</span>
+                  <select id="webhook-limit-select" value={webhookLimit} onChange={(event) => setWebhookLimit(event.target.value)}>
+                    <option value="3">3</option>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="all">All</option>
+                  </select>
+                </label>
                 <button className="mini-action" type="button" onClick={loadWebhookEvents}>Refresh Events</button>
                 <button className="mini-action" type="button" onClick={clearWebhookEvents} disabled={clearingWebhookEvents}>
                   {clearingWebhookEvents ? 'Clearing…' : 'Clear Events'}
@@ -1299,6 +1327,9 @@ export default function HomeView({
             </div>
             <p className="status">Live listener is active. New events appear automatically. Showing all fetched events.</p>
             <p className="status">{webhookStatus || 'No webhook data loaded yet.'}</p>
+            <p className="status webhook-hint">
+              Use <code>action</code> + <code>reason</code> in alarm attempts to understand whether backend queued or ignored each update.
+            </p>
 
             <div className="webhook-list">
               {webhookRaw === null ? (
@@ -1307,6 +1338,7 @@ export default function HomeView({
                 webhookRaw.map((event, index) => {
                   const summary = webhookSummary(event, index)
                   const { parts } = summary
+                  const alarmAttempts = extractAlarmAttempts(event)
                   return (
                     <article className="webhook-event" key={event?.id || event?._id || `${parts.timestamp || 'event'}-${index}`}>
                       <header className="webhook-head">
@@ -1326,6 +1358,37 @@ export default function HomeView({
                       ) : null}
                       <h4>Payload</h4>
                       <pre className="conversation-box webhook-pre">{renderRaw(parts.payload ?? parts.rawEvent)}</pre>
+                      <h4>Alarm Attempts</h4>
+                      {alarmAttempts.length ? (
+                        <div className="table-shell webhook-attempt-shell">
+                          <table className="data-table webhook-attempt-table">
+                            <thead>
+                              <tr>
+                                <th>Candidate #</th>
+                                <th>External Device ID</th>
+                                <th>Alarm Code</th>
+                                <th>Event Timestamp</th>
+                                <th>Action</th>
+                                <th>Reason</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {alarmAttempts.map((attempt, attemptIndex) => (
+                                <tr key={`${summary.id}-attempt-${attemptIndex}`}>
+                                  <td>{attempt?.candidateIndex ?? '-'}</td>
+                                  <td>{attempt?.externalDeviceId || '-'}</td>
+                                  <td>{attempt?.alarmCode || '-'}</td>
+                                  <td>{attempt?.eventTimestamp || '-'}</td>
+                                  <td>{attempt?.action || '-'}</td>
+                                  <td>{attempt?.reason || '-'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="webhook-attempt-empty">No alarm attempts detected in this event.</p>
+                      )}
                     </article>
                   )
                 })
