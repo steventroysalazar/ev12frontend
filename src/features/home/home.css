@@ -310,6 +310,30 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .location-meta a:hover { text-decoration: underline; }
 
 .webhook-list { display: grid; gap: 0.9rem; }
+.webhook-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.webhook-limit-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #24456f;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.webhook-limit-control select {
+  min-width: 72px;
+}
+
+.webhook-hint code {
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.83em;
+}
 
 .webhook-event {
   border: 1px solid #d9e6f7;
@@ -378,6 +402,23 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
   border-color: #d8e3f2;
   font-size: 0.84rem;
   line-height: 1.45;
+}
+
+.webhook-attempt-shell {
+  margin-top: 0.35rem;
+  overflow: auto;
+}
+
+.webhook-attempt-table th,
+.webhook-attempt-table td {
+  vertical-align: top;
+  min-width: 115px;
+}
+
+.webhook-attempt-empty {
+  margin: 0;
+  color: #5f7190;
+  font-size: 0.86rem;
 }
 
 .alarm-cancel-meta {
