@@ -1,7 +1,7 @@
 .sidebar-panel {
-  border: 1px solid #1f3a5c;
+  border: 1px solid #36557c;
   border-radius: 18px;
-  background: linear-gradient(180deg, #10233d 0%, #173054 62%, #1e3f67 100%);
+  background: linear-gradient(180deg, #1f3c63 0%, #2a4b76 60%, #345986 100%);
   padding: 1rem;
   min-height: 620px;
   display: flex;
@@ -42,13 +42,13 @@
 }
 
 .sidebar-nav a.active {
-  background: rgba(85, 220, 206, 0.16);
-  border-color: rgba(130, 242, 232, 0.35);
-  color: #dffaf7;
+  background: rgba(143, 232, 221, 0.19);
+  border-color: rgba(182, 248, 240, 0.38);
+  color: #f0fffd;
 }
 
 .sidebar-subnav a {
-  color: #9cc2ea;
+  color: #c3daf4;
   padding: 0.2rem 0.35rem;
   font-size: 0.8rem;
 }

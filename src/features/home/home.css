@@ -1,7 +1,7 @@
 .home-shell {
   display: grid;
-  grid-template-columns: 240px 1fr;
-  gap: 1.25rem;
+  grid-template-columns: clamp(220px, 17vw, 272px) minmax(0, 1fr);
+  gap: clamp(0.85rem, 1.5vw, 1.3rem);
   align-items: start;
 }
 
@@ -11,6 +11,7 @@
   border-radius: 18px;
   padding: 1.2rem;
   box-shadow: 0 18px 45px -34px rgba(19, 38, 73, 0.45);
+  min-width: 0;
 }
 
 .page-title,
@@ -270,6 +271,18 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 
 @media (max-width: 980px) {
   .home-shell,.metric-grid,.dashboard-main-grid,.location-grid,.commands-layout,.queue-previews-grid,.field-grid.two-col,.alarm-row,.contact-head,.contact-row { grid-template-columns: 1fr; }
+}
+
+@media (min-width: 1600px) {
+  .dashboard-content {
+    padding: 1.35rem 1.4rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }
 
 .status-success {
