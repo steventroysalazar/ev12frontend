@@ -1,11 +1,12 @@
 .sidebar-panel {
-  border: 1px solid #e8edf2;
-  border-radius: 12px;
-  background: #f9fbfc;
+  border: 1px solid #1f3a5c;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #10233d 0%, #173054 62%, #1e3f67 100%);
   padding: 1rem;
   min-height: 620px;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 20px 36px -28px rgba(9, 20, 38, 0.85);
 }
 
 .sidebar-nav,
@@ -32,25 +33,29 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.65rem 0.8rem;
-  color: #6abfbc;
+  color: #d0e4ff;
   text-decoration: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-weight: 700;
   font-size: 0.9rem;
+  border: 1px solid transparent;
 }
 
 .sidebar-nav a.active {
-  background: #def0ef;
+  background: rgba(85, 220, 206, 0.16);
+  border-color: rgba(130, 242, 232, 0.35);
+  color: #dffaf7;
 }
 
 .sidebar-subnav a {
-  color: #78c7c4;
+  color: #9cc2ea;
   padding: 0.2rem 0.35rem;
   font-size: 0.8rem;
 }
 
 .sidebar-subnav a.sub-active {
   font-weight: 800;
+  color: #ffffff;
 }
 
 .nav-icon {
@@ -63,11 +68,13 @@
   margin-top: auto;
   align-self: flex-start;
   background: transparent;
-  color: #df4f4f;
-  padding: 0;
+  color: #ffc4cc;
+  padding: 0.45rem 0.7rem;
   font-size: 0.95rem;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   font-weight: 700;
+  border: 1px solid rgba(255, 196, 204, 0.35);
+  border-radius: 9px;
 }
