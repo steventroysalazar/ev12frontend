@@ -842,6 +842,7 @@ export default function HomeView({
     .slice(0, 8)
     .map((entry) => `${entry.latitude},${entry.longitude}`)
     .join('|')
+  const freshestLocation = latestDeviceLocations[0] || null
 
   const resolveLiveAlarmCode = useCallback(
     (device) => {
@@ -1056,9 +1057,21 @@ export default function HomeView({
 
                 {isSuperAdmin ? (
                   <section className="card-like superadmin-map-panel">
-                    <div className="section-head">
-                      <h3>Device Location Map (Webhook/SMS Latest)</h3>
-                      <span className="status">{latestDeviceLocations.length} device(s) with coordinates</span>
+                    <div className="map-panel-head">
+                      <div>
+                        <h3>Live Device Location Overview</h3>
+                        <p>Latest known coordinates from SMS replies and webhook auto-updates.</p>
+                      </div>
+                      <div className="map-kpi-stack">
+                        <span className="map-kpi-chip">
+                          <strong>{latestDeviceLocations.length}</strong>
+                          <small>Devices with GPS</small>
+                        </span>
+                        <span className="map-kpi-chip">
+                          <strong>{freshestLocation?.updatedAt ? new Date(freshestLocation.updatedAt).toLocaleString() : '—'}</strong>
+                          <small>Freshest update</small>
+                        </span>
+                      </div>
                     </div>
                     {latestDeviceLocations.length ? (
                       <>
@@ -1069,8 +1082,13 @@ export default function HomeView({
                             src={`https://maps.google.com/maps?q=${encodeURIComponent(superAdminMapQuery)}&z=3&output=embed`}
                           />
                         </div>
-                        <div className="location-meta">
+                        <div className="location-meta location-meta-grid">
                           <span className="map-chip map-chip-inline">Showing up to 8 latest device points.</span>
+                          {latestDeviceLocations.slice(0, 4).map((entry) => (
+                            <span key={`${entry.device.id || entry.device.deviceId}-${entry.updatedAt || 'na'}`} className="map-chip map-chip-inline map-chip-soft">
+                              {entry.device.name || entry.device.deviceName || `Device ${entry.device.id || entry.device.deviceId}`}: {entry.latitude.toFixed(5)}, {entry.longitude.toFixed(5)}
+                            </span>
+                          ))}
                         </div>
                       </>
                     ) : (
@@ -1304,7 +1322,12 @@ export default function HomeView({
           <section className="section-panel">
             <h2 className="page-title">Location</h2>
             <article className="card-like map-panel">
-              <div className="field-grid">
+              <div className="section-head">
+                <h3 className="block-title">Device Location Viewer</h3>
+                <button className="mini-action request-btn-inline" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
+              </div>
+              <p className="status">If SMS location is unavailable, this view automatically falls back to the saved webhook location.</p>
+              <div className="field-grid location-device-picker">
                 <div>
                   <label htmlFor="location-device-select">Device</label>
                   <select
@@ -1333,7 +1356,7 @@ export default function HomeView({
                   <div className="location-meta">
                     <span className="map-chip map-chip-inline">Lat: {displayedLocation.latitude} Lon: {displayedLocation.longitude}</span>
                     <a href={displayedLocation.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
-                    {usingWebhookFallback ? <span className="status">Source: webhook location fallback.</span> : null}
+                    {usingWebhookFallback ? <span className="status location-source-chip">Source: Webhook fallback</span> : <span className="status location-source-chip">Source: SMS reply</span>}
                     {selectedDeviceWebhookLocation?.updatedAt ? (
                       <span className="status">Last device update: {new Date(selectedDeviceWebhookLocation.updatedAt).toLocaleString()}</span>
                     ) : null}
@@ -1343,7 +1366,6 @@ export default function HomeView({
               ) : (
                 <div className="map-placeholder"><span className="map-chip">No SMS reply or webhook location yet for this device.</span></div>
               )}
-              <button className="mini-action request-btn" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
               <p className="status">{status}</p>
             </article>
           </section>
