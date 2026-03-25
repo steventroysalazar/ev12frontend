@@ -166,6 +166,13 @@ const normalizeAlarmUpdatePayload = (update) => {
   }
 }
 
+const isCountableActiveAlarmCode = (alarmCode) => {
+  const normalizedCode = String(alarmCode || '').trim().toLowerCase()
+  if (!normalizedCode) return false
+  if (normalizedCode.includes('sos') && normalizedCode.includes('ending')) return false
+  return normalizedCode.includes('sos') || normalizedCode.includes('fall')
+}
+
 export default function App() {
   const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
   const [activeView, setActiveView] = useState(auth.isAuthenticated ? 'home' : 'login')
@@ -588,8 +595,7 @@ export default function App() {
   const activeAlarmCount = useMemo(
     () =>
       Object.values(alarmStateByDevice).filter((entry) => {
-        const code = String(entry?.alarmCode || '').trim().toLowerCase()
-        return code.includes('sos') || code.includes('fall')
+        return isCountableActiveAlarmCode(entry?.alarmCode)
       }).length,
     [alarmStateByDevice]
   )
