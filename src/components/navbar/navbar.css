@@ -83,22 +83,6 @@
   font-weight: 500;
 }
 
-.alarm-count-pill {
-  font-size: 0.75rem;
-  border-radius: 999px;
-  border: 1px solid #cad3df;
-  padding: 0.2rem 0.55rem;
-  color: #334155;
-  background: #f8fafc;
-  font-weight: 600;
-}
-
-.alarm-count-pill.has-alert {
-  color: #fff;
-  border-color: #b52c2c;
-  background: linear-gradient(135deg, #db4444, #b91c1c);
-}
-
 .logout-top {
   margin-top: 0;
   background: #f3f4f6;
