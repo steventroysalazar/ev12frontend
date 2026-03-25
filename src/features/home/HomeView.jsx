@@ -108,6 +108,7 @@ export default function HomeView({
   const [webhookStatus, setWebhookStatus] = useState('')
   const [clearingWebhookEvents, setClearingWebhookEvents] = useState(false)
   const [webhookLimit, setWebhookLimit] = useState('10')
+  const [locationDeviceId, setLocationDeviceId] = useState('')
   const webhookFingerprintRef = useRef('')
 
   const roleLabel = useCallback((value) => {
@@ -125,6 +126,7 @@ export default function HomeView({
 
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
   const isAdminDashboard = normalizedRole === 'super admin' || normalizedRole === 'manager'
+  const isSuperAdmin = normalizedRole === 'super admin'
 
   const metrics = useMemo(
     () => [
@@ -756,6 +758,92 @@ export default function HomeView({
     [replies]
   )
 
+  const resolveValidCoordinates = useCallback((source) => {
+    if (!source || typeof source !== 'object') return null
+
+    const latitude = Number.parseFloat(source.latitude ?? source.lat)
+    const longitude = Number.parseFloat(source.longitude ?? source.lng ?? source.lon)
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+    if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null
+
+    return { latitude, longitude }
+  }, [])
+
+  const latestDeviceLocations = useMemo(() => {
+    return devices
+      .map((device) => {
+        const coordinates = resolveValidCoordinates(device)
+        if (!coordinates) return null
+
+        const updatedAt = device.locationUpdatedAt || device.location_updated_at || device.updatedAt || device.updated_at || null
+        const updatedAtMs = updatedAt ? new Date(updatedAt).getTime() : 0
+
+        return {
+          device,
+          ...coordinates,
+          updatedAt,
+          updatedAtMs: Number.isFinite(updatedAtMs) ? updatedAtMs : 0
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.updatedAtMs - a.updatedAtMs)
+  }, [devices, resolveValidCoordinates])
+
+  const locationDeviceOptions = useMemo(() => {
+    if (isAdminDashboard) return devices
+
+    const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
+    if (!currentUserId) return devices
+
+    return devices.filter((device) => {
+      const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
+      return ownerId === currentUserId
+    })
+  }, [devices, isAdminDashboard, user])
+
+  useEffect(() => {
+    if (!locationDeviceOptions.length) {
+      setLocationDeviceId('')
+      return
+    }
+
+    if (locationDeviceId && locationDeviceOptions.some((device) => String(device.id || device.deviceId || '') === String(locationDeviceId))) {
+      return
+    }
+
+    const preferredId = configForm.deviceId && locationDeviceOptions.find((device) => String(device.id || device.deviceId || '') === String(configForm.deviceId))
+      ? String(configForm.deviceId)
+      : String(locationDeviceOptions[0].id || locationDeviceOptions[0].deviceId || '')
+    setLocationDeviceId(preferredId)
+  }, [locationDeviceOptions, locationDeviceId, configForm.deviceId])
+
+  const selectedLocationDevice = useMemo(
+    () => locationDeviceOptions.find((device) => String(device.id || device.deviceId || '') === String(locationDeviceId)) || null,
+    [locationDeviceId, locationDeviceOptions]
+  )
+
+  const selectedDeviceWebhookLocation = useMemo(() => {
+    if (!selectedLocationDevice) return null
+
+    const coordinates = resolveValidCoordinates(selectedLocationDevice)
+    if (!coordinates) return null
+
+    return {
+      ...coordinates,
+      mapUrl: `https://www.google.com/maps?q=${coordinates.latitude},${coordinates.longitude}`,
+      source: 'webhook',
+      updatedAt: selectedLocationDevice.locationUpdatedAt || selectedLocationDevice.location_updated_at || null
+    }
+  }, [resolveValidCoordinates, selectedLocationDevice])
+
+  const displayedLocation = locationResult || selectedDeviceWebhookLocation
+  const usingWebhookFallback = !locationResult && Boolean(selectedDeviceWebhookLocation)
+  const superAdminMapQuery = latestDeviceLocations
+    .slice(0, 8)
+    .map((entry) => `${entry.latitude},${entry.longitude}`)
+    .join('|')
+  const freshestLocation = latestDeviceLocations[0] || null
+
   const resolveLiveAlarmCode = useCallback(
     (device) => {
       const deviceId = Number(device?.id || device?.deviceId || 0)
@@ -966,6 +1054,50 @@ export default function HomeView({
                     <button disabled={loading} onClick={fetchReplies}><AppIcon name="replies" className="btn-icon" />Fetch Replies</button>
                   </aside>
                 </section>
+
+                {isSuperAdmin ? (
+                  <section className="card-like superadmin-map-panel">
+                    <div className="map-panel-head">
+                      <div>
+                        <h3>Live Device Location Overview</h3>
+                        <p>Latest known coordinates from SMS replies and webhook auto-updates.</p>
+                      </div>
+                      <div className="map-kpi-stack">
+                        <span className="map-kpi-chip">
+                          <strong>{latestDeviceLocations.length}</strong>
+                          <small>Devices with GPS</small>
+                        </span>
+                        <span className="map-kpi-chip">
+                          <strong>{freshestLocation?.updatedAt ? new Date(freshestLocation.updatedAt).toLocaleString() : '—'}</strong>
+                          <small>Freshest update</small>
+                        </span>
+                      </div>
+                    </div>
+                    {latestDeviceLocations.length ? (
+                      <>
+                        <div className="map-placeholder map-embed-wrap">
+                          <iframe
+                            title="Super admin device locations map"
+                            className="map-embed"
+                            src={`https://maps.google.com/maps?q=${encodeURIComponent(superAdminMapQuery)}&z=3&output=embed`}
+                          />
+                        </div>
+                        <div className="location-meta location-meta-grid">
+                          <span className="map-chip map-chip-inline">Showing up to 8 latest device points.</span>
+                          {latestDeviceLocations.slice(0, 4).map((entry) => (
+                            <span key={`${entry.device.id || entry.device.deviceId}-${entry.updatedAt || 'na'}`} className="map-chip map-chip-inline map-chip-soft">
+                              {entry.device.name || entry.device.deviceName || `Device ${entry.device.id || entry.device.deviceId}`}: {entry.latitude.toFixed(5)}, {entry.longitude.toFixed(5)}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="map-placeholder">
+                        <span className="map-chip">No device coordinates received from webhook/SMS yet.</span>
+                      </div>
+                    )}
+                  </section>
+                ) : null}
               </>
             ) : (
               <section className="dashboard-main-grid user-dashboard-grid">
@@ -1190,25 +1322,50 @@ export default function HomeView({
           <section className="section-panel">
             <h2 className="page-title">Location</h2>
             <article className="card-like map-panel">
-              {locationResult ? (
+              <div className="section-head">
+                <h3 className="block-title">Device Location Viewer</h3>
+                <button className="mini-action request-btn-inline" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
+              </div>
+              <p className="status">If SMS location is unavailable, this view automatically falls back to the saved webhook location.</p>
+              <div className="field-grid location-device-picker">
+                <div>
+                  <label htmlFor="location-device-select">Device</label>
+                  <select
+                    id="location-device-select"
+                    value={locationDeviceId}
+                    onChange={(event) => setLocationDeviceId(event.target.value)}
+                  >
+                    {locationDeviceOptions.map((device) => (
+                      <option key={device.id || device.deviceId || device.phoneNumber} value={String(device.id || device.deviceId || '')}>
+                        {device.name || device.deviceName || `Device ${device.id || device.deviceId}`} ({device.phoneNumber || 'No phone'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {displayedLocation ? (
                 <>
                   <div className="map-placeholder map-embed-wrap">
                     <iframe
                       title="Device location map"
                       className="map-embed"
-                      src={`https://maps.google.com/maps?q=${locationResult.latitude},${locationResult.longitude}&z=15&output=embed`}
+                      src={`https://maps.google.com/maps?q=${displayedLocation.latitude},${displayedLocation.longitude}&z=15&output=embed`}
                     />
                   </div>
                   <div className="location-meta">
-                    <span className="map-chip">Lat: {locationResult.latitude} Lon: {locationResult.longitude}</span>
-                    <a href={locationResult.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
+                    <span className="map-chip map-chip-inline">Lat: {displayedLocation.latitude} Lon: {displayedLocation.longitude}</span>
+                    <a href={displayedLocation.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
+                    {usingWebhookFallback ? <span className="status location-source-chip">Source: Webhook fallback</span> : <span className="status location-source-chip">Source: SMS reply</span>}
+                    {selectedDeviceWebhookLocation?.updatedAt ? (
+                      <span className="status">Last device update: {new Date(selectedDeviceWebhookLocation.updatedAt).toLocaleString()}</span>
+                    ) : null}
                   </div>
-                  <pre className="preview-box">{locationResult.rawMessage}</pre>
+                  {locationResult?.rawMessage ? <pre className="preview-box">{locationResult.rawMessage}</pre> : null}
                 </>
               ) : (
-                <div className="map-placeholder"><span className="map-chip">No location reply yet. Click request to send Loc.</span></div>
+                <div className="map-placeholder"><span className="map-chip">No SMS reply or webhook location yet for this device.</span></div>
               )}
-              <button className="mini-action request-btn" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
               <p className="status">{status}</p>
             </article>
           </section>
