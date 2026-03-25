@@ -166,13 +166,6 @@ const normalizeAlarmUpdatePayload = (update) => {
   }
 }
 
-const isCountableActiveAlarmCode = (alarmCode) => {
-  const normalizedCode = String(alarmCode || '').trim().toLowerCase()
-  if (!normalizedCode) return false
-  if (normalizedCode.includes('sos') && normalizedCode.includes('ending')) return false
-  return normalizedCode.includes('sos') || normalizedCode.includes('fall')
-}
-
 export default function App() {
   const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
   const [activeView, setActiveView] = useState(auth.isAuthenticated ? 'home' : 'login')
@@ -591,14 +584,6 @@ export default function App() {
       clearInterval(intervalId)
     }
   }, [auth.isAuthenticated, activeView, homeActiveSection, commonHeaders, applyRealtimeAlarmUpdate])
-
-  const activeAlarmCount = useMemo(
-    () =>
-      Object.values(alarmStateByDevice).filter((entry) => {
-        return isCountableActiveAlarmCode(entry?.alarmCode)
-      }).length,
-    [alarmStateByDevice]
-  )
 
   const commandPreview = useMemo(() => buildEv12Preview(configForm, configBaseline), [configForm, configBaseline])
   const draftCommandPreview = useMemo(
@@ -1113,7 +1098,6 @@ export default function App() {
       {activeView === 'home' ? (
         <Navbar
           user={auth.user}
-          activeAlarmCount={activeAlarmCount}
           alarmStreamConnected={alarmStreamConnected}
         />
       ) : null}
