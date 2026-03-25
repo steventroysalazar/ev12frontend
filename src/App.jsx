@@ -124,6 +124,48 @@ const normalizeWebhookAlarmCode = (value) => {
   return code
 }
 
+const normalizeAlarmUpdatePayload = (update) => {
+  if (!update || typeof update !== 'object') return null
+
+  const deviceId = Number(
+    update?.deviceId ||
+    update?.internalDeviceId ||
+    update?.internal_device_id ||
+    update?.id ||
+    0
+  )
+
+  const externalDeviceId = String(
+    update?.externalDeviceId ||
+    update?.external_device_id ||
+    update?.deviceExternalId ||
+    update?.device_external_id ||
+    update?.imei ||
+    ''
+  ).trim()
+
+  if (!deviceId && !externalDeviceId) return null
+
+  return {
+    ...update,
+    deviceId: deviceId || undefined,
+    externalDeviceId: externalDeviceId || undefined,
+    alarmCode:
+      update?.alarmCode ??
+      update?.alarm_code ??
+      update?.alertCode ??
+      update?.alert_code ??
+      null,
+    updatedAt:
+      update?.updatedAt ||
+      update?.updated_at ||
+      update?.receivedAt ||
+      update?.received_at ||
+      update?.timestamp ||
+      new Date().toISOString()
+  }
+}
+
 export default function App() {
   const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
   const [activeView, setActiveView] = useState(auth.isAuthenticated ? 'home' : 'login')
@@ -207,27 +249,30 @@ export default function App() {
   }, [getDeviceAlarmCancelKeys])
 
   const applyRealtimeAlarmUpdate = useCallback((update) => {
-    const deviceId = Number(update?.deviceId || 0)
-    const externalDeviceId = String(update?.externalDeviceId || '').trim()
+    const normalizedUpdate = normalizeAlarmUpdatePayload(update)
+    if (!normalizedUpdate) return
+
+    const deviceId = Number(normalizedUpdate.deviceId || 0)
+    const externalDeviceId = String(normalizedUpdate.externalDeviceId || '').trim()
     if (!deviceId && !externalDeviceId) return
 
     setAlarmStateByDevice((prev) => {
       const next = { ...prev }
-      if (deviceId) next[`id:${deviceId}`] = update
-      if (externalDeviceId) next[`ext:${externalDeviceId}`] = update
+      if (deviceId) next[`id:${deviceId}`] = normalizedUpdate
+      if (externalDeviceId) next[`ext:${externalDeviceId}`] = normalizedUpdate
       return next
     })
 
     setAlarmFeed((prev) => {
-      const updateKey = `${update?.deviceId || '-'}:${update?.externalDeviceId || '-'}`
-      const updatedAtMs = new Date(update?.updatedAt || update?.receivedAt || update?.timestamp || Date.now()).getTime()
+      const updateKey = `${normalizedUpdate?.deviceId || '-'}:${normalizedUpdate?.externalDeviceId || '-'}`
+      const updatedAtMs = new Date(normalizedUpdate?.updatedAt || normalizedUpdate?.receivedAt || normalizedUpdate?.timestamp || Date.now()).getTime()
       const filtered = prev.filter((entry) => {
         const entryKey = `${entry?.deviceId || '-'}:${entry?.externalDeviceId || '-'}`
         const entryUpdatedAtMs = new Date(entry?.updatedAt || entry?.receivedAt || entry?.timestamp || 0).getTime()
         if (entryKey !== updateKey) return true
         return entryUpdatedAtMs > updatedAtMs
       })
-      return [update, ...filtered].slice(0, 30)
+      return [normalizedUpdate, ...filtered].slice(0, 30)
     })
   }, [])
 
