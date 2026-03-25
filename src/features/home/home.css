@@ -359,6 +359,9 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .location-meta { margin-top: 0.6rem; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
 .location-meta a { color: #0f766e; font-weight: 700; text-decoration: none; }
 .location-meta a:hover { text-decoration: underline; }
+.map-chip-inline { position: static; }
+.location-meta { flex-wrap: wrap; justify-content: flex-start; }
+.superadmin-map-panel h3 { margin: 0; color: #202b40; }
 
 .webhook-list { display: grid; gap: 0.9rem; }
 .webhook-actions {
