@@ -2,7 +2,10 @@
   display: grid;
   grid-template-columns: clamp(220px, 17vw, 272px) minmax(0, 1fr);
   gap: clamp(0.85rem, 1.5vw, 1.3rem);
-  align-items: start;
+  align-items: stretch;
+  min-height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .dashboard-content {
@@ -12,6 +15,8 @@
   padding: 1.2rem;
   box-shadow: 0 18px 45px -34px rgba(19, 38, 73, 0.45);
   min-width: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .page-title,
@@ -81,7 +86,7 @@
   color: #222f45;
 }
 
-.dashboard-main-grid { display: grid; grid-template-columns: 1fr 260px; gap: 0.9rem; }
+.dashboard-main-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 0.9rem; }
 .live-alarm-strip {
   margin: 0 0 1rem;
   border: 1px solid #d6e0ea;
@@ -169,6 +174,14 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .alarm-row { display: grid; grid-template-columns: 0.8fr 1fr 1fr 1fr; gap: 0.6rem; align-items: center; }
 
 .map-placeholder { height: 220px; border-radius: 16px; background: #ced4da; position: relative; }
+.map-square {
+  width: min(100%, 760px);
+  aspect-ratio: 1 / 1;
+  height: auto;
+  min-height: 340px;
+  max-height: 760px;
+  margin: 0 auto;
+}
 .map-chip { position: absolute; right: 1rem; top: 1rem; background: #fff; border: 1px solid #cfd6de; padding: 0.4rem; border-radius: 4px; }
 .request-btn { margin-top: 0.6rem; margin-left: auto; display: block; }
 .location-grid,.commands-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
@@ -273,6 +286,9 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
   .home-shell,.metric-grid,.dashboard-main-grid,.location-grid,.commands-layout,.queue-previews-grid,.field-grid.two-col,.alarm-row,.contact-head,.contact-row { grid-template-columns: 1fr; }
   .map-panel-head { flex-direction: column; }
   .map-kpi-stack { grid-template-columns: 1fr; width: 100%; }
+  .home-shell { min-height: auto; max-height: none; overflow: visible; }
+  .dashboard-content { height: auto; overflow-y: visible; }
+  .map-square { width: 100%; max-height: none; }
 }
 
 @media (min-width: 1600px) {
@@ -364,6 +380,10 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .map-chip-inline { position: static; }
 .location-meta { flex-wrap: wrap; justify-content: flex-start; }
 .superadmin-map-panel h3 { margin: 0; color: #202b40; }
+.superadmin-map-panel {
+  border-color: #c5d7ea;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+}
 .map-panel-head {
   display: flex;
   justify-content: space-between;

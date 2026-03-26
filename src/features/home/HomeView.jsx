@@ -1075,7 +1075,7 @@ export default function HomeView({
                     </div>
                     {latestDeviceLocations.length ? (
                       <>
-                        <div className="map-placeholder map-embed-wrap">
+                        <div className="map-placeholder map-embed-wrap map-square">
                           <iframe
                             title="Super admin device locations map"
                             className="map-embed"
@@ -1092,7 +1092,7 @@ export default function HomeView({
                         </div>
                       </>
                     ) : (
-                      <div className="map-placeholder">
+                      <div className="map-placeholder map-square">
                         <span className="map-chip">No device coordinates received from webhook/SMS yet.</span>
                       </div>
                     )}
@@ -1346,7 +1346,7 @@ export default function HomeView({
 
               {displayedLocation ? (
                 <>
-                  <div className="map-placeholder map-embed-wrap">
+                  <div className="map-placeholder map-embed-wrap map-square">
                     <iframe
                       title="Device location map"
                       className="map-embed"
@@ -1364,7 +1364,7 @@ export default function HomeView({
                   {locationResult?.rawMessage ? <pre className="preview-box">{locationResult.rawMessage}</pre> : null}
                 </>
               ) : (
-                <div className="map-placeholder"><span className="map-chip">No SMS reply or webhook location yet for this device.</span></div>
+                <div className="map-placeholder map-square"><span className="map-chip">No SMS reply or webhook location yet for this device.</span></div>
               )}
               <p className="status">{status}</p>
             </article>
