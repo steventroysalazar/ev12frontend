@@ -78,6 +78,7 @@ export default function HomeView({
 }) {
   const [activeSection, setActiveSection] = useState('dashboard')
   const [selectedDevice, setSelectedDevice] = useState(null)
+  const [dashboardMapDeviceId, setDashboardMapDeviceId] = useState('')
 
   useEffect(() => {
     onSectionChange?.(activeSection)
@@ -838,11 +839,25 @@ export default function HomeView({
 
   const displayedLocation = locationResult || selectedDeviceWebhookLocation
   const usingWebhookFallback = !locationResult && Boolean(selectedDeviceWebhookLocation)
-  const superAdminMapQuery = latestDeviceLocations
-    .slice(0, 8)
-    .map((entry) => `${entry.latitude},${entry.longitude}`)
-    .join('|')
   const freshestLocation = latestDeviceLocations[0] || null
+  const selectedDashboardLocation = useMemo(
+    () =>
+      latestDeviceLocations.find((entry) => String(entry.device.id || entry.device.deviceId || '') === String(dashboardMapDeviceId)) ||
+      freshestLocation ||
+      null,
+    [dashboardMapDeviceId, freshestLocation, latestDeviceLocations]
+  )
+
+  useEffect(() => {
+    if (!latestDeviceLocations.length) {
+      setDashboardMapDeviceId('')
+      return
+    }
+    if (dashboardMapDeviceId && latestDeviceLocations.some((entry) => String(entry.device.id || entry.device.deviceId || '') === String(dashboardMapDeviceId))) {
+      return
+    }
+    setDashboardMapDeviceId(String(latestDeviceLocations[0].device.id || latestDeviceLocations[0].device.deviceId || ''))
+  }, [dashboardMapDeviceId, latestDeviceLocations])
 
   const resolveLiveAlarmCode = useCallback(
     (device) => {
@@ -1074,23 +1089,36 @@ export default function HomeView({
                       </div>
                     </div>
                     {latestDeviceLocations.length ? (
-                      <>
+                      <div className="dashboard-map-layout">
                         <div className="map-placeholder map-embed-wrap map-square">
                           <iframe
-                            title="Super admin device locations map"
+                            title="Super admin device location map"
                             className="map-embed"
-                            src={`https://maps.google.com/maps?q=${encodeURIComponent(superAdminMapQuery)}&z=3&output=embed`}
+                            src={`https://maps.google.com/maps?q=${selectedDashboardLocation?.latitude},${selectedDashboardLocation?.longitude}&z=15&output=embed`}
                           />
                         </div>
-                        <div className="location-meta location-meta-grid">
-                          <span className="map-chip map-chip-inline">Showing up to 8 latest device points.</span>
-                          {latestDeviceLocations.slice(0, 4).map((entry) => (
-                            <span key={`${entry.device.id || entry.device.deviceId}-${entry.updatedAt || 'na'}`} className="map-chip map-chip-inline map-chip-soft">
-                              {entry.device.name || entry.device.deviceName || `Device ${entry.device.id || entry.device.deviceId}`}: {entry.latitude.toFixed(5)}, {entry.longitude.toFixed(5)}
-                            </span>
-                          ))}
+                        <div className="dashboard-map-list">
+                          <h4>Recent device locations</h4>
+                          <div className="dashboard-map-list-grid">
+                            {latestDeviceLocations.slice(0, 6).map((entry) => {
+                              const entryId = String(entry.device.id || entry.device.deviceId || '')
+                              const isActive = entryId === String(selectedDashboardLocation?.device?.id || selectedDashboardLocation?.device?.deviceId || '')
+                              return (
+                                <button
+                                  type="button"
+                                  key={`${entryId}-${entry.updatedAt || 'na'}`}
+                                  className={`map-list-item ${isActive ? 'is-active' : ''}`}
+                                  onClick={() => setDashboardMapDeviceId(entryId)}
+                                >
+                                  <strong>{entry.device.name || entry.device.deviceName || `Device ${entryId}`}</strong>
+                                  <span>{entry.latitude.toFixed(5)}, {entry.longitude.toFixed(5)}</span>
+                                  <small>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : 'Timestamp unavailable'}</small>
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
-                      </>
+                      </div>
                     ) : (
                       <div className="map-placeholder map-square">
                         <span className="map-chip">No device coordinates received from webhook/SMS yet.</span>

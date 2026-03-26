@@ -26,42 +26,44 @@ export default function Sidebar({ activeSection, onChangeSection, onLogout }) {
 
   return (
     <aside className="sidebar-panel">
-      <ul className="sidebar-nav">
-        {sidebarItems.map((item) => (
-          <li key={item.id}>
-            <a
-              className={activeSection === item.id || (item.id === 'settings' && isSettingsActive) ? 'active' : ''}
-              href="#"
-              onClick={(event) => {
-                event.preventDefault()
-                onChangeSection(item.id === 'settings' ? 'settings-basic' : item.id)
-              }}
-            >
-              <AppIcon name={item.icon} className="nav-icon" />
-              <span>{item.label}</span>
-            </a>
+      <div className="sidebar-scroll">
+        <ul className="sidebar-nav">
+          {sidebarItems.map((item) => (
+            <li key={item.id}>
+              <a
+                className={activeSection === item.id || (item.id === 'settings' && isSettingsActive) ? 'active' : ''}
+                href="#"
+                onClick={(event) => {
+                  event.preventDefault()
+                  onChangeSection(item.id === 'settings' ? 'settings-basic' : item.id)
+                }}
+              >
+                <AppIcon name={item.icon} className="nav-icon" />
+                <span>{item.label}</span>
+              </a>
 
-            {item.children ? (
-              <ul className="sidebar-subnav">
-                {item.children.map((child) => (
-                  <li key={child.id}>
-                    <a
-                      className={activeSection === child.id ? 'sub-active' : ''}
-                      href="#"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        onChangeSection(child.id)
-                      }}
-                    >
-                      {child.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </li>
-        ))}
-      </ul>
+              {item.children ? (
+                <ul className="sidebar-subnav">
+                  {item.children.map((child) => (
+                    <li key={child.id}>
+                      <a
+                        className={activeSection === child.id ? 'sub-active' : ''}
+                        href="#"
+                        onClick={(event) => {
+                          event.preventDefault()
+                          onChangeSection(child.id)
+                        }}
+                      >
+                        {child.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </div>
       <button className="logout-link" type="button" onClick={onLogout}>
         <AppIcon name="logout" className="nav-icon" />
         <span>Logout</span>
