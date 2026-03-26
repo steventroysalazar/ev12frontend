@@ -109,3 +109,12 @@
     position: static;
   }
 }
+
+@media (max-width: 980px) {
+  .sidebar-panel {
+    position: static;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+  }
+}
