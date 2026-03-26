@@ -3,8 +3,9 @@
   grid-template-columns: clamp(220px, 17vw, 272px) minmax(0, 1fr);
   gap: clamp(0.85rem, 1.5vw, 1.3rem);
   align-items: stretch;
-  min-height: 100vh;
-  max-height: 100vh;
+  height: calc(100dvh - var(--dashboard-layout-offset, 5.25rem));
+  min-height: calc(100dvh - var(--dashboard-layout-offset, 5.25rem));
+  max-height: calc(100dvh - var(--dashboard-layout-offset, 5.25rem));
   overflow: hidden;
 }
 
@@ -15,7 +16,7 @@
   padding: 1.2rem;
   box-shadow: 0 18px 45px -34px rgba(19, 38, 73, 0.45);
   min-width: 0;
-  height: 100vh;
+  height: 100%;
   overflow-y: auto;
 }
 
