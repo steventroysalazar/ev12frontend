@@ -97,6 +97,7 @@ export default function HomeView({
   const [users, setUsers] = useState([])
   const [locations, setLocations] = useState([])
   const [devices, setDevices] = useState([])
+  const [dashboardDevicePage, setDashboardDevicePage] = useState(1)
 
   const [locationForm, setLocationForm] = useState(initialLocationForm)
   const [userForm, setUserForm] = useState(initialUserForm)
@@ -127,7 +128,6 @@ export default function HomeView({
 
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
   const isAdminDashboard = normalizedRole === 'super admin' || normalizedRole === 'manager'
-  const isSuperAdmin = normalizedRole === 'super admin'
 
   const metrics = useMemo(
     () => [
@@ -847,6 +847,18 @@ export default function HomeView({
       null,
     [dashboardMapDeviceId, freshestLocation, latestDeviceLocations]
   )
+  const dashboardPageSize = 8
+  const dashboardTotalPages = Math.max(1, Math.ceil(devices.length / dashboardPageSize))
+  const paginatedDashboardDevices = useMemo(() => {
+    const start = (dashboardDevicePage - 1) * dashboardPageSize
+    return devices.slice(start, start + dashboardPageSize)
+  }, [dashboardDevicePage, devices])
+
+  useEffect(() => {
+    if (dashboardDevicePage > dashboardTotalPages) {
+      setDashboardDevicePage(dashboardTotalPages)
+    }
+  }, [dashboardDevicePage, dashboardTotalPages])
 
   useEffect(() => {
     if (!latestDeviceLocations.length) {
@@ -872,6 +884,13 @@ export default function HomeView({
       return liveEntry.alarmCode || device?.alarmCode || null
     },
     [alarmStateByDevice]
+  )
+  const activeAlarmDevices = useMemo(
+    () =>
+      devices
+        .map((device) => ({ device, alarmCode: resolveLiveAlarmCode(device) }))
+        .filter((entry) => Boolean(entry.alarmCode)),
+    [devices, resolveLiveAlarmCode]
   )
 
   const userDeviceRows = useMemo(() => {
@@ -1038,40 +1057,8 @@ export default function HomeView({
                   ))}
                 </section>
 
-                <section className="dashboard-main-grid">
-                  <article className="device-overview card-like">
-                    <h3>Recently Added Devices</h3>
-                    <div className="table-shell dashboard-device-table">
-                      <table className="data-table">
-                        <thead><tr><th>Device</th><th>Alarm</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead>
-                        <tbody>
-                          {devices.slice(0, 5).map((device) => {
-                            const meta = resolveDeviceMeta(device)
-                            const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(device))
-                            return (
-                              <tr key={device.id || device.phoneNumber || device.name}>
-                                <td>{device.name || device.deviceName || '-'}</td>
-                                <td><span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span></td>
-                                <td>{meta.ownerName}</td>
-                                <td>{meta.ownerRole}</td>
-                                <td>{meta.ownerLocation}</td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </article>
-
-                  <aside className="action-stack card-like">
-                    <button disabled={loading} onClick={sendConfig}><AppIcon name="command" className="btn-icon" />Send Command</button>
-                    <button disabled={loading} onClick={sendMessage}><AppIcon name="location" className="btn-icon" />Request Location</button>
-                    <button disabled={loading} onClick={fetchReplies}><AppIcon name="replies" className="btn-icon" />Fetch Replies</button>
-                  </aside>
-                </section>
-
-                {isSuperAdmin ? (
-                  <section className="card-like superadmin-map-panel">
+                <section className="dashboard-top-layout">
+                  <article className="card-like superadmin-map-panel">
                     <div className="map-panel-head">
                       <div>
                         <h3>Live Device Location Overview</h3>
@@ -1092,7 +1079,7 @@ export default function HomeView({
                       <div className="dashboard-map-layout">
                         <div className="map-placeholder map-embed-wrap map-square">
                           <iframe
-                            title="Super admin device location map"
+                            title="Admin device location map"
                             className="map-embed"
                             src={`https://maps.google.com/maps?q=${selectedDashboardLocation?.latitude},${selectedDashboardLocation?.longitude}&z=15&output=embed`}
                           />
@@ -1124,8 +1111,66 @@ export default function HomeView({
                         <span className="map-chip">No device coordinates received from webhook/SMS yet.</span>
                       </div>
                     )}
-                  </section>
-                ) : null}
+                  </article>
+
+                  <aside className="active-alerts card-like">
+                    <div className="section-head">
+                      <h3>Active Alert Devices</h3>
+                      <span className="map-kpi-chip compact"><strong>{activeAlarmDevices.length}</strong></span>
+                    </div>
+                    <div className="active-alerts-list">
+                      {activeAlarmDevices.length ? activeAlarmDevices.slice(0, 8).map(({ device, alarmCode }) => {
+                        const meta = resolveDeviceMeta(device)
+                        const alarmMeta = getAlarmMeta(alarmCode)
+                        return (
+                          <div key={`alarm-${device.id || device.deviceId || device.phoneNumber}`} className="active-alert-row">
+                            <strong>{device.name || device.deviceName || 'Unnamed device'}</strong>
+                            <span>{meta.ownerName}</span>
+                            <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
+                          </div>
+                        )
+                      }) : <p className="status">No active alerts right now.</p>}
+                    </div>
+                  </aside>
+                </section>
+
+                <section className="dashboard-main-grid">
+                  <article className="device-overview card-like">
+                    <h3>Device List</h3>
+                    <div className="table-shell dashboard-device-table">
+                      <table className="data-table">
+                        <thead><tr><th>Device</th><th>Alarm</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead>
+                        <tbody>
+                          {paginatedDashboardDevices.map((device) => {
+                            const meta = resolveDeviceMeta(device)
+                            const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(device))
+                            return (
+                              <tr key={device.id || device.phoneNumber || device.name}>
+                                <td>{device.name || device.deviceName || '-'}</td>
+                                <td><span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span></td>
+                                <td>{meta.ownerName}</td>
+                                <td>{meta.ownerRole}</td>
+                                <td>{meta.ownerLocation}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="table-pagination">
+                      <button type="button" className="table-link action-chip action-chip-neutral" disabled={dashboardDevicePage <= 1} onClick={() => setDashboardDevicePage((prev) => Math.max(prev - 1, 1))}>Prev</button>
+                      <span>Page {dashboardDevicePage} of {dashboardTotalPages}</span>
+                      <button type="button" className="table-link action-chip action-chip-neutral" disabled={dashboardDevicePage >= dashboardTotalPages} onClick={() => setDashboardDevicePage((prev) => Math.min(prev + 1, dashboardTotalPages))}>Next</button>
+                    </div>
+                  </article>
+
+                  <aside className="action-stack card-like">
+                    <h3>Quick Actions</h3>
+                    <button disabled={loading} onClick={sendConfig}><AppIcon name="command" className="btn-icon" />Send Command</button>
+                    <button disabled={loading} onClick={sendMessage}><AppIcon name="location" className="btn-icon" />Request Location</button>
+                    <button disabled={loading} onClick={fetchReplies}><AppIcon name="replies" className="btn-icon" />Fetch Replies</button>
+                  </aside>
+                </section>
               </>
             ) : (
               <section className="dashboard-main-grid user-dashboard-grid">
