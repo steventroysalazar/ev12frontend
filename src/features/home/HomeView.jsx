@@ -853,13 +853,6 @@ export default function HomeView({
     const start = (dashboardDevicePage - 1) * dashboardPageSize
     return devices.slice(start, start + dashboardPageSize)
   }, [dashboardDevicePage, devices])
-  const activeAlarmDevices = useMemo(
-    () =>
-      devices
-        .map((device) => ({ device, alarmCode: resolveLiveAlarmCode(device) }))
-        .filter((entry) => Boolean(entry.alarmCode)),
-    [devices, resolveLiveAlarmCode]
-  )
 
   useEffect(() => {
     if (dashboardDevicePage > dashboardTotalPages) {
@@ -891,6 +884,13 @@ export default function HomeView({
       return liveEntry.alarmCode || device?.alarmCode || null
     },
     [alarmStateByDevice]
+  )
+  const activeAlarmDevices = useMemo(
+    () =>
+      devices
+        .map((device) => ({ device, alarmCode: resolveLiveAlarmCode(device) }))
+        .filter((entry) => Boolean(entry.alarmCode)),
+    [devices, resolveLiveAlarmCode]
   )
 
   const userDeviceRows = useMemo(() => {
