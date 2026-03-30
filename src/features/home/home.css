@@ -544,14 +544,14 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 }
 .dashboard-map-layout {
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(250px, 320px);
+  grid-template-columns: minmax(420px, 1fr);
   gap: 0.9rem;
   align-items: stretch;
 }
 .dashboard-map-layout .map-square {
   width: 100%;
-  max-width: none;
-  margin: 0;
+  max-width: 960px;
+  margin: 0 auto;
   aspect-ratio: auto;
   min-height: clamp(460px, 68vh, 920px);
   height: 100%;
