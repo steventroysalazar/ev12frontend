@@ -1,40 +1,41 @@
 import AppIcon from '../icons/AppIcon'
 import './sidebar.css'
 
-const sidebarGroups = [
-  {
-    id: 'operations',
-    label: 'Operations',
-    items: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-      { id: 'users', label: 'Users', icon: 'users' },
-      { id: 'locations', label: 'Locations', icon: 'location' },
-      { id: 'replies', label: 'Replies', icon: 'replies' },
-      { id: 'webhooks', label: 'Webhook Events', icon: 'refresh' }
-    ]
-  },
-  {
-    id: 'device-center',
-    label: 'Device Center',
-    items: [
-      { id: 'devices', label: 'Devices', icon: 'devices' },
-      {
-        id: 'settings',
-        label: 'Settings',
-        icon: 'settings',
-        children: [
-          { id: 'settings-basic', label: 'Basic Configuration' },
-          { id: 'settings-advanced', label: 'Advanced Configuration' }
-        ]
-      },
-      { id: 'location', label: 'Location Request', icon: 'location' },
-      { id: 'commands', label: 'Commands', icon: 'command' }
-    ]
-  }
-]
+const operationsGroup = {
+  id: 'operations',
+  label: 'Operations',
+  items: [
+    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { id: 'users', label: 'Users', icon: 'users' },
+    { id: 'locations', label: 'Locations', icon: 'location' },
+    { id: 'devices', label: 'Devices', icon: 'devices' },
+    { id: 'replies', label: 'Replies', icon: 'replies' },
+    { id: 'webhooks', label: 'Webhook Events', icon: 'refresh' }
+  ]
+}
 
-export default function Sidebar({ activeSection, onChangeSection, onLogout }) {
-  const isSettingsActive = activeSection.startsWith('settings')
+const deviceCenterGroup = {
+  id: 'device-center',
+  label: 'Device Center',
+  items: [
+    { id: 'device-detail-overview', label: 'Device Profile', icon: 'devices' },
+    {
+      id: 'device-detail-settings',
+      label: 'Settings',
+      icon: 'settings',
+      children: [
+        { id: 'device-detail-basic', label: 'Basic Configuration' },
+        { id: 'device-detail-advanced', label: 'Advanced Configuration' }
+      ]
+    },
+    { id: 'device-detail-location', label: 'Location Request', icon: 'location' },
+    { id: 'device-detail-commands', label: 'Commands', icon: 'command' }
+  ]
+}
+
+export default function Sidebar({ activeSection, onChangeSection, onLogout, showDeviceCenter = false }) {
+  const isSettingsActive = activeSection.startsWith('device-detail-') || activeSection.startsWith('settings')
+  const sidebarGroups = showDeviceCenter ? [operationsGroup, deviceCenterGroup] : [operationsGroup]
 
   return (
     <aside className="sidebar-panel">
@@ -46,11 +47,11 @@ export default function Sidebar({ activeSection, onChangeSection, onLogout }) {
               {group.items.map((item) => (
                 <li key={item.id}>
                   <a
-                    className={activeSection === item.id || (item.id === 'settings' && isSettingsActive) ? 'active' : ''}
+                    className={activeSection === item.id || (item.id === 'device-detail-settings' && isSettingsActive) ? 'active' : ''}
                     href="#"
                     onClick={(event) => {
                       event.preventDefault()
-                      onChangeSection(item.id === 'settings' ? 'settings-basic' : item.id)
+                      onChangeSection(item.id === 'device-detail-settings' ? 'device-detail-basic' : item.id)
                     }}
                   >
                     <AppIcon name={item.icon} className="nav-icon" />
