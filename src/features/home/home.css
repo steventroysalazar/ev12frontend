@@ -546,7 +546,18 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(260px, 340px);
   gap: 0.9rem;
-  align-items: start;
+  align-items: stretch;
+}
+.dashboard-map-layout .map-square {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  aspect-ratio: auto;
+  min-height: clamp(360px, 54vh, 760px);
+  height: 100%;
+}
+.dashboard-map-layout .dashboard-live-map {
+  height: 100%;
 }
 .dashboard-map-list h4 {
   margin: 0 0 0.55rem;
@@ -592,8 +603,35 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .location-device-picker {
   margin-bottom: 0.8rem;
 }
+.location-device-picker-compact {
+  margin-top: 0.25rem;
+}
 .request-btn-inline {
   margin: 0;
+}
+.location-viewer-card {
+  border-color: #c9d9ea;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+.location-viewer-toolbar {
+  align-items: center;
+  margin-bottom: 0.45rem;
+}
+.location-note {
+  margin: 0.2rem 0 0;
+  color: #5a6e87;
+  max-width: 780px;
+}
+.selected-device-pill {
+  border: 1px solid #cfdbe8;
+  background: #f3f8fd;
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  color: #244163;
+  font-weight: 700;
+}
+.location-meta-row {
+  padding-top: 0.25rem;
 }
 .location-source-chip {
   background: #ecf8f6;

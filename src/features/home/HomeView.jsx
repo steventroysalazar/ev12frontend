@@ -126,6 +126,8 @@ export default function HomeView({
   const dashboardLeafletMapRef = useRef(null)
   const dashboardMarkersLayerRef = useRef(null)
   const [leafletReady, setLeafletReady] = useState(false)
+  const isDeviceWorkspaceSection = ['device-detail-overview', 'device-detail-basic', 'device-detail-advanced', 'device-detail-location', 'device-detail-commands'].includes(activeSection)
+  const isDeviceDetailLocationSection = activeSection === 'device-detail-location'
 
   const roleLabel = useCallback((value) => {
     const normalized = String(value || '').trim().toUpperCase()
@@ -772,11 +774,11 @@ export default function HomeView({
 
     const ownerLocation =
       locationById?.name ||
+      device.location?.name ||
       device.locationName ||
       device.location_name ||
       owner?.locationName ||
       owner?.location?.name ||
-      owner?.address ||
       '-'
 
     return {
@@ -864,19 +866,27 @@ export default function HomeView({
     [locationDeviceId, locationDeviceOptions]
   )
 
-  const selectedDeviceWebhookLocation = useMemo(() => {
-    if (!selectedLocationDevice) return null
+  const selectedWorkspaceDevice = useMemo(() => {
+    if (!selectedDevice) return null
+    const selectedId = String(selectedDevice.id || selectedDevice.deviceId || '')
+    return devices.find((device) => String(device.id || device.deviceId || '') === selectedId) || selectedDevice
+  }, [devices, selectedDevice])
 
-    const coordinates = resolveValidCoordinates(selectedLocationDevice)
+  const locationViewerDevice = isDeviceDetailLocationSection ? selectedWorkspaceDevice : selectedLocationDevice
+
+  const selectedDeviceWebhookLocation = useMemo(() => {
+    if (!locationViewerDevice) return null
+
+    const coordinates = resolveValidCoordinates(locationViewerDevice)
     if (!coordinates) return null
 
     return {
       ...coordinates,
       mapUrl: `https://www.google.com/maps?q=${coordinates.latitude},${coordinates.longitude}`,
       source: 'webhook',
-      updatedAt: selectedLocationDevice.locationUpdatedAt || selectedLocationDevice.location_updated_at || null
+      updatedAt: locationViewerDevice.locationUpdatedAt || locationViewerDevice.location_updated_at || null
     }
-  }, [resolveValidCoordinates, selectedLocationDevice])
+  }, [locationViewerDevice, resolveValidCoordinates])
 
   const displayedLocation = locationResult || selectedDeviceWebhookLocation
   const usingWebhookFallback = !locationResult && Boolean(selectedDeviceWebhookLocation)
@@ -894,65 +904,6 @@ export default function HomeView({
       setDashboardDevicePage(dashboardTotalPages)
     }
   }, [dashboardDevicePage, dashboardTotalPages])
-
-  const filteredUsers = useMemo(() => {
-    const keyword = userSearch.trim().toLowerCase()
-    return users.filter((entry) => {
-      const role = String(roleLabel(entry.userRole || entry.role || entry.user_role || '')).toLowerCase()
-      const roleMatch = userRoleFilter === 'all' ? true : role === userRoleFilter
-      const text = `${entry.firstName || ''} ${entry.lastName || ''} ${entry.email || ''} ${entry.contactNumber || ''} ${entry.locationName || entry.location?.name || ''}`.toLowerCase()
-      const textMatch = !keyword || text.includes(keyword)
-      return roleMatch && textMatch
-    })
-  }, [roleLabel, userRoleFilter, userSearch, users])
-
-  const filteredLocations = useMemo(() => {
-    const keyword = locationSearch.trim().toLowerCase()
-    return locations.filter((entry) => {
-      const hasDevice = Number(entry.deviceCount || entry.devices?.length || 0) > 0
-      const deviceMatch = locationDeviceFilter === 'all' ? true : (locationDeviceFilter === 'with-devices' ? hasDevice : !hasDevice)
-      const text = `${entry.name || ''} ${entry.details || ''}`.toLowerCase()
-      const textMatch = !keyword || text.includes(keyword)
-      return deviceMatch && textMatch
-    })
-  }, [locationDeviceFilter, locationSearch, locations])
-
-  const filteredDevices = useMemo(() => {
-    const keyword = deviceSearch.trim().toLowerCase()
-    return devices.filter((entry) => {
-      const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(entry))
-      const alarmMatch = deviceAlarmFilter === 'all' ? true : alarmMeta.tone === deviceAlarmFilter
-      const owner = resolveDeviceMeta(entry)
-      const text = `${entry.name || entry.deviceName || ''} ${entry.phoneNumber || ''} ${entry.externalDeviceId || entry.external_device_id || entry.deviceId || ''} ${owner.ownerName} ${owner.ownerLocation}`.toLowerCase()
-      const textMatch = !keyword || text.includes(keyword)
-      return alarmMatch && textMatch
-    })
-  }, [deviceAlarmFilter, deviceSearch, devices, getAlarmMeta, resolveDeviceMeta, resolveLiveAlarmCode])
-
-  const toPagedRows = useCallback((rows, page) => {
-    const totalPages = Math.max(1, Math.ceil(rows.length / listPageSize))
-    const safePage = Math.min(page, totalPages)
-    const start = (safePage - 1) * listPageSize
-    return { totalPages, rows: rows.slice(start, start + listPageSize), safePage }
-  }, [listPageSize])
-
-  const pagedUsers = toPagedRows(filteredUsers, usersPage)
-  const pagedLocations = toPagedRows(filteredLocations, locationsPage)
-  const pagedDevices = toPagedRows(filteredDevices, devicesPage)
-  const activeAlertTotalPages = Math.max(1, Math.ceil(activeAlarmLocations.length / activeAlertPageSize))
-  const paginatedActiveAlerts = useMemo(() => {
-    const start = (activeAlertPage - 1) * activeAlertPageSize
-    return activeAlarmLocations.slice(start, start + activeAlertPageSize)
-  }, [activeAlertPage, activeAlarmLocations])
-
-  useEffect(() => setUsersPage(1), [userSearch, userRoleFilter])
-  useEffect(() => setLocationsPage(1), [locationSearch, locationDeviceFilter])
-  useEffect(() => setDevicesPage(1), [deviceSearch, deviceAlarmFilter])
-  useEffect(() => setActiveAlertPage(1), [activeAlarmLocations.length])
-  useEffect(() => { if (usersPage > pagedUsers.totalPages) setUsersPage(pagedUsers.totalPages) }, [pagedUsers.totalPages, usersPage])
-  useEffect(() => { if (locationsPage > pagedLocations.totalPages) setLocationsPage(pagedLocations.totalPages) }, [locationsPage, pagedLocations.totalPages])
-  useEffect(() => { if (devicesPage > pagedDevices.totalPages) setDevicesPage(pagedDevices.totalPages) }, [devicesPage, pagedDevices.totalPages])
-  useEffect(() => { if (activeAlertPage > activeAlertTotalPages) setActiveAlertPage(activeAlertTotalPages) }, [activeAlertPage, activeAlertTotalPages])
 
   const resolveLiveAlarmCode = useCallback(
     (device) => {
@@ -1008,7 +959,8 @@ export default function HomeView({
   const filteredUsers = useMemo(() => {
     const keyword = userSearch.trim().toLowerCase()
     return users.filter((entry) => {
-      const role = String(roleLabel(entry.userRole || entry.role || entry.user_role || '')).toLowerCase()
+      const rawRole = entry.userRole || entry.role || entry.user_role || ''
+      const role = String(roleLabel(rawRole)).toLowerCase()
       const roleMatch = userRoleFilter === 'all' ? true : role === userRoleFilter
       const text = `${entry.firstName || ''} ${entry.lastName || ''} ${entry.email || ''} ${entry.contactNumber || ''} ${entry.locationName || entry.location?.name || ''}`.toLowerCase()
       const textMatch = !keyword || text.includes(keyword)
@@ -1020,7 +972,12 @@ export default function HomeView({
     const keyword = locationSearch.trim().toLowerCase()
     return locations.filter((entry) => {
       const hasDevice = Number(entry.deviceCount || entry.devices?.length || 0) > 0
-      const deviceMatch = locationDeviceFilter === 'all' ? true : (locationDeviceFilter === 'with-devices' ? hasDevice : !hasDevice)
+      let deviceMatch = true
+      if (locationDeviceFilter === 'with-devices') {
+        deviceMatch = hasDevice
+      } else if (locationDeviceFilter === 'without-devices') {
+        deviceMatch = !hasDevice
+      }
       const text = `${entry.name || ''} ${entry.details || ''}`.toLowerCase()
       const textMatch = !keyword || text.includes(keyword)
       return deviceMatch && textMatch
@@ -1264,12 +1221,16 @@ export default function HomeView({
   const hasActiveCommand = Boolean(activeCommandPreview)
   const hasQueuedCommand = Boolean(queuedCommandPreview)
   const hasCommandChanges = hasActiveCommand && activeCommandPreview !== queuedCommandPreview
-  const isDeviceWorkspaceSection = ['device-detail-overview', 'device-detail-basic', 'device-detail-advanced', 'device-detail-location', 'device-detail-commands'].includes(activeSection)
   const activeDeviceSettingsSection = activeSection.startsWith('device-detail-') ? activeSection : ''
 
   return (
     <div className="home-shell">
-      <Sidebar activeSection={activeSection} onChangeSection={setActiveSection} onLogout={onLogout} />
+      <Sidebar
+        activeSection={activeSection}
+        onChangeSection={setActiveSection}
+        onLogout={onLogout}
+        showDeviceCenter={isDeviceWorkspaceSection && Boolean(selectedDevice)}
+      />
 
       <div className="dashboard-content">
         {dataStatus ? <p className="status">{dataStatus}</p> : null}
@@ -1723,28 +1684,43 @@ export default function HomeView({
         {(activeSection === 'location' || activeSection === 'device-detail-location') && (
           <section className="section-panel">
             <h2 className="page-title">Location</h2>
-            <article className="card-like map-panel">
-              <div className="section-head">
-                <h3 className="block-title">Device Location Viewer</h3>
+            <article className="card-like map-panel location-viewer-card">
+              <div className="section-head location-viewer-toolbar">
+                <div>
+                  <h3 className="block-title">Device Location Viewer</h3>
+                  <p className="status location-note">Live map view for the active device. SMS data falls back to latest webhook coordinates when needed.</p>
+                </div>
                 <button className="mini-action request-btn-inline" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
               </div>
-              <p className="status">If SMS location is unavailable, this view automatically falls back to the saved webhook location.</p>
-              <div className="field-grid location-device-picker">
-                <div>
-                  <label htmlFor="location-device-select">Device</label>
-                  <select
-                    id="location-device-select"
-                    value={locationDeviceId}
-                    onChange={(event) => setLocationDeviceId(event.target.value)}
-                  >
-                    {locationDeviceOptions.map((device) => (
-                      <option key={device.id || device.deviceId || device.phoneNumber} value={String(device.id || device.deviceId || '')}>
-                        {device.name || device.deviceName || `Device ${device.id || device.deviceId}`} ({device.phoneNumber || 'No phone'})
-                      </option>
-                    ))}
-                  </select>
+              {isDeviceDetailLocationSection ? (
+                <div className="field-grid location-device-picker location-device-picker-compact">
+                  <div>
+                    <label>Selected device</label>
+                    <div className="selected-device-pill">
+                      {locationViewerDevice
+                        ? `${locationViewerDevice.name || locationViewerDevice.deviceName || `Device ${locationViewerDevice.id || locationViewerDevice.deviceId || ''}`} (${locationViewerDevice.phoneNumber || 'No phone'})`
+                        : 'No selected device.'}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="field-grid location-device-picker">
+                  <div>
+                    <label htmlFor="location-device-select">Device</label>
+                    <select
+                      id="location-device-select"
+                      value={locationDeviceId}
+                      onChange={(event) => setLocationDeviceId(event.target.value)}
+                    >
+                      {locationDeviceOptions.map((device) => (
+                        <option key={device.id || device.deviceId || device.phoneNumber} value={String(device.id || device.deviceId || '')}>
+                          {device.name || device.deviceName || `Device ${device.id || device.deviceId}`} ({device.phoneNumber || 'No phone'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {displayedLocation ? (
                 <>
@@ -1755,9 +1731,9 @@ export default function HomeView({
                       src={`https://maps.google.com/maps?q=${displayedLocation.latitude},${displayedLocation.longitude}&z=15&output=embed`}
                     />
                   </div>
-                  <div className="location-meta">
+                  <div className="location-meta location-meta-row">
                     <span className="map-chip map-chip-inline">Lat: {displayedLocation.latitude} Lon: {displayedLocation.longitude}</span>
-                    <a href={displayedLocation.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
+                    <a className="table-link action-chip action-chip-neutral" href={displayedLocation.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
                     {usingWebhookFallback ? <span className="status location-source-chip">Source: Webhook fallback</span> : <span className="status location-source-chip">Source: SMS reply</span>}
                     {selectedDeviceWebhookLocation?.updatedAt ? (
                       <span className="status">Last device update: {new Date(selectedDeviceWebhookLocation.updatedAt).toLocaleString()}</span>
