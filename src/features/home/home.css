@@ -1,6 +1,6 @@
 .home-shell {
   display: grid;
-  grid-template-columns: clamp(220px, 17vw, 272px) minmax(0, 1fr);
+  grid-template-columns: clamp(196px, 14.5vw, 236px) minmax(0, 1fr);
   gap: clamp(0.85rem, 1.5vw, 1.3rem);
   align-items: stretch;
   height: calc(100dvh - var(--dashboard-layout-offset, 5.25rem));
@@ -238,6 +238,9 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
   display: grid;
   gap: 0.15rem;
   background: #f9fbff;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
 }
 
 .active-alert-row strong {
@@ -248,6 +251,16 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .active-alert-row span {
   color: #5f6f84;
   font-size: 0.78rem;
+}
+
+.active-alert-row small {
+  color: #4f637d;
+  font-size: 0.72rem;
+}
+
+.active-alert-row.is-map-focused {
+  border-color: #7cc6bb;
+  background: #eaf9f5;
 }
 
 .user-dashboard-grid {
