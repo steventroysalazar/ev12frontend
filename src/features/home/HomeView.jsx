@@ -1079,9 +1079,23 @@ export default function HomeView({
   }, [])
 
   useEffect(() => {
-    if (!leafletReady || !dashboardLeafletRef.current || !activeAlarmLocations.length || typeof window === 'undefined' || !window.L) return
+    if (
+      activeSection !== 'dashboard' ||
+      !leafletReady ||
+      !dashboardLeafletRef.current ||
+      !activeAlarmLocations.length ||
+      typeof window === 'undefined' ||
+      !window.L
+    ) return
 
     const L = window.L
+    const currentContainer = dashboardLeafletMapRef.current?.getContainer?.()
+    if (dashboardLeafletMapRef.current && currentContainer !== dashboardLeafletRef.current) {
+      dashboardLeafletMapRef.current.remove()
+      dashboardLeafletMapRef.current = null
+      dashboardMarkersLayerRef.current = null
+    }
+
     if (!dashboardLeafletMapRef.current) {
       dashboardLeafletMapRef.current = L.map(dashboardLeafletRef.current, {
         zoomControl: true
@@ -1123,7 +1137,7 @@ export default function HomeView({
     }
 
     setTimeout(() => map.invalidateSize(), 120)
-  }, [activeAlarmLocations, dashboardMapDeviceId, getAlarmMeta, leafletReady, resolveDeviceMeta, selectedAlertLocation])
+  }, [activeAlarmLocations, activeSection, dashboardMapDeviceId, getAlarmMeta, leafletReady, resolveDeviceMeta, selectedAlertLocation])
 
   useEffect(() => {
     return () => {
