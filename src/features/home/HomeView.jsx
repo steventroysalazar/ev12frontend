@@ -969,6 +969,42 @@ export default function HomeView({
     [alarmStateByDevice]
   )
 
+  const activeAlarmDevices = useMemo(
+    () =>
+      devices
+        .map((device) => ({ device, alarmCode: resolveLiveAlarmCode(device) }))
+        .filter((entry) => Boolean(entry.alarmCode)),
+    [devices, resolveLiveAlarmCode]
+  )
+  const activeAlarmLocations = useMemo(
+    () =>
+      activeAlarmDevices
+        .map(({ device, alarmCode }) => {
+          const coordinates = resolveValidCoordinates(device)
+          if (!coordinates) return null
+
+          const deviceId = String(device.id || device.deviceId || '')
+          const updatedAt = device.locationUpdatedAt || device.location_updated_at || device.updatedAt || device.updated_at || null
+          const updatedAtMs = updatedAt ? new Date(updatedAt).getTime() : 0
+
+          return {
+            device,
+            alarmCode,
+            ...coordinates,
+            updatedAt,
+            updatedAtMs: Number.isFinite(updatedAtMs) ? updatedAtMs : 0,
+            deviceKey: deviceId
+          }
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.updatedAtMs - a.updatedAtMs),
+    [activeAlarmDevices, resolveValidCoordinates]
+  )
+  const selectedAlertLocation = useMemo(
+    () => activeAlarmLocations.find((entry) => entry.deviceKey === String(dashboardMapDeviceId)) || null,
+    [activeAlarmLocations, dashboardMapDeviceId]
+  )
+
   const filteredUsers = useMemo(() => {
     const keyword = userSearch.trim().toLowerCase()
     return users.filter((entry) => {
@@ -1028,41 +1064,6 @@ export default function HomeView({
   useEffect(() => { if (devicesPage > pagedDevices.totalPages) setDevicesPage(pagedDevices.totalPages) }, [devicesPage, pagedDevices.totalPages])
   useEffect(() => { if (activeAlertPage > activeAlertTotalPages) setActiveAlertPage(activeAlertTotalPages) }, [activeAlertPage, activeAlertTotalPages])
 
-  const activeAlarmDevices = useMemo(
-    () =>
-      devices
-        .map((device) => ({ device, alarmCode: resolveLiveAlarmCode(device) }))
-        .filter((entry) => Boolean(entry.alarmCode)),
-    [devices, resolveLiveAlarmCode]
-  )
-  const activeAlarmLocations = useMemo(
-    () =>
-      activeAlarmDevices
-        .map(({ device, alarmCode }) => {
-          const coordinates = resolveValidCoordinates(device)
-          if (!coordinates) return null
-
-          const deviceId = String(device.id || device.deviceId || '')
-          const updatedAt = device.locationUpdatedAt || device.location_updated_at || device.updatedAt || device.updated_at || null
-          const updatedAtMs = updatedAt ? new Date(updatedAt).getTime() : 0
-
-          return {
-            device,
-            alarmCode,
-            ...coordinates,
-            updatedAt,
-            updatedAtMs: Number.isFinite(updatedAtMs) ? updatedAtMs : 0,
-            deviceKey: deviceId
-          }
-        })
-        .filter(Boolean)
-        .sort((a, b) => b.updatedAtMs - a.updatedAtMs),
-    [activeAlarmDevices, resolveValidCoordinates]
-  )
-  const selectedAlertLocation = useMemo(
-    () => activeAlarmLocations.find((entry) => entry.deviceKey === String(dashboardMapDeviceId)) || null,
-    [activeAlarmLocations, dashboardMapDeviceId]
-  )
   useEffect(() => {
     if (!activeAlarmLocations.length) {
       setDashboardMapDeviceId('')
