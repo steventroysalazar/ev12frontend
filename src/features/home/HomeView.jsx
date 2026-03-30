@@ -587,17 +587,14 @@ export default function HomeView({
         eviewVersion: deviceForm.eviewVersion.trim(),
         version: deviceForm.eviewVersion.trim(),
         locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
-        location_id: deviceForm.locationId ? Number(deviceForm.locationId) : null,
-        ownerUserId: Number(deviceForm.ownerUserId),
         userId: Number(deviceForm.ownerUserId),
-        user_id: Number(deviceForm.ownerUserId),
         ...(deviceForm.externalDeviceId.trim()
           ? { externalDeviceId: deviceForm.externalDeviceId.trim(), deviceId: deviceForm.externalDeviceId.trim() }
           : {})
       }
 
       try {
-        await fetchJson(`/api/users/${payload.ownerUserId}/devices`, { method: 'POST', body: JSON.stringify(payload) })
+        await fetchJson(`/api/users/${payload.userId}/devices`, { method: 'POST', body: JSON.stringify(payload) })
       } catch {
         await fetchJson('/api/devices', { method: 'POST', body: JSON.stringify(payload) })
       }
@@ -631,16 +628,17 @@ export default function HomeView({
       if (!editingDeviceId) throw new Error('Device id is missing')
       if (!deviceForm.name.trim() || !deviceForm.phoneNumber.trim()) throw new Error('Device name and phone number are required')
 
+      const normalizedOwnerUserId = deviceForm.ownerUserId ? Number(deviceForm.ownerUserId) : null
+      const normalizedLocationId = deviceForm.locationId ? Number(deviceForm.locationId) : null
+      const shouldClearLocation = !normalizedLocationId
+
       const payload = {
         name: deviceForm.name.trim(),
         phoneNumber: deviceForm.phoneNumber.trim(),
         eviewVersion: deviceForm.eviewVersion.trim(),
         version: deviceForm.eviewVersion.trim(),
-        ownerUserId: deviceForm.ownerUserId ? Number(deviceForm.ownerUserId) : null,
-        userId: deviceForm.ownerUserId ? Number(deviceForm.ownerUserId) : null,
-        user_id: deviceForm.ownerUserId ? Number(deviceForm.ownerUserId) : null,
-        locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
-        location_id: deviceForm.locationId ? Number(deviceForm.locationId) : null,
+        ...(normalizedOwnerUserId ? { userId: normalizedOwnerUserId } : {}),
+        ...(shouldClearLocation ? { clearLocation: true } : { locationId: normalizedLocationId }),
         externalDeviceId: deviceForm.externalDeviceId.trim() || null,
         deviceId: deviceForm.externalDeviceId.trim() || null
       }
@@ -661,6 +659,18 @@ export default function HomeView({
         setSelectedDevice((prev) => prev
           ? { ...prev, ...payload, id: prev.id || editingDeviceId, deviceId: prev.deviceId || payload.deviceId }
           : prev)
+      }
+      try {
+        const refreshed = await fetchJson(`/api/devices/${editingDeviceId}`, { headers: {} })
+        if (refreshed && typeof refreshed === 'object') {
+          setSelectedDevice((prev) => {
+            if (!prev) return prev
+            if (String(prev.id || prev.deviceId || '') !== String(editingDeviceId)) return prev
+            return { ...prev, ...refreshed }
+          })
+        }
+      } catch {
+        // Non-blocking refresh; list refresh below will still run.
       }
       await loadDevices()
     } catch (error) {
