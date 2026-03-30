@@ -915,10 +915,9 @@ export default function HomeView({
       setDashboardMapDeviceId('')
       return
     }
-    if (dashboardMapDeviceId && activeAlarmLocations.some((entry) => entry.deviceKey === String(dashboardMapDeviceId))) {
-      return
+    if (dashboardMapDeviceId && !activeAlarmLocations.some((entry) => entry.deviceKey === String(dashboardMapDeviceId))) {
+      setDashboardMapDeviceId('')
     }
-    setDashboardMapDeviceId(activeAlarmLocations[0].deviceKey)
   }, [activeAlarmLocations, dashboardMapDeviceId])
 
   const userDeviceRows = useMemo(() => {
@@ -1123,7 +1122,17 @@ export default function HomeView({
                   <aside className="active-alerts card-like">
                     <div className="section-head">
                       <h3>Active Alert Devices</h3>
-                      <span className="map-kpi-chip compact"><strong>{activeAlarmDevices.length}</strong></span>
+                      <div className="alert-head-actions">
+                        <span className="map-kpi-chip compact"><strong>{activeAlarmDevices.length}</strong></span>
+                        <button
+                          type="button"
+                          className="table-link action-chip action-chip-neutral"
+                          onClick={() => setDashboardMapDeviceId('')}
+                          disabled={!selectedAlertLocation}
+                        >
+                          Show all on map
+                        </button>
+                      </div>
                     </div>
                     <div className="active-alerts-list">
                       {activeAlarmLocations.length ? activeAlarmLocations.slice(0, 8).map(({ device, alarmCode, latitude, longitude, updatedAt, deviceKey }) => {
