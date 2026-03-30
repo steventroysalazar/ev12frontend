@@ -546,7 +546,18 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(260px, 340px);
   gap: 0.9rem;
-  align-items: start;
+  align-items: stretch;
+}
+.dashboard-map-layout .map-square {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  aspect-ratio: auto;
+  min-height: clamp(360px, 54vh, 760px);
+  height: 100%;
+}
+.dashboard-map-layout .dashboard-live-map {
+  height: 100%;
 }
 .dashboard-map-list h4 {
   margin: 0 0 0.55rem;
