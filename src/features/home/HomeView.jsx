@@ -122,6 +122,10 @@ export default function HomeView({
   const [webhookLimit, setWebhookLimit] = useState('10')
   const [locationDeviceId, setLocationDeviceId] = useState('')
   const webhookFingerprintRef = useRef('')
+  const dashboardLeafletRef = useRef(null)
+  const dashboardLeafletMapRef = useRef(null)
+  const dashboardMarkersLayerRef = useRef(null)
+  const [leafletReady, setLeafletReady] = useState(false)
 
   const roleLabel = useCallback((value) => {
     const normalized = String(value || '').trim().toUpperCase()
@@ -876,7 +880,6 @@ export default function HomeView({
 
   const displayedLocation = locationResult || selectedDeviceWebhookLocation
   const usingWebhookFallback = !locationResult && Boolean(selectedDeviceWebhookLocation)
-  const freshestLocation = latestDeviceLocations[0] || null
   const dashboardPageSize = 8
   const activeAlertPageSize = 6
   const listPageSize = 10
@@ -1000,14 +1003,6 @@ export default function HomeView({
     () => activeAlarmLocations.find((entry) => entry.deviceKey === String(dashboardMapDeviceId)) || null,
     [activeAlarmLocations, dashboardMapDeviceId]
   )
-  const alertMapQuery = useMemo(() => {
-    if (selectedAlertLocation) {
-      return `${selectedAlertLocation.latitude},${selectedAlertLocation.longitude}`
-    }
-    return activeAlarmLocations.map((entry) => `${entry.latitude},${entry.longitude}`).join('|')
-  }, [activeAlarmLocations, selectedAlertLocation])
-  const alertMapZoom = selectedAlertLocation ? 15 : 12
-
   useEffect(() => {
     if (!activeAlarmLocations.length) {
       setDashboardMapDeviceId('')
@@ -1017,6 +1012,93 @@ export default function HomeView({
       setDashboardMapDeviceId('')
     }
   }, [activeAlarmLocations, dashboardMapDeviceId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.L) {
+      setLeafletReady(true)
+      return
+    }
+
+    const cssId = 'leaflet-cdn-css'
+    if (!document.getElementById(cssId)) {
+      const link = document.createElement('link')
+      link.id = cssId
+      link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
+
+    const scriptId = 'leaflet-cdn-script'
+    const existingScript = document.getElementById(scriptId)
+    if (existingScript) {
+      existingScript.addEventListener('load', () => setLeafletReady(true), { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = scriptId
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    script.async = true
+    script.onload = () => setLeafletReady(true)
+    document.body.appendChild(script)
+  }, [])
+
+  useEffect(() => {
+    if (!leafletReady || !dashboardLeafletRef.current || !activeAlarmLocations.length || typeof window === 'undefined' || !window.L) return
+
+    const L = window.L
+    if (!dashboardLeafletMapRef.current) {
+      dashboardLeafletMapRef.current = L.map(dashboardLeafletRef.current, {
+        zoomControl: true
+      })
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(dashboardLeafletMapRef.current)
+      dashboardMarkersLayerRef.current = L.layerGroup().addTo(dashboardLeafletMapRef.current)
+    }
+
+    const map = dashboardLeafletMapRef.current
+    const markersLayer = dashboardMarkersLayerRef.current || L.layerGroup().addTo(map)
+    markersLayer.clearLayers()
+
+    const markerBounds = []
+    activeAlarmLocations.forEach(({ device, alarmCode, latitude, longitude, deviceKey }) => {
+      const meta = resolveDeviceMeta(device)
+      const alarmMeta = getAlarmMeta(alarmCode)
+      const marker = L.marker([latitude, longitude])
+        .bindPopup(`<strong>${device.name || device.deviceName || `Device ${deviceKey}`}</strong><br/>Owner: ${meta.ownerName}<br/>Alert: ${alarmMeta.label}<br/>Lat/Lng: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`)
+        .on('click', () => setDashboardMapDeviceId(deviceKey))
+
+      if (String(dashboardMapDeviceId) === String(deviceKey)) {
+        marker.bindTooltip(device.name || device.deviceName || `Device ${deviceKey}`, { permanent: true, direction: 'top', offset: [0, -24] })
+      } else {
+        marker.bindTooltip(device.name || device.deviceName || `Device ${deviceKey}`, { permanent: false, direction: 'top' })
+      }
+
+      marker.addTo(markersLayer)
+      markerBounds.push([latitude, longitude])
+    })
+
+    if (selectedAlertLocation) {
+      map.setView([selectedAlertLocation.latitude, selectedAlertLocation.longitude], 15)
+    } else if (markerBounds.length > 1) {
+      map.fitBounds(markerBounds, { padding: [26, 26] })
+    } else if (markerBounds.length === 1) {
+      map.setView(markerBounds[0], 13)
+    }
+
+    setTimeout(() => map.invalidateSize(), 120)
+  }, [activeAlarmLocations, dashboardMapDeviceId, getAlarmMeta, leafletReady, resolveDeviceMeta, selectedAlertLocation])
+
+  useEffect(() => {
+    return () => {
+      if (dashboardLeafletMapRef.current) {
+        dashboardLeafletMapRef.current.remove()
+        dashboardLeafletMapRef.current = null
+      }
+    }
+  }, [])
 
   const userDeviceRows = useMemo(() => {
     const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
@@ -1207,12 +1289,8 @@ export default function HomeView({
                     </div>
                     {activeAlarmLocations.length ? (
                       <div className="dashboard-map-layout">
-                        <div className="map-placeholder map-embed-wrap map-square">
-                          <iframe
-                            title="Admin device location map"
-                            className="map-embed"
-                            src={`https://maps.google.com/maps?q=${encodeURIComponent(alertMapQuery || `${freshestLocation?.latitude || 0},${freshestLocation?.longitude || 0}`)}&z=${alertMapZoom}&output=embed`}
-                          />
+                        <div className="map-placeholder map-square dashboard-live-map">
+                          {leafletReady ? <div ref={dashboardLeafletRef} className="leaflet-map" /> : <span className="map-chip">Loading map…</span>}
                         </div>
                       </div>
                     ) : (
