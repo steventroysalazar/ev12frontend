@@ -126,6 +126,8 @@ export default function HomeView({
   const dashboardLeafletMapRef = useRef(null)
   const dashboardMarkersLayerRef = useRef(null)
   const [leafletReady, setLeafletReady] = useState(false)
+  const isDeviceWorkspaceSection = ['device-detail-overview', 'device-detail-basic', 'device-detail-advanced', 'device-detail-location', 'device-detail-commands'].includes(activeSection)
+  const isDeviceDetailLocationSection = activeSection === 'device-detail-location'
 
   const roleLabel = useCallback((value) => {
     const normalized = String(value || '').trim().toUpperCase()
@@ -864,19 +866,27 @@ export default function HomeView({
     [locationDeviceId, locationDeviceOptions]
   )
 
-  const selectedDeviceWebhookLocation = useMemo(() => {
-    if (!selectedLocationDevice) return null
+  const selectedWorkspaceDevice = useMemo(() => {
+    if (!selectedDevice) return null
+    const selectedId = String(selectedDevice.id || selectedDevice.deviceId || '')
+    return devices.find((device) => String(device.id || device.deviceId || '') === selectedId) || selectedDevice
+  }, [devices, selectedDevice])
 
-    const coordinates = resolveValidCoordinates(selectedLocationDevice)
+  const locationViewerDevice = isDeviceDetailLocationSection ? selectedWorkspaceDevice : selectedLocationDevice
+
+  const selectedDeviceWebhookLocation = useMemo(() => {
+    if (!locationViewerDevice) return null
+
+    const coordinates = resolveValidCoordinates(locationViewerDevice)
     if (!coordinates) return null
 
     return {
       ...coordinates,
       mapUrl: `https://www.google.com/maps?q=${coordinates.latitude},${coordinates.longitude}`,
       source: 'webhook',
-      updatedAt: selectedLocationDevice.locationUpdatedAt || selectedLocationDevice.location_updated_at || null
+      updatedAt: locationViewerDevice.locationUpdatedAt || locationViewerDevice.location_updated_at || null
     }
-  }, [resolveValidCoordinates, selectedLocationDevice])
+  }, [locationViewerDevice, resolveValidCoordinates])
 
   const displayedLocation = locationResult || selectedDeviceWebhookLocation
   const usingWebhookFallback = !locationResult && Boolean(selectedDeviceWebhookLocation)
@@ -1211,7 +1221,6 @@ export default function HomeView({
   const hasActiveCommand = Boolean(activeCommandPreview)
   const hasQueuedCommand = Boolean(queuedCommandPreview)
   const hasCommandChanges = hasActiveCommand && activeCommandPreview !== queuedCommandPreview
-  const isDeviceWorkspaceSection = ['device-detail-overview', 'device-detail-basic', 'device-detail-advanced', 'device-detail-location', 'device-detail-commands'].includes(activeSection)
   const activeDeviceSettingsSection = activeSection.startsWith('device-detail-') ? activeSection : ''
 
   return (
@@ -1681,22 +1690,35 @@ export default function HomeView({
                 <button className="mini-action request-btn-inline" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
               </div>
               <p className="status">If SMS location is unavailable, this view automatically falls back to the saved webhook location.</p>
-              <div className="field-grid location-device-picker">
-                <div>
-                  <label htmlFor="location-device-select">Device</label>
-                  <select
-                    id="location-device-select"
-                    value={locationDeviceId}
-                    onChange={(event) => setLocationDeviceId(event.target.value)}
-                  >
-                    {locationDeviceOptions.map((device) => (
-                      <option key={device.id || device.deviceId || device.phoneNumber} value={String(device.id || device.deviceId || '')}>
-                        {device.name || device.deviceName || `Device ${device.id || device.deviceId}`} ({device.phoneNumber || 'No phone'})
-                      </option>
-                    ))}
-                  </select>
+              {isDeviceDetailLocationSection ? (
+                <div className="field-grid location-device-picker">
+                  <div>
+                    <label>Selected device</label>
+                    <div className="map-chip map-chip-inline">
+                      {locationViewerDevice
+                        ? `${locationViewerDevice.name || locationViewerDevice.deviceName || `Device ${locationViewerDevice.id || locationViewerDevice.deviceId || ''}`} (${locationViewerDevice.phoneNumber || 'No phone'})`
+                        : 'No selected device.'}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="field-grid location-device-picker">
+                  <div>
+                    <label htmlFor="location-device-select">Device</label>
+                    <select
+                      id="location-device-select"
+                      value={locationDeviceId}
+                      onChange={(event) => setLocationDeviceId(event.target.value)}
+                    >
+                      {locationDeviceOptions.map((device) => (
+                        <option key={device.id || device.deviceId || device.phoneNumber} value={String(device.id || device.deviceId || '')}>
+                          {device.name || device.deviceName || `Device ${device.id || device.deviceId}`} ({device.phoneNumber || 'No phone'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {displayedLocation ? (
                 <>
