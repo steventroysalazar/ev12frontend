@@ -1693,16 +1693,14 @@ export default function HomeView({
                 <button className="mini-action request-btn-inline" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
               </div>
               {isDeviceDetailLocationSection ? (
-                <div className="field-grid location-device-picker location-device-picker-compact">
-                  <div>
-                    <label>Selected device</label>
-                    <div className="selected-device-pill">
-                      {locationViewerDevice
-                        ? `${locationViewerDevice.name || locationViewerDevice.deviceName || `Device ${locationViewerDevice.id || locationViewerDevice.deviceId || ''}`} (${locationViewerDevice.phoneNumber || 'No phone'})`
-                        : 'No selected device.'}
-                    </div>
-                  </div>
-                </div>
+                <p className="location-context-label">
+                  Location for{' '}
+                  <strong>
+                    {locationViewerDevice
+                      ? `${locationViewerDevice.name || locationViewerDevice.deviceName || `Device ${locationViewerDevice.id || locationViewerDevice.deviceId || ''}`}`
+                      : 'selected device'}
+                  </strong>
+                </p>
               ) : (
                 <div className="field-grid location-device-picker">
                   <div>
@@ -1724,20 +1722,23 @@ export default function HomeView({
 
               {displayedLocation ? (
                 <>
-                  <div className="map-placeholder map-embed-wrap map-square">
-                    <iframe
-                      title="Device location map"
-                      className="map-embed"
-                      src={`https://maps.google.com/maps?q=${displayedLocation.latitude},${displayedLocation.longitude}&z=15&output=embed`}
-                    />
-                  </div>
-                  <div className="location-meta location-meta-row">
-                    <span className="map-chip map-chip-inline">Lat: {displayedLocation.latitude} Lon: {displayedLocation.longitude}</span>
-                    <a className="table-link action-chip action-chip-neutral" href={displayedLocation.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
-                    {usingWebhookFallback ? <span className="status location-source-chip">Source: Webhook fallback</span> : <span className="status location-source-chip">Source: SMS reply</span>}
-                    {selectedDeviceWebhookLocation?.updatedAt ? (
-                      <span className="status">Last device update: {new Date(selectedDeviceWebhookLocation.updatedAt).toLocaleString()}</span>
-                    ) : null}
+                  <div className={`location-viewer-layout ${isDeviceDetailLocationSection ? 'is-device-workspace' : ''}`}>
+                    <div className="map-placeholder map-embed-wrap map-square">
+                      <iframe
+                        title="Device location map"
+                        className="map-embed"
+                        src={`https://maps.google.com/maps?q=${displayedLocation.latitude},${displayedLocation.longitude}&z=15&output=embed`}
+                      />
+                    </div>
+                    <aside className="location-meta-panel">
+                      <h4>Location details</h4>
+                      <span className="map-chip map-chip-inline">Lat: {displayedLocation.latitude} Lon: {displayedLocation.longitude}</span>
+                      <a className="table-link action-chip action-chip-neutral" href={displayedLocation.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
+                      {usingWebhookFallback ? <span className="status location-source-chip">Source: Webhook fallback</span> : <span className="status location-source-chip">Source: SMS reply</span>}
+                      {selectedDeviceWebhookLocation?.updatedAt ? (
+                        <span className="status">Last device update: {new Date(selectedDeviceWebhookLocation.updatedAt).toLocaleString()}</span>
+                      ) : null}
+                    </aside>
                   </div>
                   {locationResult?.rawMessage ? <pre className="preview-box">{locationResult.rawMessage}</pre> : null}
                 </>
