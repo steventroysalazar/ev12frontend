@@ -898,7 +898,8 @@ export default function HomeView({
   const filteredUsers = useMemo(() => {
     const keyword = userSearch.trim().toLowerCase()
     return users.filter((entry) => {
-      const role = String(roleLabel(entry.userRole || entry.role || entry.user_role || '')).toLowerCase()
+      const rawRole = entry.userRole || entry.role || entry.user_role || ''
+      const role = String(roleLabel(rawRole)).toLowerCase()
       const roleMatch = userRoleFilter === 'all' ? true : role === userRoleFilter
       const text = `${entry.firstName || ''} ${entry.lastName || ''} ${entry.email || ''} ${entry.contactNumber || ''} ${entry.locationName || entry.location?.name || ''}`.toLowerCase()
       const textMatch = !keyword || text.includes(keyword)
@@ -1013,7 +1014,8 @@ export default function HomeView({
   const filteredUsers = useMemo(() => {
     const keyword = userSearch.trim().toLowerCase()
     return users.filter((entry) => {
-      const role = String(roleLabel(entry.userRole || entry.role || entry.user_role || '')).toLowerCase()
+      const rawRole = entry.userRole || entry.role || entry.user_role || ''
+      const role = String(roleLabel(rawRole)).toLowerCase()
       const roleMatch = userRoleFilter === 'all' ? true : role === userRoleFilter
       const text = `${entry.firstName || ''} ${entry.lastName || ''} ${entry.email || ''} ${entry.contactNumber || ''} ${entry.locationName || entry.location?.name || ''}`.toLowerCase()
       const textMatch = !keyword || text.includes(keyword)
