@@ -587,7 +587,10 @@ export default function HomeView({
         eviewVersion: deviceForm.eviewVersion.trim(),
         version: deviceForm.eviewVersion.trim(),
         locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
+        location_id: deviceForm.locationId ? Number(deviceForm.locationId) : null,
         ownerUserId: Number(deviceForm.ownerUserId),
+        userId: Number(deviceForm.ownerUserId),
+        user_id: Number(deviceForm.ownerUserId),
         ...(deviceForm.externalDeviceId.trim()
           ? { externalDeviceId: deviceForm.externalDeviceId.trim(), deviceId: deviceForm.externalDeviceId.trim() }
           : {})
@@ -633,8 +636,11 @@ export default function HomeView({
         phoneNumber: deviceForm.phoneNumber.trim(),
         eviewVersion: deviceForm.eviewVersion.trim(),
         version: deviceForm.eviewVersion.trim(),
+        ownerUserId: deviceForm.ownerUserId ? Number(deviceForm.ownerUserId) : null,
         userId: deviceForm.ownerUserId ? Number(deviceForm.ownerUserId) : null,
+        user_id: deviceForm.ownerUserId ? Number(deviceForm.ownerUserId) : null,
         locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
+        location_id: deviceForm.locationId ? Number(deviceForm.locationId) : null,
         externalDeviceId: deviceForm.externalDeviceId.trim() || null,
         deviceId: deviceForm.externalDeviceId.trim() || null
       }
