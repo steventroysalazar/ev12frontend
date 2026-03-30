@@ -1270,12 +1270,14 @@ export default function HomeView({
             <aside className="device-detail-sidebar">
               <strong>Device workspace</strong>
               <p>{selectedDevice ? (selectedDevice.name || selectedDevice.deviceName || 'Selected device') : 'No device selected yet'}</p>
-              <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-overview')}>Device Profile</button>
-              <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-basic')}>Basic Config</button>
-              <button type="button" className={activeDeviceSettingsSection === 'device-detail-advanced' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-advanced')}>Advanced Config</button>
-              <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-location')}>Location</button>
-              <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-commands')}>Commands</button>
-              <button type="button" className="table-link" onClick={() => setActiveSection('devices')}>Back to devices</button>
+              <div className="device-detail-nav">
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-overview')}>Device Profile</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-basic')}>Basic Config</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-advanced' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-advanced')}>Advanced Config</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-location')}>Location</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-commands')}>Commands</button>
+              </div>
+              <button type="button" className="device-back-button" onClick={() => setActiveSection('devices')}>← Back to devices</button>
             </aside>
           </div>
         ) : null}
