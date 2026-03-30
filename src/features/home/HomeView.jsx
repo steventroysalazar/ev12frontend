@@ -898,7 +898,8 @@ export default function HomeView({
   const filteredUsers = useMemo(() => {
     const keyword = userSearch.trim().toLowerCase()
     return users.filter((entry) => {
-      const role = String(roleLabel(entry.userRole || entry.role || entry.user_role || '')).toLowerCase()
+      const rawRole = entry.userRole || entry.role || entry.user_role || ''
+      const role = String(roleLabel(rawRole)).toLowerCase()
       const roleMatch = userRoleFilter === 'all' ? true : role === userRoleFilter
       const text = `${entry.firstName || ''} ${entry.lastName || ''} ${entry.email || ''} ${entry.contactNumber || ''} ${entry.locationName || entry.location?.name || ''}`.toLowerCase()
       const textMatch = !keyword || text.includes(keyword)
@@ -910,7 +911,12 @@ export default function HomeView({
     const keyword = locationSearch.trim().toLowerCase()
     return locations.filter((entry) => {
       const hasDevice = Number(entry.deviceCount || entry.devices?.length || 0) > 0
-      const deviceMatch = locationDeviceFilter === 'all' ? true : (locationDeviceFilter === 'with-devices' ? hasDevice : !hasDevice)
+      let deviceMatch = true
+      if (locationDeviceFilter === 'with-devices') {
+        deviceMatch = hasDevice
+      } else if (locationDeviceFilter === 'without-devices') {
+        deviceMatch = !hasDevice
+      }
       const text = `${entry.name || ''} ${entry.details || ''}`.toLowerCase()
       const textMatch = !keyword || text.includes(keyword)
       return deviceMatch && textMatch
@@ -1008,7 +1014,8 @@ export default function HomeView({
   const filteredUsers = useMemo(() => {
     const keyword = userSearch.trim().toLowerCase()
     return users.filter((entry) => {
-      const role = String(roleLabel(entry.userRole || entry.role || entry.user_role || '')).toLowerCase()
+      const rawRole = entry.userRole || entry.role || entry.user_role || ''
+      const role = String(roleLabel(rawRole)).toLowerCase()
       const roleMatch = userRoleFilter === 'all' ? true : role === userRoleFilter
       const text = `${entry.firstName || ''} ${entry.lastName || ''} ${entry.email || ''} ${entry.contactNumber || ''} ${entry.locationName || entry.location?.name || ''}`.toLowerCase()
       const textMatch = !keyword || text.includes(keyword)
@@ -1020,7 +1027,12 @@ export default function HomeView({
     const keyword = locationSearch.trim().toLowerCase()
     return locations.filter((entry) => {
       const hasDevice = Number(entry.deviceCount || entry.devices?.length || 0) > 0
-      const deviceMatch = locationDeviceFilter === 'all' ? true : (locationDeviceFilter === 'with-devices' ? hasDevice : !hasDevice)
+      let deviceMatch = true
+      if (locationDeviceFilter === 'with-devices') {
+        deviceMatch = hasDevice
+      } else if (locationDeviceFilter === 'without-devices') {
+        deviceMatch = !hasDevice
+      }
       const text = `${entry.name || ''} ${entry.details || ''}`.toLowerCase()
       const textMatch = !keyword || text.includes(keyword)
       return deviceMatch && textMatch
