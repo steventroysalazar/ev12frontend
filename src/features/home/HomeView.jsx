@@ -98,6 +98,16 @@ export default function HomeView({
   const [locations, setLocations] = useState([])
   const [devices, setDevices] = useState([])
   const [dashboardDevicePage, setDashboardDevicePage] = useState(1)
+  const [activeAlertPage, setActiveAlertPage] = useState(1)
+  const [usersPage, setUsersPage] = useState(1)
+  const [locationsPage, setLocationsPage] = useState(1)
+  const [devicesPage, setDevicesPage] = useState(1)
+  const [userSearch, setUserSearch] = useState('')
+  const [locationSearch, setLocationSearch] = useState('')
+  const [deviceSearch, setDeviceSearch] = useState('')
+  const [userRoleFilter, setUserRoleFilter] = useState('all')
+  const [locationDeviceFilter, setLocationDeviceFilter] = useState('all')
+  const [deviceAlarmFilter, setDeviceAlarmFilter] = useState('all')
 
   const [locationForm, setLocationForm] = useState(initialLocationForm)
   const [userForm, setUserForm] = useState(initialUserForm)
@@ -124,6 +134,17 @@ export default function HomeView({
     if (role === 2) return 'Manager'
     if (role === 3) return 'User'
     return value || '-'
+  }, [])
+
+  const getAlarmMeta = useCallback((alarmCode) => {
+    const normalizedCode = String(alarmCode || '').trim()
+    if (!normalizedCode) return { label: 'No active alarm', tone: 'idle' }
+
+    const normalizedLower = normalizedCode.toLowerCase()
+    if (normalizedLower.includes('sos')) return { label: 'SOS Alert', tone: 'critical' }
+    if (normalizedLower.includes('fall')) return { label: 'Fall-Down Alert', tone: 'warning' }
+
+    return { label: normalizedCode, tone: 'active' }
   }, [])
 
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
@@ -494,8 +515,17 @@ export default function HomeView({
 
     setConfigForm(nextConfigForm)
     setConfigBaseline(nextConfigForm)
+    setEditingDeviceId(resolvedDevice.id || resolvedDevice.deviceId || null)
+    setDeviceForm({
+      name: resolvedDevice.name || resolvedDevice.deviceName || '',
+      phoneNumber: resolvedDevice.phoneNumber || '',
+      eviewVersion: resolvedDevice.eviewVersion || resolvedDevice.version || '',
+      ownerUserId: resolvedDevice.ownerUserId || resolvedDevice.userId || resolvedDevice.user_id || resolvedDevice.owner?.id || resolvedDevice.app_user?.id || '',
+      locationId: resolvedDevice.locationId || resolvedDevice.location_id || '',
+      externalDeviceId: resolvedDevice.externalDeviceId || resolvedDevice.external_device_id || resolvedDevice.deviceId || ''
+    })
     setActionStatus({ type: 'success', message: `Opened settings for ${resolvedDevice.name || resolvedDevice.deviceName || 'device'}.` })
-    setActiveSection('settings-basic')
+    setActiveSection('device-detail-basic')
   }
 
   const handleCreateLocation = async () => {
@@ -610,9 +640,16 @@ export default function HomeView({
       }
 
       setActionStatus({ type: 'success', message: 'Device updated successfully.' })
-      setShowEditDeviceModal(false)
-      setEditingDeviceId(null)
-      setDeviceForm(initialDeviceForm)
+      if (showEditDeviceModal) {
+        setShowEditDeviceModal(false)
+        setEditingDeviceId(null)
+        setDeviceForm(initialDeviceForm)
+      }
+      if (selectedDevice && String(selectedDevice.id || selectedDevice.deviceId || '') === String(editingDeviceId)) {
+        setSelectedDevice((prev) => prev
+          ? { ...prev, ...payload, id: prev.id || editingDeviceId, deviceId: prev.deviceId || payload.deviceId }
+          : prev)
+      }
       await loadDevices()
     } catch (error) {
       setActionStatus({ type: 'error', message: `Update device failed: ${error.message}` })
@@ -841,6 +878,8 @@ export default function HomeView({
   const usingWebhookFallback = !locationResult && Boolean(selectedDeviceWebhookLocation)
   const freshestLocation = latestDeviceLocations[0] || null
   const dashboardPageSize = 8
+  const activeAlertPageSize = 6
+  const listPageSize = 10
   const dashboardTotalPages = Math.max(1, Math.ceil(devices.length / dashboardPageSize))
   const paginatedDashboardDevices = useMemo(() => {
     const start = (dashboardDevicePage - 1) * dashboardPageSize
@@ -852,6 +891,65 @@ export default function HomeView({
       setDashboardDevicePage(dashboardTotalPages)
     }
   }, [dashboardDevicePage, dashboardTotalPages])
+
+  const filteredUsers = useMemo(() => {
+    const keyword = userSearch.trim().toLowerCase()
+    return users.filter((entry) => {
+      const role = String(roleLabel(entry.userRole || entry.role || entry.user_role || '')).toLowerCase()
+      const roleMatch = userRoleFilter === 'all' ? true : role === userRoleFilter
+      const text = `${entry.firstName || ''} ${entry.lastName || ''} ${entry.email || ''} ${entry.contactNumber || ''} ${entry.locationName || entry.location?.name || ''}`.toLowerCase()
+      const textMatch = !keyword || text.includes(keyword)
+      return roleMatch && textMatch
+    })
+  }, [roleLabel, userRoleFilter, userSearch, users])
+
+  const filteredLocations = useMemo(() => {
+    const keyword = locationSearch.trim().toLowerCase()
+    return locations.filter((entry) => {
+      const hasDevice = Number(entry.deviceCount || entry.devices?.length || 0) > 0
+      const deviceMatch = locationDeviceFilter === 'all' ? true : (locationDeviceFilter === 'with-devices' ? hasDevice : !hasDevice)
+      const text = `${entry.name || ''} ${entry.details || ''}`.toLowerCase()
+      const textMatch = !keyword || text.includes(keyword)
+      return deviceMatch && textMatch
+    })
+  }, [locationDeviceFilter, locationSearch, locations])
+
+  const filteredDevices = useMemo(() => {
+    const keyword = deviceSearch.trim().toLowerCase()
+    return devices.filter((entry) => {
+      const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(entry))
+      const alarmMatch = deviceAlarmFilter === 'all' ? true : alarmMeta.tone === deviceAlarmFilter
+      const owner = resolveDeviceMeta(entry)
+      const text = `${entry.name || entry.deviceName || ''} ${entry.phoneNumber || ''} ${entry.externalDeviceId || entry.external_device_id || entry.deviceId || ''} ${owner.ownerName} ${owner.ownerLocation}`.toLowerCase()
+      const textMatch = !keyword || text.includes(keyword)
+      return alarmMatch && textMatch
+    })
+  }, [deviceAlarmFilter, deviceSearch, devices, getAlarmMeta, resolveDeviceMeta, resolveLiveAlarmCode])
+
+  const toPagedRows = useCallback((rows, page) => {
+    const totalPages = Math.max(1, Math.ceil(rows.length / listPageSize))
+    const safePage = Math.min(page, totalPages)
+    const start = (safePage - 1) * listPageSize
+    return { totalPages, rows: rows.slice(start, start + listPageSize), safePage }
+  }, [listPageSize])
+
+  const pagedUsers = toPagedRows(filteredUsers, usersPage)
+  const pagedLocations = toPagedRows(filteredLocations, locationsPage)
+  const pagedDevices = toPagedRows(filteredDevices, devicesPage)
+  const activeAlertTotalPages = Math.max(1, Math.ceil(activeAlarmLocations.length / activeAlertPageSize))
+  const paginatedActiveAlerts = useMemo(() => {
+    const start = (activeAlertPage - 1) * activeAlertPageSize
+    return activeAlarmLocations.slice(start, start + activeAlertPageSize)
+  }, [activeAlertPage, activeAlarmLocations])
+
+  useEffect(() => setUsersPage(1), [userSearch, userRoleFilter])
+  useEffect(() => setLocationsPage(1), [locationSearch, locationDeviceFilter])
+  useEffect(() => setDevicesPage(1), [deviceSearch, deviceAlarmFilter])
+  useEffect(() => setActiveAlertPage(1), [activeAlarmLocations.length])
+  useEffect(() => { if (usersPage > pagedUsers.totalPages) setUsersPage(pagedUsers.totalPages) }, [pagedUsers.totalPages, usersPage])
+  useEffect(() => { if (locationsPage > pagedLocations.totalPages) setLocationsPage(pagedLocations.totalPages) }, [locationsPage, pagedLocations.totalPages])
+  useEffect(() => { if (devicesPage > pagedDevices.totalPages) setDevicesPage(pagedDevices.totalPages) }, [devicesPage, pagedDevices.totalPages])
+  useEffect(() => { if (activeAlertPage > activeAlertTotalPages) setActiveAlertPage(activeAlertTotalPages) }, [activeAlertPage, activeAlertTotalPages])
 
   const resolveLiveAlarmCode = useCallback(
     (device) => {
@@ -942,17 +1040,6 @@ export default function HomeView({
     ]
   }, [devices, replyRows, user, resolveDeviceMeta, resolveLiveAlarmCode])
 
-  const getAlarmMeta = useCallback((alarmCode) => {
-    const normalizedCode = String(alarmCode || '').trim()
-    if (!normalizedCode) return { label: 'No active alarm', tone: 'idle' }
-
-    const normalizedLower = normalizedCode.toLowerCase()
-    if (normalizedLower.includes('sos')) return { label: 'SOS Alert', tone: 'critical' }
-    if (normalizedLower.includes('fall')) return { label: 'Fall-Down Alert', tone: 'warning' }
-
-    return { label: normalizedCode, tone: 'active' }
-  }, [])
-
   const getAlarmCancelledAt = useCallback((device) => {
     const internalId = Number(device?.id || device?.deviceId || 0)
     const externalId = String(device?.externalDeviceId || device?.external_device_id || '').trim()
@@ -1034,6 +1121,8 @@ export default function HomeView({
   const hasActiveCommand = Boolean(activeCommandPreview)
   const hasQueuedCommand = Boolean(queuedCommandPreview)
   const hasCommandChanges = hasActiveCommand && activeCommandPreview !== queuedCommandPreview
+  const isDeviceWorkspaceSection = ['device-detail-overview', 'device-detail-basic', 'device-detail-advanced', 'device-detail-location', 'device-detail-commands'].includes(activeSection)
+  const activeDeviceSettingsSection = activeSection.startsWith('device-detail-') ? activeSection : ''
 
   return (
     <div className="home-shell">
@@ -1042,6 +1131,20 @@ export default function HomeView({
       <div className="dashboard-content">
         {dataStatus ? <p className="status">{dataStatus}</p> : null}
         {actionStatus.message ? <p className={actionStatus.type === 'error' ? 'status-error' : 'status-success'}>{actionStatus.message}</p> : null}
+        {isDeviceWorkspaceSection ? (
+          <div className="device-workspace-head card-like">
+            <aside className="device-detail-sidebar">
+              <strong>Device workspace</strong>
+              <p>{selectedDevice ? (selectedDevice.name || selectedDevice.deviceName || 'Selected device') : 'No device selected yet'}</p>
+              <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-overview')}>Device Profile</button>
+              <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-basic')}>Basic Config</button>
+              <button type="button" className={activeDeviceSettingsSection === 'device-detail-advanced' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-advanced')}>Advanced Config</button>
+              <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-location')}>Location</button>
+              <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-commands')}>Commands</button>
+              <button type="button" className="table-link" onClick={() => setActiveSection('devices')}>Back to devices</button>
+            </aside>
+          </div>
+        ) : null}
 
         {activeSection === 'dashboard' && (
           <>
@@ -1135,7 +1238,7 @@ export default function HomeView({
                       </div>
                     </div>
                     <div className="active-alerts-list">
-                      {activeAlarmLocations.length ? activeAlarmLocations.slice(0, 8).map(({ device, alarmCode, latitude, longitude, updatedAt, deviceKey }) => {
+                      {activeAlarmLocations.length ? paginatedActiveAlerts.map(({ device, alarmCode, latitude, longitude, updatedAt, deviceKey }) => {
                         const meta = resolveDeviceMeta(device)
                         const alarmMeta = getAlarmMeta(alarmCode)
                         const isMapFocused = String(dashboardMapDeviceId) === String(deviceKey)
@@ -1154,6 +1257,11 @@ export default function HomeView({
                           </button>
                         )
                       }) : <p className="status">No active alerts right now.</p>}
+                    </div>
+                    <div className="table-pagination">
+                      <button type="button" className="table-link action-chip action-chip-neutral" disabled={activeAlertPage <= 1} onClick={() => setActiveAlertPage((prev) => Math.max(prev - 1, 1))}>Prev</button>
+                      <span>Page {activeAlertPage} of {activeAlertTotalPages}</span>
+                      <button type="button" className="table-link action-chip action-chip-neutral" disabled={activeAlertPage >= activeAlertTotalPages} onClick={() => setActiveAlertPage((prev) => Math.min(prev + 1, activeAlertTotalPages))}>Next</button>
                     </div>
                   </aside>
                 </section>
@@ -1220,11 +1328,20 @@ export default function HomeView({
               <h2 className="section-title">Users</h2>
               <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
             </div>
+            <div className="table-controls">
+              <input placeholder="Search user, email, contact, location..." value={userSearch} onChange={(event) => setUserSearch(event.target.value)} />
+              <select value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
+                <option value="all">All roles</option>
+                <option value="super admin">Super Admin</option>
+                <option value="manager">Manager</option>
+                <option value="user">User</option>
+              </select>
+            </div>
             <div className="table-shell">
               <table className="data-table">
               <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th><th>Action</th></tr></thead>
               <tbody>
-                {users.map((u) => (
+                {pagedUsers.rows.map((u) => (
                   <tr key={u.id || u.email}>
                     <td>{`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || '-'}</td>
                     <td>{u.email || '-'}</td>
@@ -1238,6 +1355,11 @@ export default function HomeView({
               </tbody>
               </table>
             </div>
+            <div className="table-pagination">
+              <button type="button" className="table-link action-chip action-chip-neutral" disabled={usersPage <= 1} onClick={() => setUsersPage((prev) => Math.max(prev - 1, 1))}>Prev</button>
+              <span>Page {usersPage} of {pagedUsers.totalPages}</span>
+              <button type="button" className="table-link action-chip action-chip-neutral" disabled={usersPage >= pagedUsers.totalPages} onClick={() => setUsersPage((prev) => Math.min(prev + 1, pagedUsers.totalPages))}>Next</button>
+            </div>
           </section>
         )}
 
@@ -1247,11 +1369,19 @@ export default function HomeView({
               <h2 className="section-title">Locations</h2>
               <button className="mini-action" onClick={() => setShowLocationModal(true)}><AppIcon name="plus" className="btn-icon" />Create Location</button>
             </div>
+            <div className="table-controls">
+              <input placeholder="Search location or details..." value={locationSearch} onChange={(event) => setLocationSearch(event.target.value)} />
+              <select value={locationDeviceFilter} onChange={(event) => setLocationDeviceFilter(event.target.value)}>
+                <option value="all">All locations</option>
+                <option value="with-devices">With devices</option>
+                <option value="without-devices">Without devices</option>
+              </select>
+            </div>
             <div className="table-shell">
               <table className="data-table">
               <thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th><th>Action</th></tr></thead>
               <tbody>
-                {locations.map((l) => (
+                {pagedLocations.rows.map((l) => (
                   <tr key={l.id || l.name}>
                     <td>{l.name || '-'}</td>
                     <td>{l.details || '-'}</td>
@@ -1263,6 +1393,11 @@ export default function HomeView({
               </tbody>
               </table>
             </div>
+            <div className="table-pagination">
+              <button type="button" className="table-link action-chip action-chip-neutral" disabled={locationsPage <= 1} onClick={() => setLocationsPage((prev) => Math.max(prev - 1, 1))}>Prev</button>
+              <span>Page {locationsPage} of {pagedLocations.totalPages}</span>
+              <button type="button" className="table-link action-chip action-chip-neutral" disabled={locationsPage >= pagedLocations.totalPages} onClick={() => setLocationsPage((prev) => Math.min(prev + 1, pagedLocations.totalPages))}>Next</button>
+            </div>
           </section>
         )}
 
@@ -1272,11 +1407,21 @@ export default function HomeView({
               <h2 className="section-title">Devices</h2>
               <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}><AppIcon name="plus" className="btn-icon" />Add Device</button>
             </div>
+            <div className="table-controls">
+              <input placeholder="Search device, owner, location, phone..." value={deviceSearch} onChange={(event) => setDeviceSearch(event.target.value)} />
+              <select value={deviceAlarmFilter} onChange={(event) => setDeviceAlarmFilter(event.target.value)}>
+                <option value="all">All alarms</option>
+                <option value="critical">SOS only</option>
+                <option value="warning">Fall alert only</option>
+                <option value="active">Other active alarms</option>
+                <option value="idle">No active alarm</option>
+              </select>
+            </div>
             <div className="table-shell">
               <table className="data-table">
               <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Owner</th><th>Role</th><th>Location</th><th>Edit</th><th>Settings</th><th>Alarm Action</th></tr></thead>
               <tbody>
-                {devices.map((d) => {
+                {pagedDevices.rows.map((d) => {
                   const deviceMeta = resolveDeviceMeta(d)
                   const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(d))
                   const cancelledAt = getAlarmCancelledAt(d)
@@ -1302,10 +1447,31 @@ export default function HomeView({
               </tbody>
               </table>
             </div>
+            <div className="table-pagination">
+              <button type="button" className="table-link action-chip action-chip-neutral" disabled={devicesPage <= 1} onClick={() => setDevicesPage((prev) => Math.max(prev - 1, 1))}>Prev</button>
+              <span>Page {devicesPage} of {pagedDevices.totalPages}</span>
+              <button type="button" className="table-link action-chip action-chip-neutral" disabled={devicesPage >= pagedDevices.totalPages} onClick={() => setDevicesPage((prev) => Math.min(prev + 1, pagedDevices.totalPages))}>Next</button>
+            </div>
           </section>
         )}
 
-        {activeSection === 'settings-basic' && (
+        {activeSection === 'device-detail-overview' && (
+          <section className="card-like section-panel">
+            <h2 className="section-title">Device Profile</h2>
+            {selectedDevice ? <p className="status-success">Edit details for {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Open a device workspace from Devices list first.</p>}
+            <div className="field-grid two-col">
+              <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
+              <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
+              <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
+              <input placeholder="Webhook Device ID" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
+              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{users.map((entry) => <option key={entry.id || entry.email} value={entry.id || ''}>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.email}</option>)}</select>
+              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((entry) => <option key={entry.id || entry.name} value={entry.id || ''}>{entry.name || 'Unknown location'}</option>)}</select>
+            </div>
+            <button className="mini-action" disabled={!editingDeviceId} onClick={handleUpdateDevice}>Save Device Profile</button>
+          </section>
+        )}
+
+        {(activeSection === 'settings-basic' || activeSection === 'device-detail-basic') && (
           <section className="card-like section-panel">
             <h2 className="section-title">Settings &gt; Basic Configuration</h2>
             {selectedDevice ? <p className="status-success">Editing {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Select a device from Devices list to configure.</p>}
@@ -1349,7 +1515,7 @@ export default function HomeView({
           </section>
         )}
 
-        {activeSection === 'settings-advanced' && (
+        {(activeSection === 'settings-advanced' || activeSection === 'device-detail-advanced') && (
           <section className="card-like section-panel">
             <h2 className="section-title">Settings &gt; Advanced Configuration</h2>
             {selectedDevice ? <p className="status-success">Advanced settings for {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Select a device from Devices list to configure advanced settings.</p>}
@@ -1415,7 +1581,7 @@ export default function HomeView({
           </section>
         )}
 
-        {activeSection === 'location' && (
+        {(activeSection === 'location' || activeSection === 'device-detail-location') && (
           <section className="section-panel">
             <h2 className="page-title">Location</h2>
             <article className="card-like map-panel">
@@ -1468,7 +1634,7 @@ export default function HomeView({
           </section>
         )}
 
-        {activeSection === 'commands' && (
+        {(activeSection === 'commands' || activeSection === 'device-detail-commands') && (
           <section>
             <h2 className="page-title">Command Page</h2>
             <div className="commands-layout">
