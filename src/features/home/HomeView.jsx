@@ -968,6 +968,66 @@ export default function HomeView({
     },
     [alarmStateByDevice]
   )
+
+  const filteredUsers = useMemo(() => {
+    const keyword = userSearch.trim().toLowerCase()
+    return users.filter((entry) => {
+      const role = String(roleLabel(entry.userRole || entry.role || entry.user_role || '')).toLowerCase()
+      const roleMatch = userRoleFilter === 'all' ? true : role === userRoleFilter
+      const text = `${entry.firstName || ''} ${entry.lastName || ''} ${entry.email || ''} ${entry.contactNumber || ''} ${entry.locationName || entry.location?.name || ''}`.toLowerCase()
+      const textMatch = !keyword || text.includes(keyword)
+      return roleMatch && textMatch
+    })
+  }, [roleLabel, userRoleFilter, userSearch, users])
+
+  const filteredLocations = useMemo(() => {
+    const keyword = locationSearch.trim().toLowerCase()
+    return locations.filter((entry) => {
+      const hasDevice = Number(entry.deviceCount || entry.devices?.length || 0) > 0
+      const deviceMatch = locationDeviceFilter === 'all' ? true : (locationDeviceFilter === 'with-devices' ? hasDevice : !hasDevice)
+      const text = `${entry.name || ''} ${entry.details || ''}`.toLowerCase()
+      const textMatch = !keyword || text.includes(keyword)
+      return deviceMatch && textMatch
+    })
+  }, [locationDeviceFilter, locationSearch, locations])
+
+  const filteredDevices = useMemo(() => {
+    const keyword = deviceSearch.trim().toLowerCase()
+    return devices.filter((entry) => {
+      const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(entry))
+      const alarmMatch = deviceAlarmFilter === 'all' ? true : alarmMeta.tone === deviceAlarmFilter
+      const owner = resolveDeviceMeta(entry)
+      const text = `${entry.name || entry.deviceName || ''} ${entry.phoneNumber || ''} ${entry.externalDeviceId || entry.external_device_id || entry.deviceId || ''} ${owner.ownerName} ${owner.ownerLocation}`.toLowerCase()
+      const textMatch = !keyword || text.includes(keyword)
+      return alarmMatch && textMatch
+    })
+  }, [deviceAlarmFilter, deviceSearch, devices, getAlarmMeta, resolveDeviceMeta, resolveLiveAlarmCode])
+
+  const toPagedRows = useCallback((rows, page) => {
+    const totalPages = Math.max(1, Math.ceil(rows.length / listPageSize))
+    const safePage = Math.min(page, totalPages)
+    const start = (safePage - 1) * listPageSize
+    return { totalPages, rows: rows.slice(start, start + listPageSize), safePage }
+  }, [listPageSize])
+
+  const pagedUsers = toPagedRows(filteredUsers, usersPage)
+  const pagedLocations = toPagedRows(filteredLocations, locationsPage)
+  const pagedDevices = toPagedRows(filteredDevices, devicesPage)
+  const activeAlertTotalPages = Math.max(1, Math.ceil(activeAlarmLocations.length / activeAlertPageSize))
+  const paginatedActiveAlerts = useMemo(() => {
+    const start = (activeAlertPage - 1) * activeAlertPageSize
+    return activeAlarmLocations.slice(start, start + activeAlertPageSize)
+  }, [activeAlertPage, activeAlarmLocations])
+
+  useEffect(() => setUsersPage(1), [userSearch, userRoleFilter])
+  useEffect(() => setLocationsPage(1), [locationSearch, locationDeviceFilter])
+  useEffect(() => setDevicesPage(1), [deviceSearch, deviceAlarmFilter])
+  useEffect(() => setActiveAlertPage(1), [activeAlarmLocations.length])
+  useEffect(() => { if (usersPage > pagedUsers.totalPages) setUsersPage(pagedUsers.totalPages) }, [pagedUsers.totalPages, usersPage])
+  useEffect(() => { if (locationsPage > pagedLocations.totalPages) setLocationsPage(pagedLocations.totalPages) }, [locationsPage, pagedLocations.totalPages])
+  useEffect(() => { if (devicesPage > pagedDevices.totalPages) setDevicesPage(pagedDevices.totalPages) }, [devicesPage, pagedDevices.totalPages])
+  useEffect(() => { if (activeAlertPage > activeAlertTotalPages) setActiveAlertPage(activeAlertTotalPages) }, [activeAlertPage, activeAlertTotalPages])
+
   const activeAlarmDevices = useMemo(
     () =>
       devices
