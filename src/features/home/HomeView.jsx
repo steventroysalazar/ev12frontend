@@ -910,12 +910,12 @@ export default function HomeView({
     const keyword = locationSearch.trim().toLowerCase()
     return locations.filter((entry) => {
       const hasDevice = Number(entry.deviceCount || entry.devices?.length || 0) > 0
-      const deviceMatch =
-        locationDeviceFilter === 'all'
-          ? true
-          : locationDeviceFilter === 'with-devices'
-            ? hasDevice
-            : !hasDevice
+      let deviceMatch = true
+      if (locationDeviceFilter === 'with-devices') {
+        deviceMatch = hasDevice
+      } else if (locationDeviceFilter === 'without-devices') {
+        deviceMatch = !hasDevice
+      }
       const text = `${entry.name || ''} ${entry.details || ''}`.toLowerCase()
       const textMatch = !keyword || text.includes(keyword)
       return deviceMatch && textMatch
@@ -1025,12 +1025,12 @@ export default function HomeView({
     const keyword = locationSearch.trim().toLowerCase()
     return locations.filter((entry) => {
       const hasDevice = Number(entry.deviceCount || entry.devices?.length || 0) > 0
-      const deviceMatch =
-        locationDeviceFilter === 'all'
-          ? true
-          : locationDeviceFilter === 'with-devices'
-            ? hasDevice
-            : !hasDevice
+      let deviceMatch = true
+      if (locationDeviceFilter === 'with-devices') {
+        deviceMatch = hasDevice
+      } else if (locationDeviceFilter === 'without-devices') {
+        deviceMatch = !hasDevice
+      }
       const text = `${entry.name || ''} ${entry.details || ''}`.toLowerCase()
       const textMatch = !keyword || text.includes(keyword)
       return deviceMatch && textMatch
