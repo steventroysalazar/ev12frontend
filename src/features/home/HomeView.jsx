@@ -840,13 +840,6 @@ export default function HomeView({
   const displayedLocation = locationResult || selectedDeviceWebhookLocation
   const usingWebhookFallback = !locationResult && Boolean(selectedDeviceWebhookLocation)
   const freshestLocation = latestDeviceLocations[0] || null
-  const selectedDashboardLocation = useMemo(
-    () =>
-      latestDeviceLocations.find((entry) => String(entry.device.id || entry.device.deviceId || '') === String(dashboardMapDeviceId)) ||
-      freshestLocation ||
-      null,
-    [dashboardMapDeviceId, freshestLocation, latestDeviceLocations]
-  )
   const dashboardPageSize = 8
   const dashboardTotalPages = Math.max(1, Math.ceil(devices.length / dashboardPageSize))
   const paginatedDashboardDevices = useMemo(() => {
@@ -859,17 +852,6 @@ export default function HomeView({
       setDashboardDevicePage(dashboardTotalPages)
     }
   }, [dashboardDevicePage, dashboardTotalPages])
-
-  useEffect(() => {
-    if (!latestDeviceLocations.length) {
-      setDashboardMapDeviceId('')
-      return
-    }
-    if (dashboardMapDeviceId && latestDeviceLocations.some((entry) => String(entry.device.id || entry.device.deviceId || '') === String(dashboardMapDeviceId))) {
-      return
-    }
-    setDashboardMapDeviceId(String(latestDeviceLocations[0].device.id || latestDeviceLocations[0].device.deviceId || ''))
-  }, [dashboardMapDeviceId, latestDeviceLocations])
 
   const resolveLiveAlarmCode = useCallback(
     (device) => {
@@ -892,6 +874,51 @@ export default function HomeView({
         .filter((entry) => Boolean(entry.alarmCode)),
     [devices, resolveLiveAlarmCode]
   )
+  const activeAlarmLocations = useMemo(
+    () =>
+      activeAlarmDevices
+        .map(({ device, alarmCode }) => {
+          const coordinates = resolveValidCoordinates(device)
+          if (!coordinates) return null
+
+          const deviceId = String(device.id || device.deviceId || '')
+          const updatedAt = device.locationUpdatedAt || device.location_updated_at || device.updatedAt || device.updated_at || null
+          const updatedAtMs = updatedAt ? new Date(updatedAt).getTime() : 0
+
+          return {
+            device,
+            alarmCode,
+            ...coordinates,
+            updatedAt,
+            updatedAtMs: Number.isFinite(updatedAtMs) ? updatedAtMs : 0,
+            deviceKey: deviceId
+          }
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.updatedAtMs - a.updatedAtMs),
+    [activeAlarmDevices, resolveValidCoordinates]
+  )
+  const selectedAlertLocation = useMemo(
+    () => activeAlarmLocations.find((entry) => entry.deviceKey === String(dashboardMapDeviceId)) || null,
+    [activeAlarmLocations, dashboardMapDeviceId]
+  )
+  const alertMapQuery = useMemo(() => {
+    if (selectedAlertLocation) {
+      return `${selectedAlertLocation.latitude},${selectedAlertLocation.longitude}`
+    }
+    return activeAlarmLocations.map((entry) => `${entry.latitude},${entry.longitude}`).join('|')
+  }, [activeAlarmLocations, selectedAlertLocation])
+  const alertMapZoom = selectedAlertLocation ? 15 : 12
+
+  useEffect(() => {
+    if (!activeAlarmLocations.length) {
+      setDashboardMapDeviceId('')
+      return
+    }
+    if (dashboardMapDeviceId && !activeAlarmLocations.some((entry) => entry.deviceKey === String(dashboardMapDeviceId))) {
+      setDashboardMapDeviceId('')
+    }
+  }, [activeAlarmLocations, dashboardMapDeviceId])
 
   const userDeviceRows = useMemo(() => {
     const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
@@ -1062,53 +1089,32 @@ export default function HomeView({
                     <div className="map-panel-head">
                       <div>
                         <h3>Live Device Location Overview</h3>
-                        <p>Latest known coordinates from SMS replies and webhook auto-updates.</p>
+                        <p>Shows devices with active alerts. Click an alert card to focus the map on that device.</p>
                       </div>
                       <div className="map-kpi-stack">
                         <span className="map-kpi-chip">
-                          <strong>{latestDeviceLocations.length}</strong>
-                          <small>Devices with GPS</small>
+                          <strong>{activeAlarmLocations.length}</strong>
+                          <small>Alert devices on map</small>
                         </span>
                         <span className="map-kpi-chip">
-                          <strong>{freshestLocation?.updatedAt ? new Date(freshestLocation.updatedAt).toLocaleString() : '—'}</strong>
+                          <strong>{activeAlarmLocations[0]?.updatedAt ? new Date(activeAlarmLocations[0].updatedAt).toLocaleString() : '—'}</strong>
                           <small>Freshest update</small>
                         </span>
                       </div>
                     </div>
-                    {latestDeviceLocations.length ? (
+                    {activeAlarmLocations.length ? (
                       <div className="dashboard-map-layout">
                         <div className="map-placeholder map-embed-wrap map-square">
                           <iframe
                             title="Admin device location map"
                             className="map-embed"
-                            src={`https://maps.google.com/maps?q=${selectedDashboardLocation?.latitude},${selectedDashboardLocation?.longitude}&z=15&output=embed`}
+                            src={`https://maps.google.com/maps?q=${encodeURIComponent(alertMapQuery || `${freshestLocation?.latitude || 0},${freshestLocation?.longitude || 0}`)}&z=${alertMapZoom}&output=embed`}
                           />
-                        </div>
-                        <div className="dashboard-map-list">
-                          <h4>Recent device locations</h4>
-                          <div className="dashboard-map-list-grid">
-                            {latestDeviceLocations.slice(0, 6).map((entry) => {
-                              const entryId = String(entry.device.id || entry.device.deviceId || '')
-                              const isActive = entryId === String(selectedDashboardLocation?.device?.id || selectedDashboardLocation?.device?.deviceId || '')
-                              return (
-                                <button
-                                  type="button"
-                                  key={`${entryId}-${entry.updatedAt || 'na'}`}
-                                  className={`map-list-item ${isActive ? 'is-active' : ''}`}
-                                  onClick={() => setDashboardMapDeviceId(entryId)}
-                                >
-                                  <strong>{entry.device.name || entry.device.deviceName || `Device ${entryId}`}</strong>
-                                  <span>{entry.latitude.toFixed(5)}, {entry.longitude.toFixed(5)}</span>
-                                  <small>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : 'Timestamp unavailable'}</small>
-                                </button>
-                              )
-                            })}
-                          </div>
                         </div>
                       </div>
                     ) : (
                       <div className="map-placeholder map-square">
-                        <span className="map-chip">No device coordinates received from webhook/SMS yet.</span>
+                        <span className="map-chip">No active alert locations to map yet.</span>
                       </div>
                     )}
                   </article>
@@ -1116,18 +1122,36 @@ export default function HomeView({
                   <aside className="active-alerts card-like">
                     <div className="section-head">
                       <h3>Active Alert Devices</h3>
-                      <span className="map-kpi-chip compact"><strong>{activeAlarmDevices.length}</strong></span>
+                      <div className="alert-head-actions">
+                        <span className="map-kpi-chip compact"><strong>{activeAlarmDevices.length}</strong></span>
+                        <button
+                          type="button"
+                          className="table-link action-chip action-chip-neutral"
+                          onClick={() => setDashboardMapDeviceId('')}
+                          disabled={!selectedAlertLocation}
+                        >
+                          Show all on map
+                        </button>
+                      </div>
                     </div>
                     <div className="active-alerts-list">
-                      {activeAlarmDevices.length ? activeAlarmDevices.slice(0, 8).map(({ device, alarmCode }) => {
+                      {activeAlarmLocations.length ? activeAlarmLocations.slice(0, 8).map(({ device, alarmCode, latitude, longitude, updatedAt, deviceKey }) => {
                         const meta = resolveDeviceMeta(device)
                         const alarmMeta = getAlarmMeta(alarmCode)
+                        const isMapFocused = String(dashboardMapDeviceId) === String(deviceKey)
                         return (
-                          <div key={`alarm-${device.id || device.deviceId || device.phoneNumber}`} className="active-alert-row">
+                          <button
+                            type="button"
+                            key={`alarm-${device.id || device.deviceId || device.phoneNumber}`}
+                            className={`active-alert-row ${isMapFocused ? 'is-map-focused' : ''}`}
+                            onClick={() => setDashboardMapDeviceId(deviceKey)}
+                          >
                             <strong>{device.name || device.deviceName || 'Unnamed device'}</strong>
                             <span>{meta.ownerName}</span>
                             <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
-                          </div>
+                            <small>{latitude.toFixed(5)}, {longitude.toFixed(5)}</small>
+                            <small>{updatedAt ? new Date(updatedAt).toLocaleString() : 'Timestamp unavailable'}</small>
+                          </button>
                         )
                       }) : <p className="status">No active alerts right now.</p>}
                     </div>
