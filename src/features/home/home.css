@@ -606,6 +606,9 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .location-device-picker {
   margin-bottom: 0.8rem;
 }
+.location-device-picker-compact {
+  margin-top: 0.25rem;
+}
 .request-btn-inline {
   margin: 0;
 }
