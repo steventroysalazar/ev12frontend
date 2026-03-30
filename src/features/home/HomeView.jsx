@@ -1079,9 +1079,23 @@ export default function HomeView({
   }, [])
 
   useEffect(() => {
-    if (!leafletReady || !dashboardLeafletRef.current || !activeAlarmLocations.length || typeof window === 'undefined' || !window.L) return
+    if (
+      activeSection !== 'dashboard' ||
+      !leafletReady ||
+      !dashboardLeafletRef.current ||
+      !activeAlarmLocations.length ||
+      typeof window === 'undefined' ||
+      !window.L
+    ) return
 
     const L = window.L
+    const currentContainer = dashboardLeafletMapRef.current?.getContainer?.()
+    if (dashboardLeafletMapRef.current && currentContainer !== dashboardLeafletRef.current) {
+      dashboardLeafletMapRef.current.remove()
+      dashboardLeafletMapRef.current = null
+      dashboardMarkersLayerRef.current = null
+    }
+
     if (!dashboardLeafletMapRef.current) {
       dashboardLeafletMapRef.current = L.map(dashboardLeafletRef.current, {
         zoomControl: true
@@ -1123,7 +1137,7 @@ export default function HomeView({
     }
 
     setTimeout(() => map.invalidateSize(), 120)
-  }, [activeAlarmLocations, dashboardMapDeviceId, getAlarmMeta, leafletReady, resolveDeviceMeta, selectedAlertLocation])
+  }, [activeAlarmLocations, activeSection, dashboardMapDeviceId, getAlarmMeta, leafletReady, resolveDeviceMeta, selectedAlertLocation])
 
   useEffect(() => {
     return () => {
@@ -1256,12 +1270,14 @@ export default function HomeView({
             <aside className="device-detail-sidebar">
               <strong>Device workspace</strong>
               <p>{selectedDevice ? (selectedDevice.name || selectedDevice.deviceName || 'Selected device') : 'No device selected yet'}</p>
-              <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-overview')}>Device Profile</button>
-              <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-basic')}>Basic Config</button>
-              <button type="button" className={activeDeviceSettingsSection === 'device-detail-advanced' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-advanced')}>Advanced Config</button>
-              <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-location')}>Location</button>
-              <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-commands')}>Commands</button>
-              <button type="button" className="table-link" onClick={() => setActiveSection('devices')}>Back to devices</button>
+              <div className="device-detail-nav">
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-overview')}>Device Profile</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-basic')}>Basic Config</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-advanced' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-advanced')}>Advanced Config</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-location')}>Location</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-commands')}>Commands</button>
+              </div>
+              <button type="button" className="device-back-button" onClick={() => setActiveSection('devices')}>← Back to devices</button>
             </aside>
           </div>
         ) : null}
