@@ -96,7 +96,7 @@
 .dashboard-main-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 0.9rem; }
 .dashboard-top-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
   gap: 0.9rem;
   margin-bottom: 0.9rem;
 }
@@ -198,6 +198,16 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .map-chip { position: absolute; right: 1rem; top: 1rem; background: #fff; border: 1px solid #cfd6de; padding: 0.4rem; border-radius: 4px; }
 .request-btn { margin-top: 0.6rem; margin-left: auto; display: block; }
 .location-grid,.commands-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.dashboard-live-map {
+  overflow: hidden;
+  border: 1px solid #d6e0ea;
+}
+
+.leaflet-map {
+  width: 100%;
+  height: 100%;
+  min-height: 340px;
+}
 
 .preview-box,.conversation-box { min-height: 170px; background: #f3f6fa; border: 1px solid #d7dfe8; border-radius: 10px; padding: 0.8rem; white-space: pre-wrap; }
 
@@ -232,7 +242,8 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .active-alerts-list {
   display: grid;
   gap: 0.5rem;
-  max-height: 480px;
+  max-height: 680px;
+  min-height: 520px;
   overflow-y: auto;
   margin-top: 0.5rem;
 }
@@ -257,6 +268,47 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .active-alert-row span {
   color: #5f6f84;
   font-size: 0.78rem;
+}
+
+.table-controls {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+}
+
+.device-workspace-head {
+  margin-bottom: 0.8rem;
+  padding: 0.6rem;
+}
+
+.device-detail-sidebar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.device-detail-sidebar p {
+  margin: 0 0.5rem 0 0;
+  color: #4f5f74;
+  font-size: 0.85rem;
+}
+
+.device-detail-sidebar button {
+  border: 1px solid #cad8e9;
+  background: #f7fbff;
+  color: #1e2f47;
+  border-radius: 9px;
+  padding: 0.32rem 0.62rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.device-detail-sidebar button.is-active {
+  background: linear-gradient(135deg, #0f766e, #15968d);
+  border-color: #0f766e;
+  color: #fff;
 }
 
 .active-alert-row small {
@@ -800,4 +852,18 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .queue-mini-changed {
   background: #fff7ed;
   color: #c2410c;
+}
+
+@media (max-width: 980px) {
+  .dashboard-top-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .active-alerts-list {
+    min-height: 340px;
+  }
+
+  .table-controls {
+    grid-template-columns: 1fr;
+  }
 }
