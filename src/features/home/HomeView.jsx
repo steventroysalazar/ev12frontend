@@ -772,11 +772,11 @@ export default function HomeView({
 
     const ownerLocation =
       locationById?.name ||
+      device.location?.name ||
       device.locationName ||
       device.location_name ||
       owner?.locationName ||
       owner?.location?.name ||
-      owner?.address ||
       '-'
 
     return {
@@ -1216,7 +1216,12 @@ export default function HomeView({
 
   return (
     <div className="home-shell">
-      <Sidebar activeSection={activeSection} onChangeSection={setActiveSection} onLogout={onLogout} />
+      <Sidebar
+        activeSection={activeSection}
+        onChangeSection={setActiveSection}
+        onLogout={onLogout}
+        showDeviceCenter={isDeviceWorkspaceSection && Boolean(selectedDevice)}
+      />
 
       <div className="dashboard-content">
         {dataStatus ? <p className="status">{dataStatus}</p> : null}
