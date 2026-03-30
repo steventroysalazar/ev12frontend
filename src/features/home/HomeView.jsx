@@ -1684,17 +1684,19 @@ export default function HomeView({
         {(activeSection === 'location' || activeSection === 'device-detail-location') && (
           <section className="section-panel">
             <h2 className="page-title">Location</h2>
-            <article className="card-like map-panel">
-              <div className="section-head">
-                <h3 className="block-title">Device Location Viewer</h3>
+            <article className="card-like map-panel location-viewer-card">
+              <div className="section-head location-viewer-toolbar">
+                <div>
+                  <h3 className="block-title">Device Location Viewer</h3>
+                  <p className="status location-note">Live map view for the active device. SMS data falls back to latest webhook coordinates when needed.</p>
+                </div>
                 <button className="mini-action request-btn-inline" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
               </div>
-              <p className="status">If SMS location is unavailable, this view automatically falls back to the saved webhook location.</p>
               {isDeviceDetailLocationSection ? (
-                <div className="field-grid location-device-picker">
+                <div className="field-grid location-device-picker location-device-picker-compact">
                   <div>
                     <label>Selected device</label>
-                    <div className="map-chip map-chip-inline">
+                    <div className="selected-device-pill">
                       {locationViewerDevice
                         ? `${locationViewerDevice.name || locationViewerDevice.deviceName || `Device ${locationViewerDevice.id || locationViewerDevice.deviceId || ''}`} (${locationViewerDevice.phoneNumber || 'No phone'})`
                         : 'No selected device.'}
@@ -1729,9 +1731,9 @@ export default function HomeView({
                       src={`https://maps.google.com/maps?q=${displayedLocation.latitude},${displayedLocation.longitude}&z=15&output=embed`}
                     />
                   </div>
-                  <div className="location-meta">
+                  <div className="location-meta location-meta-row">
                     <span className="map-chip map-chip-inline">Lat: {displayedLocation.latitude} Lon: {displayedLocation.longitude}</span>
-                    <a href={displayedLocation.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
+                    <a className="table-link action-chip action-chip-neutral" href={displayedLocation.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
                     {usingWebhookFallback ? <span className="status location-source-chip">Source: Webhook fallback</span> : <span className="status location-source-chip">Source: SMS reply</span>}
                     {selectedDeviceWebhookLocation?.updatedAt ? (
                       <span className="status">Last device update: {new Date(selectedDeviceWebhookLocation.updatedAt).toLocaleString()}</span>
