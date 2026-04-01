@@ -1741,16 +1741,18 @@ export default function HomeView({
                       <td>{d.eviewVersion || d.version || '-'}</td>
                       <td>{d.externalDeviceId || d.external_device_id || d.deviceId || '-'}</td>
                       <td>
-                        <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
-                        <button
-                          className="table-link table-link-compact action-chip action-chip-danger device-cancel-inline"
-                          type="button"
-                          onClick={() => handleCancelAlarm(d)}
-                          disabled={!resolveLiveAlarmCode(d)}
-                          title={!resolveLiveAlarmCode(d) ? 'No active alarm to cancel' : 'Cancel active alarm'}
-                        >
-                          Cancel Alarm
-                        </button>
+                        <div className="alarm-status-inline">
+                          <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
+                          <button
+                            className="table-link table-link-compact action-chip action-chip-danger device-cancel-inline"
+                            type="button"
+                            onClick={() => handleCancelAlarm(d)}
+                            disabled={!resolveLiveAlarmCode(d)}
+                            title={!resolveLiveAlarmCode(d) ? 'No active alarm to cancel' : 'Cancel active alarm'}
+                          >
+                            Cancel Alarm
+                          </button>
+                        </div>
                       </td>
                       <td>{formatTimestamp(d.lastPowerOnAt || d.last_power_on_at)}</td>
                       <td>{formatTimestamp(d.lastPowerOffAt || d.last_power_off_at)}</td>
