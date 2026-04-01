@@ -9,6 +9,7 @@ const operationsGroup = {
     { id: 'users', label: 'Users', icon: 'users' },
     { id: 'locations', label: 'Locations', icon: 'location' },
     { id: 'devices', label: 'Devices', icon: 'devices' },
+    { id: 'alarm-logs', label: 'Alarm Logs', icon: 'clock' },
     { id: 'replies', label: 'Replies', icon: 'replies' },
     { id: 'webhooks', label: 'Webhook Events', icon: 'refresh' }
   ]
