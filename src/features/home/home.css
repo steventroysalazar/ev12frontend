@@ -639,6 +639,30 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .location-device-picker-compact {
   margin-top: 0.25rem;
 }
+.lifecycle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 0.6rem;
+  margin: 0.8rem 0;
+}
+.lifecycle-card {
+  border: 1px solid #d8e3ef;
+  border-radius: 10px;
+  background: #f6faff;
+  padding: 0.65rem 0.75rem;
+  display: grid;
+  gap: 0.25rem;
+}
+.lifecycle-card strong {
+  font-size: 0.74rem;
+  color: #4f6580;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.lifecycle-card span {
+  color: #1f3b60;
+  font-weight: 700;
+}
 .request-btn-inline {
   margin: 0;
 }
@@ -711,6 +735,9 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 
 @media (max-width: 980px) {
   .location-viewer-layout {
+    grid-template-columns: 1fr;
+  }
+  .lifecycle-grid {
     grid-template-columns: 1fr;
   }
 }

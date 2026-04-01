@@ -161,6 +161,12 @@ export default function HomeView({
     return { label: normalizedCode, tone: 'active' }
   }, [])
 
+  const formatTimestamp = useCallback((value) => {
+    if (!value) return '-'
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? '-' : parsed.toLocaleString()
+  }, [])
+
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
   const isAdminDashboard = normalizedRole === 'super admin' || normalizedRole === 'manager'
 
@@ -1326,12 +1332,15 @@ export default function HomeView({
       ['Device Name', currentDevice.name || currentDevice.deviceName || '-'],
       ['Device Phone Number', currentDevice.phoneNumber || '-'],
       ['Alarm Status', resolveLiveAlarmCode(currentDevice) || 'No active alarm'],
+      ['Last Power ON', formatTimestamp(currentDevice.lastPowerOnAt || currentDevice.last_power_on_at)],
+      ['Last Power OFF', formatTimestamp(currentDevice.lastPowerOffAt || currentDevice.last_power_off_at)],
+      ['Last Disconnected', formatTimestamp(currentDevice.lastDisconnectedAt || currentDevice.last_disconnected_at)],
       ['Owner User', deviceMeta.ownerName],
       ['Owner Location', deviceMeta.ownerLocation],
       ['Last reply', replyRows[0]?.receivedAt || 'No reply yet'],
       ['Battery status', currentDevice.batteryStatus || currentDevice.battery || 'Unknown']
     ]
-  }, [devices, replyRows, user, resolveDeviceMeta, resolveLiveAlarmCode])
+  }, [devices, formatTimestamp, replyRows, user, resolveDeviceMeta, resolveLiveAlarmCode])
 
   const getAlarmCancelledAt = useCallback((device) => {
     const internalId = Number(device?.id || device?.deviceId || 0)
@@ -1714,7 +1723,7 @@ export default function HomeView({
             </div>
             <div className="table-shell">
               <table className="data-table">
-              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Owner</th><th>Role</th><th>Location</th><th>Edit</th><th>Settings</th><th>Alarm Action</th></tr></thead>
+              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Last Power ON</th><th>Last Power OFF</th><th>Last Disconnected</th><th>Owner</th><th>Role</th><th>Location</th><th>Edit</th><th>Settings</th><th>Alarm Action</th></tr></thead>
               <tbody>
                 {pagedDevices.rows.map((d) => {
                   const deviceMeta = resolveDeviceMeta(d)
@@ -1727,6 +1736,9 @@ export default function HomeView({
                       <td>{d.eviewVersion || d.version || '-'}</td>
                       <td>{d.externalDeviceId || d.external_device_id || d.deviceId || '-'}</td>
                       <td><span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span></td>
+                      <td>{formatTimestamp(d.lastPowerOnAt || d.last_power_on_at)}</td>
+                      <td>{formatTimestamp(d.lastPowerOffAt || d.last_power_off_at)}</td>
+                      <td>{formatTimestamp(d.lastDisconnectedAt || d.last_disconnected_at)}</td>
                       <td>{deviceMeta.ownerName}</td>
                       <td>{deviceMeta.ownerRole}</td>
                       <td>{deviceMeta.ownerLocation}</td>
@@ -1762,6 +1774,13 @@ export default function HomeView({
               <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{users.map((entry) => <option key={entry.id || entry.email} value={entry.id || ''}>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.email}</option>)}</select>
               <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((entry) => <option key={entry.id || entry.name} value={entry.id || ''}>{entry.name || 'Unknown location'}</option>)}</select>
             </div>
+            {selectedWorkspaceDevice ? (
+              <div className="lifecycle-grid">
+                <div className="lifecycle-card"><strong>Last Power ON</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastPowerOnAt || selectedWorkspaceDevice.last_power_on_at)}</span></div>
+                <div className="lifecycle-card"><strong>Last Power OFF</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastPowerOffAt || selectedWorkspaceDevice.last_power_off_at)}</span></div>
+                <div className="lifecycle-card"><strong>Last Disconnected</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastDisconnectedAt || selectedWorkspaceDevice.last_disconnected_at)}</span></div>
+              </div>
+            ) : null}
             <button className="mini-action" disabled={!editingDeviceId} onClick={handleUpdateDevice}>Save Device Profile</button>
           </section>
         )}
