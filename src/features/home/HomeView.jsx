@@ -1740,7 +1740,18 @@ export default function HomeView({
                       <td>{d.phoneNumber || '-'}</td>
                       <td>{d.eviewVersion || d.version || '-'}</td>
                       <td>{d.externalDeviceId || d.external_device_id || d.deviceId || '-'}</td>
-                      <td><span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span></td>
+                      <td>
+                        <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
+                        <button
+                          className="table-link table-link-compact action-chip action-chip-danger device-cancel-inline"
+                          type="button"
+                          onClick={() => handleCancelAlarm(d)}
+                          disabled={!resolveLiveAlarmCode(d)}
+                          title={!resolveLiveAlarmCode(d) ? 'No active alarm to cancel' : 'Cancel active alarm'}
+                        >
+                          Cancel Alarm
+                        </button>
+                      </td>
                       <td>{formatTimestamp(d.lastPowerOnAt || d.last_power_on_at)}</td>
                       <td>{formatTimestamp(d.lastPowerOffAt || d.last_power_off_at)}</td>
                       <td>{formatTimestamp(d.lastDisconnectedAt || d.last_disconnected_at)}</td>
@@ -1750,7 +1761,9 @@ export default function HomeView({
                       <td><button className="table-link table-link-compact action-chip action-chip-neutral" type="button" onClick={() => openEditDeviceModal(d)}>Edit</button></td>
                       <td><button className="table-link table-link-compact action-chip action-chip-primary" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
                       <td>
-                        <button className="table-link table-link-compact action-chip action-chip-danger" type="button" onClick={() => handleCancelAlarm(d)}>Cancel Alarm</button>
+                        <button className="table-link table-link-compact action-chip action-chip-danger" type="button" onClick={() => handleCancelAlarm(d)} disabled={!resolveLiveAlarmCode(d)}>
+                          Cancel Alarm
+                        </button>
                         {cancelledAt ? <small className="alarm-cancel-meta">Cancelled: {new Date(cancelledAt).toLocaleString()}</small> : null}
                       </td>
                     </tr>
