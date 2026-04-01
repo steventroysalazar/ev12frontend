@@ -1356,12 +1356,17 @@ export default function HomeView({
   const handleCancelAlarm = useCallback(async (device) => {
     try {
       await onCancelDeviceAlarm?.(device)
-      setActionStatus({ type: 'success', message: `Alarm cancelled for ${device?.name || device?.deviceName || 'device'}.` })
+      const cancelledDeviceId = Number(device?.id || device?.deviceId || 0)
+      if (cancelledDeviceId) {
+        setAlarmLogDeviceId(String(cancelledDeviceId))
+        await loadAlarmLogs(cancelledDeviceId)
+      }
+      setActionStatus({ type: 'success', message: `Alarm cancelled for ${device?.name || device?.deviceName || 'device'}. Alarm logs refreshed.` })
       await loadDevices()
     } catch (error) {
       setActionStatus({ type: 'error', message: `Cancel alarm failed: ${error.message}` })
     }
-  }, [loadDevices, onCancelDeviceAlarm])
+  }, [loadAlarmLogs, loadDevices, onCancelDeviceAlarm])
 
   const renderRaw = (value) => {
     return typeof value === 'string' ? value : JSON.stringify(value, null, 2)
@@ -1745,7 +1750,7 @@ export default function HomeView({
                       <td><button className="table-link table-link-compact action-chip action-chip-neutral" type="button" onClick={() => openEditDeviceModal(d)}>Edit</button></td>
                       <td><button className="table-link table-link-compact action-chip action-chip-primary" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
                       <td>
-                        <button className="table-link table-link-compact action-chip action-chip-danger" type="button" onClick={() => handleCancelAlarm(d)}>Cancel SOS</button>
+                        <button className="table-link table-link-compact action-chip action-chip-danger" type="button" onClick={() => handleCancelAlarm(d)}>Cancel Alarm</button>
                         {cancelledAt ? <small className="alarm-cancel-meta">Cancelled: {new Date(cancelledAt).toLocaleString()}</small> : null}
                       </td>
                     </tr>
