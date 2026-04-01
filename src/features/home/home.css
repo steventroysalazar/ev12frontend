@@ -358,7 +358,7 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .table-shell {
   border: 1px solid #d6e0ea;
   border-radius: 14px;
-  overflow: hidden;
+  overflow: auto;
   background: #fff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
@@ -514,9 +514,22 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 }
 
 .alarm-cancel-meta {
-  display: block;
-  margin-top: 0.35rem;
+  display: inline-block;
+  margin-left: 0.35rem;
   color: #768398;
+  white-space: nowrap;
+}
+.device-cancel-inline {
+  min-width: auto;
+  padding: 0.28rem 0.58rem;
+  white-space: nowrap;
+}
+.alarm-status-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: nowrap;
+  min-width: max-content;
 }
 
 .map-embed-wrap { padding: 0; overflow: hidden; background: #e5e7eb; }
@@ -639,6 +652,30 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .location-device-picker-compact {
   margin-top: 0.25rem;
 }
+.lifecycle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 0.6rem;
+  margin: 0.8rem 0;
+}
+.lifecycle-card {
+  border: 1px solid #d8e3ef;
+  border-radius: 10px;
+  background: #f6faff;
+  padding: 0.65rem 0.75rem;
+  display: grid;
+  gap: 0.25rem;
+}
+.lifecycle-card strong {
+  font-size: 0.74rem;
+  color: #4f6580;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.lifecycle-card span {
+  color: #1f3b60;
+  font-weight: 700;
+}
 .request-btn-inline {
   margin: 0;
 }
@@ -691,6 +728,13 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .location-viewer-layout.is-device-workspace .location-meta-panel {
   background: linear-gradient(180deg, #f8fcff 0%, #f2f7fd 100%);
 }
+.location-leaflet-wrap {
+  overflow: hidden;
+  background: #e5e7eb;
+}
+.location-leaflet-map {
+  min-height: 100%;
+}
 .location-source-chip {
   background: #ecf8f6;
   border: 1px solid #bce8df;
@@ -698,9 +742,15 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
   padding: 0.2rem 0.55rem;
   color: #0c6a60;
 }
+.breadcrumb-table-wrap {
+  margin-top: 0.8rem;
+}
 
 @media (max-width: 980px) {
   .location-viewer-layout {
+    grid-template-columns: 1fr;
+  }
+  .lifecycle-grid {
     grid-template-columns: 1fr;
   }
 }
