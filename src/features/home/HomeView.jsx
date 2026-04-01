@@ -121,10 +121,18 @@ export default function HomeView({
   const [clearingWebhookEvents, setClearingWebhookEvents] = useState(false)
   const [webhookLimit, setWebhookLimit] = useState('10')
   const [locationDeviceId, setLocationDeviceId] = useState('')
+  const [alarmLogDeviceId, setAlarmLogDeviceId] = useState('')
+  const [alarmLogs, setAlarmLogs] = useState([])
+  const [alarmLogsStatus, setAlarmLogsStatus] = useState('')
+  const [locationBreadcrumbs, setLocationBreadcrumbs] = useState([])
+  const [locationBreadcrumbsStatus, setLocationBreadcrumbsStatus] = useState('')
   const webhookFingerprintRef = useRef('')
   const dashboardLeafletRef = useRef(null)
   const dashboardLeafletMapRef = useRef(null)
   const dashboardMarkersLayerRef = useRef(null)
+  const locationLeafletRef = useRef(null)
+  const locationLeafletMapRef = useRef(null)
+  const locationLeafletLayerRef = useRef(null)
   const [leafletReady, setLeafletReady] = useState(false)
   const isDeviceWorkspaceSection = ['device-detail-overview', 'device-detail-basic', 'device-detail-advanced', 'device-detail-location', 'device-detail-commands'].includes(activeSection)
   const isDeviceDetailLocationSection = activeSection === 'device-detail-location'
@@ -151,6 +159,12 @@ export default function HomeView({
     if (normalizedLower.includes('fall')) return { label: 'Fall-Down Alert', tone: 'warning' }
 
     return { label: normalizedCode, tone: 'active' }
+  }, [])
+
+  const formatTimestamp = useCallback((value) => {
+    if (!value) return '-'
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? '-' : parsed.toLocaleString()
   }, [])
 
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
@@ -271,6 +285,44 @@ export default function HomeView({
     setDevices(flattened)
   }, [asCollection, fetchJson])
 
+  const loadAlarmLogs = useCallback(async (deviceId) => {
+    if (!deviceId) {
+      setAlarmLogs([])
+      setAlarmLogsStatus('Select a device to load alarm logs.')
+      return
+    }
+
+    setAlarmLogsStatus('Loading alarm logs...')
+    try {
+      const payload = await fetchJson(`/api/devices/${deviceId}/alarm-logs`, { headers: {} })
+      const rows = asCollection(payload, ['alarmLogs', 'logs'])
+      setAlarmLogs(rows)
+      setAlarmLogsStatus(rows.length ? `Showing ${rows.length} alarm log entr${rows.length === 1 ? 'y' : 'ies'}.` : 'No alarm logs recorded for this device.')
+    } catch (error) {
+      setAlarmLogs([])
+      setAlarmLogsStatus(`Failed to load alarm logs: ${error.message}`)
+    }
+  }, [asCollection, fetchJson])
+
+  const loadLocationBreadcrumbs = useCallback(async (deviceId) => {
+    if (!deviceId) {
+      setLocationBreadcrumbs([])
+      setLocationBreadcrumbsStatus('Select a device to load breadcrumbs.')
+      return
+    }
+
+    setLocationBreadcrumbsStatus('Loading breadcrumbs...')
+    try {
+      const payload = await fetchJson(`/api/devices/${deviceId}/location-breadcrumbs`, { headers: {} })
+      const rows = asCollection(payload, ['breadcrumbs', 'locationBreadcrumbs'])
+      setLocationBreadcrumbs(rows)
+      setLocationBreadcrumbsStatus(rows.length ? `Showing ${rows.length} breadcrumb point${rows.length === 1 ? '' : 's'}.` : 'No breadcrumb history for this device yet.')
+    } catch (error) {
+      setLocationBreadcrumbs([])
+      setLocationBreadcrumbsStatus(`Failed to load breadcrumbs: ${error.message}`)
+    }
+  }, [asCollection, fetchJson])
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -389,6 +441,16 @@ export default function HomeView({
 
     return () => clearInterval(intervalId)
   }, [activeSection, loadWebhookEvents])
+
+  useEffect(() => {
+    if (activeSection !== 'alarm-logs') return
+    if (!devices.length) {
+      loadDevices()
+      return
+    }
+    loadAlarmLogs(alarmLogDeviceId)
+  }, [activeSection, alarmLogDeviceId, devices.length, loadAlarmLogs, loadDevices])
+
 
   const clearWebhookEvents = useCallback(async () => {
     if (clearingWebhookEvents) return
@@ -877,6 +939,19 @@ export default function HomeView({
     setLocationDeviceId(preferredId)
   }, [locationDeviceOptions, locationDeviceId, configForm.deviceId])
 
+  useEffect(() => {
+    if (!locationDeviceOptions.length) {
+      setAlarmLogDeviceId('')
+      return
+    }
+
+    if (alarmLogDeviceId && locationDeviceOptions.some((device) => String(device.id || device.deviceId || '') === String(alarmLogDeviceId))) {
+      return
+    }
+
+    setAlarmLogDeviceId(String(locationDeviceOptions[0].id || locationDeviceOptions[0].deviceId || ''))
+  }, [alarmLogDeviceId, locationDeviceOptions])
+
   const selectedLocationDevice = useMemo(
     () => locationDeviceOptions.find((device) => String(device.id || device.deviceId || '') === String(locationDeviceId)) || null,
     [locationDeviceId, locationDeviceOptions]
@@ -906,6 +981,30 @@ export default function HomeView({
 
   const displayedLocation = locationResult || selectedDeviceWebhookLocation
   const usingWebhookFallback = !locationResult && Boolean(selectedDeviceWebhookLocation)
+  const breadcrumbPoints = useMemo(() => {
+    return locationBreadcrumbs
+      .map((entry) => {
+        const coordinates = resolveValidCoordinates(entry)
+        if (!coordinates) return null
+        const capturedAt = entry.capturedAt || entry.eventAt || entry.createdAt || entry.updatedAt || null
+        const capturedAtMs = capturedAt ? new Date(capturedAt).getTime() : 0
+        return {
+          ...entry,
+          ...coordinates,
+          capturedAt,
+          capturedAtMs: Number.isFinite(capturedAtMs) ? capturedAtMs : 0
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.capturedAtMs - b.capturedAtMs)
+  }, [locationBreadcrumbs, resolveValidCoordinates])
+
+  useEffect(() => {
+    if ((activeSection !== 'location' && activeSection !== 'device-detail-location') || !locationViewerDevice) return
+    const deviceId = locationViewerDevice.id || locationViewerDevice.deviceId
+    if (!deviceId) return
+    loadLocationBreadcrumbs(deviceId)
+  }, [activeSection, locationViewerDevice, loadLocationBreadcrumbs])
   const dashboardPageSize = 8
   const activeAlertPageSize = 6
   const listPageSize = 10
@@ -1148,6 +1247,76 @@ export default function HomeView({
     }
   }, [])
 
+  useEffect(() => {
+    if (
+      (activeSection !== 'location' && activeSection !== 'device-detail-location') ||
+      !leafletReady ||
+      !locationLeafletRef.current ||
+      !displayedLocation ||
+      typeof window === 'undefined' ||
+      !window.L
+    ) return
+
+    const L = window.L
+    const currentContainer = locationLeafletMapRef.current?.getContainer?.()
+    if (locationLeafletMapRef.current && currentContainer !== locationLeafletRef.current) {
+      locationLeafletMapRef.current.remove()
+      locationLeafletMapRef.current = null
+      locationLeafletLayerRef.current = null
+    }
+
+    if (!locationLeafletMapRef.current) {
+      locationLeafletMapRef.current = L.map(locationLeafletRef.current, { zoomControl: true })
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(locationLeafletMapRef.current)
+      locationLeafletLayerRef.current = L.layerGroup().addTo(locationLeafletMapRef.current)
+    }
+
+    const map = locationLeafletMapRef.current
+    const layer = locationLeafletLayerRef.current || L.layerGroup().addTo(map)
+    layer.clearLayers()
+
+    const trail = breadcrumbPoints.length ? breadcrumbPoints : [displayedLocation]
+    const latLngs = trail.map((point) => [point.latitude, point.longitude])
+
+    if (latLngs.length > 1) {
+      L.polyline(latLngs, { color: '#0f766e', weight: 4, opacity: 0.8 }).addTo(layer)
+    }
+
+    trail.forEach((point, index) => {
+      const isLastPoint = index === trail.length - 1
+      const marker = L.circleMarker([point.latitude, point.longitude], {
+        radius: isLastPoint ? 7 : 5,
+        weight: 2,
+        color: isLastPoint ? '#b91c1c' : '#0f766e',
+        fillColor: isLastPoint ? '#ef4444' : '#2dd4bf',
+        fillOpacity: 0.9
+      })
+
+      const popupTime = point.capturedAt ? new Date(point.capturedAt).toLocaleString() : 'Unknown'
+      marker.bindPopup(`Lat/Lng: ${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)}<br/>Time: ${popupTime}`)
+      marker.addTo(layer)
+    })
+
+    if (latLngs.length > 1) {
+      map.fitBounds(latLngs, { padding: [24, 24] })
+    } else if (latLngs.length === 1) {
+      map.setView(latLngs[0], 15)
+    }
+
+    setTimeout(() => map.invalidateSize(), 120)
+  }, [activeSection, breadcrumbPoints, displayedLocation, leafletReady])
+
+  useEffect(() => {
+    return () => {
+      if (locationLeafletMapRef.current) {
+        locationLeafletMapRef.current.remove()
+        locationLeafletMapRef.current = null
+      }
+    }
+  }, [])
+
   const userDeviceRows = useMemo(() => {
     const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
     const ownedDevices = devices.filter((device) => {
@@ -1163,12 +1332,15 @@ export default function HomeView({
       ['Device Name', currentDevice.name || currentDevice.deviceName || '-'],
       ['Device Phone Number', currentDevice.phoneNumber || '-'],
       ['Alarm Status', resolveLiveAlarmCode(currentDevice) || 'No active alarm'],
+      ['Last Power ON', formatTimestamp(currentDevice.lastPowerOnAt || currentDevice.last_power_on_at)],
+      ['Last Power OFF', formatTimestamp(currentDevice.lastPowerOffAt || currentDevice.last_power_off_at)],
+      ['Last Disconnected', formatTimestamp(currentDevice.lastDisconnectedAt || currentDevice.last_disconnected_at)],
       ['Owner User', deviceMeta.ownerName],
       ['Owner Location', deviceMeta.ownerLocation],
       ['Last reply', replyRows[0]?.receivedAt || 'No reply yet'],
       ['Battery status', currentDevice.batteryStatus || currentDevice.battery || 'Unknown']
     ]
-  }, [devices, replyRows, user, resolveDeviceMeta, resolveLiveAlarmCode])
+  }, [devices, formatTimestamp, replyRows, user, resolveDeviceMeta, resolveLiveAlarmCode])
 
   const getAlarmCancelledAt = useCallback((device) => {
     const internalId = Number(device?.id || device?.deviceId || 0)
@@ -1184,12 +1356,17 @@ export default function HomeView({
   const handleCancelAlarm = useCallback(async (device) => {
     try {
       await onCancelDeviceAlarm?.(device)
-      setActionStatus({ type: 'success', message: `Alarm cancelled for ${device?.name || device?.deviceName || 'device'}.` })
+      const cancelledDeviceId = Number(device?.id || device?.deviceId || 0)
+      if (cancelledDeviceId) {
+        setAlarmLogDeviceId(String(cancelledDeviceId))
+        await loadAlarmLogs(cancelledDeviceId)
+      }
+      setActionStatus({ type: 'success', message: `Alarm cancelled for ${device?.name || device?.deviceName || 'device'}. Alarm logs refreshed.` })
       await loadDevices()
     } catch (error) {
       setActionStatus({ type: 'error', message: `Cancel alarm failed: ${error.message}` })
     }
-  }, [loadDevices, onCancelDeviceAlarm])
+  }, [loadAlarmLogs, loadDevices, onCancelDeviceAlarm])
 
   const renderRaw = (value) => {
     return typeof value === 'string' ? value : JSON.stringify(value, null, 2)
@@ -1551,7 +1728,7 @@ export default function HomeView({
             </div>
             <div className="table-shell">
               <table className="data-table">
-              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Owner</th><th>Role</th><th>Location</th><th>Edit</th><th>Settings</th><th>Alarm Action</th></tr></thead>
+              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Last Power ON</th><th>Last Power OFF</th><th>Last Disconnected</th><th>Owner</th><th>Role</th><th>Location</th><th>Edit</th><th>Settings</th><th>Alarm Action</th></tr></thead>
               <tbody>
                 {pagedDevices.rows.map((d) => {
                   const deviceMeta = resolveDeviceMeta(d)
@@ -1563,14 +1740,32 @@ export default function HomeView({
                       <td>{d.phoneNumber || '-'}</td>
                       <td>{d.eviewVersion || d.version || '-'}</td>
                       <td>{d.externalDeviceId || d.external_device_id || d.deviceId || '-'}</td>
-                      <td><span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span></td>
+                      <td>
+                        <div className="alarm-status-inline">
+                          <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
+                          <button
+                            className="table-link table-link-compact action-chip action-chip-danger device-cancel-inline"
+                            type="button"
+                            onClick={() => handleCancelAlarm(d)}
+                            disabled={!resolveLiveAlarmCode(d)}
+                            title={!resolveLiveAlarmCode(d) ? 'No active alarm to cancel' : 'Cancel active alarm'}
+                          >
+                            Cancel Alarm
+                          </button>
+                        </div>
+                      </td>
+                      <td>{formatTimestamp(d.lastPowerOnAt || d.last_power_on_at)}</td>
+                      <td>{formatTimestamp(d.lastPowerOffAt || d.last_power_off_at)}</td>
+                      <td>{formatTimestamp(d.lastDisconnectedAt || d.last_disconnected_at)}</td>
                       <td>{deviceMeta.ownerName}</td>
                       <td>{deviceMeta.ownerRole}</td>
                       <td>{deviceMeta.ownerLocation}</td>
                       <td><button className="table-link table-link-compact action-chip action-chip-neutral" type="button" onClick={() => openEditDeviceModal(d)}>Edit</button></td>
                       <td><button className="table-link table-link-compact action-chip action-chip-primary" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
                       <td>
-                        <button className="table-link table-link-compact action-chip action-chip-danger" type="button" onClick={() => handleCancelAlarm(d)}>Cancel SOS</button>
+                        <button className="table-link table-link-compact action-chip action-chip-danger" type="button" onClick={() => handleCancelAlarm(d)} disabled={!resolveLiveAlarmCode(d)}>
+                          Cancel Alarm
+                        </button>
                         {cancelledAt ? <small className="alarm-cancel-meta">Cancelled: {new Date(cancelledAt).toLocaleString()}</small> : null}
                       </td>
                     </tr>
@@ -1599,6 +1794,13 @@ export default function HomeView({
               <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{users.map((entry) => <option key={entry.id || entry.email} value={entry.id || ''}>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.email}</option>)}</select>
               <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((entry) => <option key={entry.id || entry.name} value={entry.id || ''}>{entry.name || 'Unknown location'}</option>)}</select>
             </div>
+            {selectedWorkspaceDevice ? (
+              <div className="lifecycle-grid">
+                <div className="lifecycle-card"><strong>Last Power ON</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastPowerOnAt || selectedWorkspaceDevice.last_power_on_at)}</span></div>
+                <div className="lifecycle-card"><strong>Last Power OFF</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastPowerOffAt || selectedWorkspaceDevice.last_power_off_at)}</span></div>
+                <div className="lifecycle-card"><strong>Last Disconnected</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastDisconnectedAt || selectedWorkspaceDevice.last_disconnected_at)}</span></div>
+              </div>
+            ) : null}
             <button className="mini-action" disabled={!editingDeviceId} onClick={handleUpdateDevice}>Save Device Profile</button>
           </section>
         )}
@@ -1755,29 +1957,110 @@ export default function HomeView({
               {displayedLocation ? (
                 <>
                   <div className={`location-viewer-layout ${isDeviceDetailLocationSection ? 'is-device-workspace' : ''}`}>
-                    <div className="map-placeholder map-embed-wrap map-square">
-                      <iframe
-                        title="Device location map"
-                        className="map-embed"
-                        src={`https://maps.google.com/maps?q=${displayedLocation.latitude},${displayedLocation.longitude}&z=15&output=embed`}
-                      />
+                    <div className="map-placeholder map-square location-leaflet-wrap">
+                      {leafletReady
+                        ? <div ref={locationLeafletRef} className="leaflet-map location-leaflet-map" />
+                        : <span className="map-chip">Loading map…</span>}
                     </div>
                     <aside className="location-meta-panel">
                       <h4>Location details</h4>
                       <span className="map-chip map-chip-inline">Lat: {displayedLocation.latitude} Lon: {displayedLocation.longitude}</span>
                       <a className="table-link action-chip action-chip-neutral" href={displayedLocation.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
                       {usingWebhookFallback ? <span className="status location-source-chip">Source: Webhook fallback</span> : <span className="status location-source-chip">Source: SMS reply</span>}
+                      <span className="status location-source-chip">Breadcrumbs: {breadcrumbPoints.length}</span>
                       {selectedDeviceWebhookLocation?.updatedAt ? (
                         <span className="status">Last device update: {new Date(selectedDeviceWebhookLocation.updatedAt).toLocaleString()}</span>
                       ) : null}
+                      <span className="status">{locationBreadcrumbsStatus}</span>
                     </aside>
                   </div>
+                  {breadcrumbPoints.length ? (
+                    <div className="table-wrap breadcrumb-table-wrap">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Captured</th>
+                            <th>Latitude</th>
+                            <th>Longitude</th>
+                            <th>Source</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[...breadcrumbPoints].reverse().slice(0, 20).map((crumb) => (
+                            <tr key={crumb.id || `${crumb.latitude}-${crumb.longitude}-${crumb.capturedAt || ''}`}>
+                              <td>{crumb.capturedAt ? new Date(crumb.capturedAt).toLocaleString() : '-'}</td>
+                              <td>{crumb.latitude}</td>
+                              <td>{crumb.longitude}</td>
+                              <td>{crumb.source || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
                   {locationResult?.rawMessage ? <pre className="preview-box">{locationResult.rawMessage}</pre> : null}
                 </>
               ) : (
                 <div className="map-placeholder map-square"><span className="map-chip">No SMS reply or webhook location yet for this device.</span></div>
               )}
               <p className="status">{status}</p>
+            </article>
+          </section>
+        )}
+
+        {activeSection === 'alarm-logs' && (
+          <section className="section-panel">
+            <h2 className="page-title">Alarm Logs</h2>
+            <article className="card-like">
+              <div className="field-grid location-device-picker">
+                <div>
+                  <label htmlFor="alarm-log-device-select">Device</label>
+                  <select
+                    id="alarm-log-device-select"
+                    value={alarmLogDeviceId}
+                    onChange={(event) => setAlarmLogDeviceId(event.target.value)}
+                  >
+                    {locationDeviceOptions.map((device) => (
+                      <option key={device.id || device.deviceId || device.phoneNumber} value={String(device.id || device.deviceId || '')}>
+                        {device.name || device.deviceName || `Device ${device.id || device.deviceId}`} ({device.phoneNumber || 'No phone'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p className="status">{alarmLogsStatus}</p>
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Event At</th>
+                      <th>Action</th>
+                      <th>Alarm Code</th>
+                      <th>Source</th>
+                      <th>Latitude</th>
+                      <th>Longitude</th>
+                      <th>Note</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {alarmLogs.length ? alarmLogs.map((entry) => (
+                      <tr key={entry.id || `${entry.eventAt || ''}-${entry.action || ''}`}>
+                        <td>{entry.eventAt ? new Date(entry.eventAt).toLocaleString() : '-'}</td>
+                        <td>{entry.action || '-'}</td>
+                        <td>{entry.alarmCode || '-'}</td>
+                        <td>{entry.source || '-'}</td>
+                        <td>{entry.latitude ?? '-'}</td>
+                        <td>{entry.longitude ?? '-'}</td>
+                        <td>{entry.note || '-'}</td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={7}>No alarm logs to show.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </article>
           </section>
         )}
