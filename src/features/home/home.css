@@ -514,9 +514,22 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 }
 
 .alarm-cancel-meta {
-  display: block;
-  margin-top: 0.35rem;
+  display: inline-block;
+  margin-left: 0.35rem;
   color: #768398;
+  white-space: nowrap;
+}
+.device-cancel-inline {
+  min-width: auto;
+  padding: 0.28rem 0.58rem;
+  white-space: nowrap;
+}
+.alarm-status-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: nowrap;
+  min-width: max-content;
 }
 .device-cancel-inline {
   min-width: 126px;

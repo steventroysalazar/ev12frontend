@@ -1728,7 +1728,7 @@ export default function HomeView({
             </div>
             <div className="table-shell">
               <table className="data-table">
-              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Last Power ON</th><th>Last Power OFF</th><th>Last Disconnected</th><th>Owner</th><th>Role</th><th>Location</th><th>Edit</th><th>Settings</th><th>Alarm Action</th></tr></thead>
+              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Last Power ON</th><th>Last Power OFF</th><th>Last Disconnected</th><th>Owner</th><th>Role</th><th>Location</th><th>Edit</th><th>Settings</th></tr></thead>
               <tbody>
                 {pagedDevices.rows.map((d) => {
                   const deviceMeta = resolveDeviceMeta(d)
@@ -1752,6 +1752,7 @@ export default function HomeView({
                           >
                             Cancel Alarm
                           </button>
+                          {cancelledAt ? <small className="alarm-cancel-meta">Cancelled: {new Date(cancelledAt).toLocaleString()}</small> : null}
                         </div>
                       </td>
                       <td>{formatTimestamp(d.lastPowerOnAt || d.last_power_on_at)}</td>
@@ -1762,12 +1763,6 @@ export default function HomeView({
                       <td>{deviceMeta.ownerLocation}</td>
                       <td><button className="table-link table-link-compact action-chip action-chip-neutral" type="button" onClick={() => openEditDeviceModal(d)}>Edit</button></td>
                       <td><button className="table-link table-link-compact action-chip action-chip-primary" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
-                      <td>
-                        <button className="table-link table-link-compact action-chip action-chip-danger" type="button" onClick={() => handleCancelAlarm(d)} disabled={!resolveLiveAlarmCode(d)}>
-                          Cancel Alarm
-                        </button>
-                        {cancelledAt ? <small className="alarm-cancel-meta">Cancelled: {new Date(cancelledAt).toLocaleString()}</small> : null}
-                      </td>
                     </tr>
                   )
                 })}
