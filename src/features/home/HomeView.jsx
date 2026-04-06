@@ -238,10 +238,10 @@ export default function HomeView({
 
   const metrics = useMemo(
     () => [
-      { label: 'TOTAL USERS', value: users.length, icon: 'users' },
-      { label: 'TOTAL DEVICES', value: devices.length, icon: 'devices' },
-      { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location' },
-      { label: 'RECENT REPLIES', value: repliesCount || 0, icon: 'replies' }
+      { label: 'TOTAL USERS', value: users.length, icon: 'users', section: 'users' },
+      { label: 'TOTAL DEVICES', value: devices.length, icon: 'devices', section: 'devices' },
+      { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location', section: 'locations' },
+      { label: 'RECENT REPLIES', value: repliesCount || 0, icon: 'replies', section: 'replies' }
     ],
     [users.length, devices.length, locations.length, repliesCount]
   )
@@ -1609,13 +1609,21 @@ export default function HomeView({
                     <div className="dashboard-hero-widgets">
                       <section className="metric-grid">
                         {metrics.map((metric) => (
-                          <article key={metric.label} className="metric-card">
-                            <div className="metric-icon"><AppIcon name={metric.icon} className="card-icon" /></div>
-                            <div>
-                              <p>{metric.label}</p>
-                              <h3>{Number(metric.value || 0)}</h3>
+                          <button
+                            type="button"
+                            key={metric.label}
+                            className="metric-card metric-card-link"
+                            onClick={() => setActiveSection(metric.section)}
+                          >
+                            <div className="metric-card-head">
+                              <span className="metric-card-title"><AppIcon name={metric.icon} className="card-icon" />{metric.label}</span>
+                              <span className="metric-card-menu">⋮</span>
                             </div>
-                          </article>
+                            <div className="metric-card-body">
+                              <h3>{Number(metric.value || 0).toLocaleString()}</h3>
+                              <span className="metric-card-jump">↗</span>
+                            </div>
+                          </button>
                         ))}
                       </section>
                       <aside className="dashboard-hero-cta">
