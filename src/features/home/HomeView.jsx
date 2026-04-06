@@ -1699,10 +1699,12 @@ export default function HomeView({
                 <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-location')}><span className="device-nav-dot"><AppIcon name="location" className="btn-icon" /></span>Location Request</button>
                 <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-commands')}><span className="device-nav-dot"><AppIcon name="command" className="btn-icon" /></span>Commands</button>
               </div>
-              <div className="device-workspace-actions">
-                <button type="button" className="mini-action" onClick={openConfigReview} disabled={!configForm.deviceId}>Save Device Changes</button>
+              <div className="device-workspace-controls">
+                <div className="device-workspace-actions">
+                  <button type="button" className="mini-action" onClick={openConfigReview} disabled={!configForm.deviceId}>Save Device Changes</button>
+                </div>
+                <button type="button" className="device-back-button" onClick={() => setActiveSection('devices')}>← Back to devices</button>
               </div>
-              <button type="button" className="device-back-button" onClick={() => setActiveSection('devices')}>← Back to devices</button>
             </aside>
           </div>
         ) : null}
