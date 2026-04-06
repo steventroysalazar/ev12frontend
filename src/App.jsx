@@ -168,7 +168,13 @@ const normalizeAlarmUpdatePayload = (update) => {
 
 export default function App() {
   const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
-  const [activeView, setActiveView] = useState(auth.isAuthenticated ? 'home' : 'login')
+  const [activeView, setActiveView] = useState(() => {
+    if (typeof window === 'undefined') return auth.isAuthenticated ? 'home' : 'login'
+    const path = window.location.pathname.toLowerCase()
+    if (path === '/register') return 'register'
+    if (path === '/login') return 'login'
+    return auth.isAuthenticated ? 'home' : 'login'
+  })
   const [authStatus, setAuthStatus] = useState(auth.isAuthenticated ? 'Authenticated session restored.' : 'Enter your credentials to sign in.')
   const [authLoading, setAuthLoading] = useState(false)
 
@@ -196,6 +202,58 @@ export default function App() {
   const [homeActiveSection, setHomeActiveSection] = useState('dashboard')
   const [alarmCancelledAtByDevice, setAlarmCancelledAtByDevice] = useState({})
   const alarmCancelledAtRef = useRef({})
+
+  const updateUrlForView = useCallback((view, { replace = false } = {}) => {
+    if (typeof window === 'undefined') return
+
+    const normalizedView = view === 'register' || view === 'login' ? view : 'home'
+    const nextPath = normalizedView === 'home' ? '/' : `/${normalizedView}`
+    const nextSearch = normalizedView === 'home' ? window.location.search : ''
+    const nextUrl = `${nextPath}${nextSearch}`
+    const currentUrl = `${window.location.pathname}${window.location.search}`
+
+    if (currentUrl === nextUrl) return
+
+    if (replace) {
+      window.history.replaceState({}, '', nextUrl)
+      return
+    }
+
+    window.history.pushState({}, '', nextUrl)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+
+    const syncViewFromUrl = () => {
+      const path = window.location.pathname.toLowerCase()
+      if (path === '/register') {
+        setActiveView('register')
+        return
+      }
+      if (path === '/login') {
+        setActiveView('login')
+        return
+      }
+      setActiveView('home')
+    }
+
+    window.addEventListener('popstate', syncViewFromUrl)
+    return () => window.removeEventListener('popstate', syncViewFromUrl)
+  }, [])
+
+  useEffect(() => {
+    if (!auth.isAuthenticated && activeView === 'home') {
+      setActiveView('login')
+      updateUrlForView('login', { replace: true })
+      return
+    }
+
+    if (auth.isAuthenticated && (activeView === 'login' || activeView === 'register')) {
+      setActiveView('home')
+      updateUrlForView('home', { replace: true })
+    }
+  }, [activeView, auth.isAuthenticated, updateUrlForView])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -722,6 +780,7 @@ export default function App() {
 
       setAuthStatus(`Registered ${data.email} successfully.`)
       setActiveView('login')
+      updateUrlForView('login', { replace: true })
     } catch (error) {
       setAuthStatus(`Register failed: ${error.message}`)
     }
@@ -759,6 +818,7 @@ export default function App() {
       dispatchAuth({ type: 'LOGIN_SUCCESS', payload: data })
       setAuthStatus(`Logged in as ${data.user.firstName} ${data.user.lastName} (role ${data.user.userRole}).`)
       setActiveView('home')
+      updateUrlForView('home', { replace: true })
     } catch (error) {
       setAuthStatus(`Login failed: ${error.message}`)
     } finally {
@@ -773,6 +833,7 @@ export default function App() {
     setAlarmStreamConnected(false)
     setAuthStatus('Logged out successfully.')
     setActiveView('login')
+    updateUrlForView('login', { replace: true })
   }
 
   const handleSendMessage = async () => {
@@ -1108,7 +1169,10 @@ export default function App() {
           setLoginForm={setLoginForm}
           onLogin={handleLogin}
           session={auth.isAuthenticated ? auth : null}
-          onGoRegister={() => setActiveView('register')}
+          onGoRegister={() => {
+            setActiveView('register')
+            updateUrlForView('register')
+          }}
           authStatus={authStatus}
           authLoading={authLoading}
         />
@@ -1119,7 +1183,10 @@ export default function App() {
           registerForm={registerForm}
           setRegisterForm={setRegisterForm}
           onRegister={handleRegister}
-          onGoLogin={() => setActiveView('login')}
+          onGoLogin={() => {
+            setActiveView('login')
+            updateUrlForView('login')
+          }}
         />
       )}
 
