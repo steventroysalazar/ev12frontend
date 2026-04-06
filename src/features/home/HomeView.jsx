@@ -1626,14 +1626,6 @@ export default function HomeView({
                           </button>
                         ))}
                       </section>
-                      <aside className="dashboard-hero-cta">
-                        <h4>Quick Actions</h4>
-                        <div className="dashboard-hero-cta-actions">
-                          <button disabled={loading} onClick={sendConfig}><AppIcon name="command" className="btn-icon" />Send Command</button>
-                          <button disabled={loading} onClick={sendMessage}><AppIcon name="location" className="btn-icon" />Request Location</button>
-                          <button disabled={loading} onClick={fetchReplies}><AppIcon name="replies" className="btn-icon" />Fetch Replies</button>
-                        </div>
-                      </aside>
                     </div>
                   </article>
                 </section>
