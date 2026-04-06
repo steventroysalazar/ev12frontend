@@ -1651,11 +1651,11 @@ export default function HomeView({
 
   const openConfigReview = () => {
     if (!configForm.deviceId) {
-      setActionStatus({ type: 'error', message: 'Open a device first before saving SMS changes.' })
+      setActionStatus({ type: 'error', message: 'Open a device first before saving device changes.' })
       return
     }
     if (!configChangeRows.length) {
-      setActionStatus({ type: 'info', message: 'No SMS-related changes detected yet.' })
+      setActionStatus({ type: 'info', message: 'No device changes detected yet.' })
       return
     }
     setShowConfigReviewModal(true)
@@ -1693,15 +1693,14 @@ export default function HomeView({
           <div className="device-workspace-head card-like">
             <aside className="device-detail-sidebar">
               <div className="device-detail-nav">
-                <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-overview')}><span className="device-nav-dot">◉</span>Device Profile</button>
-                <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-basic')}><span className="device-nav-dot">◉</span>Basic Configuration</button>
-                <button type="button" className={activeDeviceSettingsSection === 'device-detail-advanced' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-advanced')}><span className="device-nav-dot">◉</span>Advanced Configuration</button>
-                <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-location')}><span className="device-nav-dot">◉</span>Location Request</button>
-                <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-commands')}><span className="device-nav-dot">◉</span>Commands</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-overview')}><span className="device-nav-dot"><AppIcon name="devices" className="btn-icon" /></span>Device Profile</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-basic')}><span className="device-nav-dot"><AppIcon name="settings" className="btn-icon" /></span>Basic Configuration</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-advanced' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-advanced')}><span className="device-nav-dot"><AppIcon name="settings" className="btn-icon" /></span>Advanced Configuration</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-location')}><span className="device-nav-dot"><AppIcon name="location" className="btn-icon" /></span>Location Request</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-commands')}><span className="device-nav-dot"><AppIcon name="command" className="btn-icon" /></span>Commands</button>
               </div>
               <div className="device-workspace-actions">
-                <button type="button" className="mini-action" onClick={openConfigReview} disabled={!configForm.deviceId}>Save SMS Changes</button>
-                <small>Or send from Commands section.</small>
+                <button type="button" className="mini-action" onClick={openConfigReview} disabled={!configForm.deviceId}>Save Device Changes</button>
               </div>
               <button type="button" className="device-back-button" onClick={() => setActiveSection('devices')}>← Back to devices</button>
             </aside>
@@ -2049,7 +2048,7 @@ export default function HomeView({
             ) : null}
             <div className="device-profile-actions">
               <button className="mini-action" disabled={!editingDeviceId} onClick={handleUpdateDevice}>Save Device Profile</button>
-              <button className="mini-action" type="button" onClick={openConfigReview} disabled={!configForm.deviceId}>Review SMS Changes</button>
+              <button className="mini-action" type="button" onClick={openConfigReview} disabled={!configForm.deviceId}>Review Device Changes</button>
             </div>
           </section>
         )}
@@ -2504,7 +2503,7 @@ export default function HomeView({
       {showConfigReviewModal ? (
         <div className="overlay" onClick={() => setShowConfigReviewModal(false)}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <h3>Review SMS Changes</h3>
+            <h3>Review Device Changes</h3>
             <p className="status">Please confirm what changed before sending SMS.</p>
             <div className="table-shell">
               <table className="data-table">

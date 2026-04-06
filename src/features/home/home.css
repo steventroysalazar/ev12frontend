@@ -572,8 +572,10 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 .device-detail-sidebar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.8rem;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .device-detail-nav {
@@ -599,6 +601,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   align-items: center;
   gap: 0.48rem;
   transition: background 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease;
+  min-height: 42px;
 }
 
 .device-detail-nav button.is-active {
@@ -626,14 +629,8 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .device-workspace-actions {
   display: inline-flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  align-items: center;
   margin-left: auto;
-}
-
-.device-workspace-actions small {
-  color: #657080;
-  font-size: 0.74rem;
 }
 
 .device-back-button {
