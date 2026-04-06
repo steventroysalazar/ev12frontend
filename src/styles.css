@@ -7,9 +7,9 @@
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 18% 0%, rgba(192, 216, 202, 0.48) 0%, transparent 40%),
-    radial-gradient(circle at 86% 8%, rgba(188, 218, 239, 0.42) 0%, transparent 36%),
-    #eff4f6;
-  color: #152033;
+    radial-gradient(circle at 16% 0%, rgba(255, 255, 255, 0.75) 0%, transparent 35%),
+    radial-gradient(circle at 82% 8%, rgba(239, 241, 244, 0.75) 0%, transparent 34%),
+    #e9eaec;
+  color: #111214;
   letter-spacing: -0.01em;
 }

@@ -10,11 +10,11 @@
 }
 
 .dashboard-content {
-  background: linear-gradient(180deg, #f7faf9 0%, #f3f7f7 42%, #f7fafd 100%);
-  border: 1px solid #dfe7ef;
+  background: linear-gradient(180deg, #f4f4f5 0%, #f0f1f2 42%, #f5f6f7 100%);
+  border: 1px solid #d8dade;
   border-radius: 28px;
   padding: 1.25rem;
-  box-shadow: 0 25px 50px -40px rgba(20, 35, 62, 0.55);
+  box-shadow: 0 25px 46px -40px rgba(17, 18, 20, 0.45);
   min-width: 0;
   height: 100%;
   overflow-y: auto;
@@ -26,7 +26,7 @@
   font-size: 1.9rem;
   font-weight: 650;
   letter-spacing: -0.02em;
-  color: #18263c;
+  color: #17181b;
 }
 
 .section-head {
@@ -52,11 +52,11 @@
 .metric-card,
 .card-like,
 .modal {
-  border: 1px solid #dbe4ed;
+  border: 1px solid #d9dbdf;
   border-radius: 24px;
-  background: linear-gradient(180deg, #ffffff 0%, #f6f9fc 100%);
+  background: linear-gradient(180deg, #fcfcfd 0%, #f3f4f5 100%);
   padding: 1.1rem;
-  box-shadow: 0 20px 34px -33px rgba(12, 20, 34, 0.7);
+  box-shadow: 0 20px 34px -33px rgba(18, 19, 22, 0.55);
 }
 
 .metric-card {
@@ -70,8 +70,8 @@
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: linear-gradient(145deg, #f2f7ec, #ecf3f8);
-  color: #7f92a8;
+  background: linear-gradient(145deg, #f0f1f4, #e8eaed);
+  color: #6f7580;
   display: grid;
   place-items: center;
 }
@@ -87,7 +87,7 @@
   font-size: 0.74rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: #8091a4;
+  color: #777c86;
   font-weight: 600;
 }
 
@@ -97,7 +97,7 @@
   line-height: 1;
   font-weight: 650;
   letter-spacing: -0.03em;
-  color: #14233a;
+  color: #17191d;
 }
 
 .dashboard-main-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 0.9rem; }
@@ -109,8 +109,8 @@
 }
 .live-alarm-strip {
   margin: 0 0 1rem;
-  border: 1px solid #dbe6e1;
-  background: linear-gradient(180deg, #f7fcf6 0%, #f2f9f5 100%);
+  border: 1px solid #d8dbdf;
+  background: linear-gradient(180deg, #f6f7f8 0%, #f1f2f4 100%);
   border-radius: 20px;
   padding: 0.8rem 0.88rem;
   display: flex;
@@ -120,13 +120,13 @@
 }
 
 .live-alarm-strip strong {
-  color: #172338;
+  color: #171a1f;
   font-size: 0.88rem;
 }
 
 .live-alarm-strip p {
   margin: 0.2rem 0 0;
-  color: #607086;
+  color: #6a6e76;
   font-size: 0.78rem;
 }
 
@@ -149,37 +149,37 @@
 }
 
 .live-connection-chip.is-connected {
-  color: #0f766e;
-  background: #dff7f1;
-  border-color: #99e5d6;
+  color: #2f7d4d;
+  background: #e4f0e8;
+  border-color: #c0dec9;
 }
 
 .live-connection-chip.is-reconnecting {
   color: #9a6700;
-  background: #fff4d8;
-  border-color: #f4cf8a;
+  background: #f5ede0;
+  border-color: #ead8b7;
 }
-.device-overview h3, .block-title { font-size: 1.5rem; margin-bottom: 0.6rem; color: #202b40; }
+.device-overview h3, .block-title { font-size: 1.5rem; margin-bottom: 0.6rem; color: #1a1b20; }
 .device-panel { display: grid; grid-template-columns: 140px 1fr; gap: 1rem; }
 .device-photo-placeholder { width: 140px; border-radius: 20px; background: linear-gradient(145deg, #d8dde3, #eff3f7); }
 .device-row { display: grid; grid-template-columns: 1fr auto; border-bottom: 1px solid #e5eaf0; padding: 0.42rem 0; }
 .device-row dt,.device-row dd { margin: 0; font-size: 0.95rem; color: #616b78; }
 
 .action-stack { display: grid; align-content: start; gap: 0.6rem; }
-.action-stack button,.mini-action { margin-top: 0; background: linear-gradient(135deg, #111827, #1f2937); color: #fff; border-radius: 999px; font-weight: 600; font-size: 0.82rem; padding: 0.58rem 0.92rem; display:inline-flex; align-items:center; gap:0.4rem; border: 1px solid #111827; letter-spacing: 0.01em; }
+.action-stack button,.mini-action { margin-top: 0; background: linear-gradient(135deg, #141518, #22242a); color: #fff; border-radius: 999px; font-weight: 600; font-size: 0.82rem; padding: 0.58rem 0.92rem; display:inline-flex; align-items:center; gap:0.4rem; border: 1px solid #141518; letter-spacing: 0.01em; }
 
 .section-panel,.map-panel,.gateway-panel { margin-bottom: 0.9rem; }
 .field-grid { display: grid; gap: 0.7rem; }
 .field-grid.two-col { grid-template-columns: 1fr 1fr; }
 
-input,select,textarea { background: #f7fafc; border: 1px solid #dbe4ec; border-radius: 14px; font-size: 0.9rem; font-weight: 500; }
+input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-radius: 14px; font-size: 0.9rem; font-weight: 500; }
 
 .switch-row { display: inline-flex; gap: 0.4rem; align-items: center; font-weight: 600; }
 .switch-row input { width: 18px; height: 18px; }
 
 .range-with-value { display: flex; align-items: center; gap: 0.6rem; }
 .range-with-value input[type="range"] { flex: 1; }
-.range-value { min-width: 36px; text-align: center; font-weight: 700; color: #204070; background: #eef3fb; border-radius: 999px; padding: 0.2rem 0.5rem; }
+.range-value { min-width: 36px; text-align: center; font-weight: 700; color: #363a43; background: #e9ecef; border-radius: 999px; padding: 0.2rem 0.5rem; }
 
 .contact-table { border-top: 1px solid #dfe4ea; border-bottom: 1px solid #dfe4ea; padding: 0.55rem 0; }
 
@@ -187,10 +187,10 @@ input,select,textarea { background: #f7fafc; border: 1px solid #dbe4ec; border-r
 .settings-group:first-of-type { margin-top: 0.2rem; }
 .contact-row input { width: 100%; }
 .contact-head,.contact-row { display: grid; grid-template-columns: 1fr 1fr 1.5fr 0.8fr 0.8fr 0.6fr; gap: 0.5rem; padding: 0.4rem 0.3rem; align-items: center; }
-.chip { background: #edf1f5; padding: 0.3rem 0.4rem; border-radius: 8px; }
+.chip { background: #eceef1; padding: 0.3rem 0.4rem; border-radius: 8px; }
 .footer-config { margin-top: 0.75rem; }
 
-.alarm-card { background: #e8f2f2; border-radius: 12px; padding: 0.8rem; margin-bottom: 0.6rem; }
+.alarm-card { background: #eceff1; border-radius: 12px; padding: 0.8rem; margin-bottom: 0.6rem; }
 .alarm-row { display: grid; grid-template-columns: 0.8fr 1fr 1fr 1fr; gap: 0.6rem; align-items: center; }
 
 .map-placeholder { height: 220px; border-radius: 16px; background: #ced4da; position: relative; }
@@ -207,7 +207,7 @@ input,select,textarea { background: #f7fafc; border: 1px solid #dbe4ec; border-r
 .location-grid,.commands-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
 .dashboard-live-map {
   overflow: hidden;
-  border: 1px solid #dbe6ef;
+  border: 1px solid #d8dade;
   border-radius: 24px;
 }
 

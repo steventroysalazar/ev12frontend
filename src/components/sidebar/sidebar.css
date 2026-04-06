@@ -1,14 +1,14 @@
 .sidebar-panel {
-  border: 1px solid #d6dfe8;
+  border: 1px solid #d6d8dc;
   border-radius: 28px;
-  background: linear-gradient(180deg, #f9fbfb 0%, #f4f7f9 100%);
+  background: linear-gradient(180deg, #f7f7f8 0%, #f1f2f4 100%);
   padding: 0.72rem 0.62rem;
   min-height: 0;
   height: 100%;
   max-height: calc(100dvh - var(--dashboard-layout-offset, 5.25rem) - 0.6rem);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 18px 40px -34px rgba(16, 28, 48, 0.55);
+  box-shadow: 0 18px 38px -34px rgba(20, 21, 23, 0.45);
   position: sticky;
   top: 0;
   align-self: start;
@@ -29,7 +29,7 @@
   border: none;
   border-radius: 16px;
   padding: 0.35rem;
-  background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+  background: linear-gradient(180deg, #fff 0%, #f6f6f7 100%);
 }
 
 .sidebar-group-title {
@@ -38,7 +38,7 @@
   font-weight: 800;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #9cabba;
+  color: #91959d;
   padding-left: 0.4rem;
 }
 
@@ -66,7 +66,7 @@
   align-items: center;
   gap: 0.56rem;
   padding: 0.48rem 0.58rem;
-  color: #4a5b6f;
+  color: #4a4d53;
   text-decoration: none;
   border-radius: 999px;
   font-weight: 600;
@@ -75,20 +75,20 @@
 }
 
 .sidebar-nav a.active {
-  background: linear-gradient(135deg, #e8f0db 0%, #edf4d8 100%);
-  border-color: #dce6c7;
-  color: #1f2d24;
+  background: linear-gradient(135deg, #111214 0%, #2b2c31 100%);
+  border-color: #1f2024;
+  color: #f3f4f6;
 }
 
 .sidebar-subnav a {
-  color: #7d8da3;
+  color: #747983;
   padding: 0.16rem 0.3rem;
   font-size: 0.76rem;
 }
 
 .sidebar-subnav a.sub-active {
   font-weight: 800;
-  color: #182338;
+  color: #131416;
 }
 
 .nav-icon {
@@ -97,23 +97,23 @@
   flex-shrink: 0;
   padding: 0.36rem;
   border-radius: 999px;
-  background: #eff3f6;
-  color: #5d6d80;
+  background: #eff0f2;
+  color: #5a5e66;
 }
 
 .logout-link {
   margin-top: auto;
   align-self: stretch;
   justify-content: flex-start;
-  background: #fdf6f6;
-  color: #934648;
+  background: #f4f4f5;
+  color: #43474f;
   padding: 0.52rem 0.66rem;
   font-size: 0.82rem;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   font-weight: 700;
-  border: 1px solid #f0d7d8;
+  border: 1px solid #d6d9de;
   border-radius: 999px;
   position: static;
   flex-shrink: 0;
