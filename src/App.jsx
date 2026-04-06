@@ -763,9 +763,12 @@ export default function App() {
 
   const handleRegister = async () => {
     try {
+      const selectedRole = Number(registerForm.userRole)
+      const roleForSelfRegistration = selectedRole === 2 || selectedRole === 3 ? selectedRole : 3
+
       const payload = {
         ...registerForm,
-        userRole: Number(registerForm.userRole),
+        userRole: roleForSelfRegistration,
         locationId: registerForm.locationId ? Number(registerForm.locationId) : null,
         managerId: registerForm.managerId ? Number(registerForm.managerId) : null
       }
