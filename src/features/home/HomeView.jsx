@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
 import AppIcon from '../../components/icons/AppIcon'
 import { fetchJsonWithFallback, fetchWithFallback } from '../../lib/apiClient'
+import UsersPage from './pages/UsersPage'
+import LocationsPage from './pages/LocationsPage'
+import DevicesPage from './pages/DevicesPage'
+import UserDetailPage from './pages/UserDetailPage'
+import LocationDetailPage from './pages/LocationDetailPage'
 import './home.css'
 
 const initialLocationForm = { name: '', details: '' }
@@ -18,6 +23,36 @@ const initialUserForm = {
 }
 const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '', externalDeviceId: '' }
 const WEBHOOK_STORAGE_KEY = 'ev12:webhook-events'
+const DEFAULT_HOME_SECTION = 'dashboard'
+const supportedSections = new Set([
+  'dashboard',
+  'users',
+  'user-detail',
+  'locations',
+  'location-detail',
+  'devices',
+  'device-detail-overview',
+  'device-detail-basic',
+  'device-detail-advanced',
+  'device-detail-location',
+  'device-detail-commands',
+  'settings-basic',
+  'settings-advanced',
+  'location',
+  'alarm-logs',
+  'commands',
+  'replies',
+  'webhooks'
+])
+
+const parseHomeRoute = () => {
+  if (typeof window === 'undefined') return { section: DEFAULT_HOME_SECTION, entityId: '' }
+  const params = new URLSearchParams(window.location.search)
+  const rawSection = (params.get('page') || DEFAULT_HOME_SECTION).trim()
+  const section = supportedSections.has(rawSection) ? rawSection : DEFAULT_HOME_SECTION
+  const entityId = (params.get('id') || '').trim()
+  return { section, entityId }
+}
 
 const parseStoredWebhookEvents = () => {
   if (typeof window === 'undefined') return []
@@ -76,13 +111,44 @@ export default function HomeView({
   onCancelDeviceAlarm,
   alarmCancelledAtByDevice
 }) {
-  const [activeSection, setActiveSection] = useState('dashboard')
+  const [activeSection, setActiveSection] = useState(() => parseHomeRoute().section)
+  const [selectedUserId, setSelectedUserId] = useState(() => parseHomeRoute().section === 'user-detail' ? parseHomeRoute().entityId : '')
+  const [selectedLocationId, setSelectedLocationId] = useState(() => parseHomeRoute().section === 'location-detail' ? parseHomeRoute().entityId : '')
   const [selectedDevice, setSelectedDevice] = useState(null)
   const [dashboardMapDeviceId, setDashboardMapDeviceId] = useState('')
 
   useEffect(() => {
     onSectionChange?.(activeSection)
   }, [activeSection, onSectionChange])
+
+  useEffect(() => {
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+    params.set('page', activeSection)
+    if (activeSection === 'user-detail' && selectedUserId) {
+      params.set('id', String(selectedUserId))
+    } else if (activeSection === 'location-detail' && selectedLocationId) {
+      params.set('id', String(selectedLocationId))
+    } else {
+      params.delete('id')
+    }
+
+    if (typeof window !== 'undefined') {
+      const nextUrl = `${window.location.pathname}?${params.toString()}`
+      window.history.replaceState({}, '', nextUrl)
+    }
+  }, [activeSection, selectedLocationId, selectedUserId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const syncSectionFromUrl = () => {
+      const route = parseHomeRoute()
+      setActiveSection(route.section)
+      if (route.section === 'user-detail') setSelectedUserId(route.entityId)
+      if (route.section === 'location-detail') setSelectedLocationId(route.entityId)
+    }
+    window.addEventListener('popstate', syncSectionFromUrl)
+    return () => window.removeEventListener('popstate', syncSectionFromUrl)
+  }, [])
 
   const [showUserModal, setShowUserModal] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
@@ -326,11 +392,14 @@ export default function HomeView({
   useEffect(() => {
     const load = async () => {
       try {
-        if (activeSection === 'users') await loadUsers()
-        if (activeSection === 'locations') await loadLocations()
+        if (activeSection === 'users' || activeSection === 'user-detail') await loadUsers()
+        if (activeSection === 'locations' || activeSection === 'location-detail') await loadLocations()
         if (activeSection === 'devices') await loadDevices()
         if (activeSection === 'dashboard') {
           await Promise.all([loadUsers(), loadLocations(), loadDevices()])
+        }
+        if (activeSection === 'user-detail' || activeSection === 'location-detail') {
+          await loadDevices()
         }
         setDataStatus('')
       } catch (error) {
@@ -768,6 +837,28 @@ export default function HomeView({
     setShowEditLocationModal(true)
   }
 
+  const openUserDetailPage = async (entry) => {
+    if (!users.length) {
+      await loadUsers()
+    }
+    if (!devices.length) {
+      await loadDevices()
+    }
+    setSelectedUserId(String(entry?.id || ''))
+    setActiveSection('user-detail')
+  }
+
+  const openLocationDetailPage = async (entry) => {
+    if (!locations.length) {
+      await loadLocations()
+    }
+    if (!devices.length) {
+      await loadDevices()
+    }
+    setSelectedLocationId(String(entry?.id || ''))
+    setActiveSection('location-detail')
+  }
+
   const handleUpdateUser = async () => {
     try {
       if (!editingUserId) throw new Error('User id is missing')
@@ -962,6 +1053,14 @@ export default function HomeView({
     const selectedId = String(selectedDevice.id || selectedDevice.deviceId || '')
     return devices.find((device) => String(device.id || device.deviceId || '') === selectedId) || selectedDevice
   }, [devices, selectedDevice])
+  const selectedUser = useMemo(
+    () => users.find((entry) => String(entry.id || '') === String(selectedUserId || '')) || null,
+    [selectedUserId, users]
+  )
+  const selectedLocation = useMemo(
+    () => locations.find((entry) => String(entry.id || '') === String(selectedLocationId || '')) || null,
+    [locations, selectedLocationId]
+  )
 
   const locationViewerDevice = isDeviceDetailLocationSection ? selectedWorkspaceDevice : selectedLocationDevice
 
@@ -1429,12 +1528,17 @@ export default function HomeView({
   const hasQueuedCommand = Boolean(queuedCommandPreview)
   const hasCommandChanges = hasActiveCommand && activeCommandPreview !== queuedCommandPreview
   const activeDeviceSettingsSection = activeSection.startsWith('device-detail-') ? activeSection : ''
+  const handleSectionChange = (section) => {
+    setActiveSection(section)
+    if (section !== 'user-detail') setSelectedUserId('')
+    if (section !== 'location-detail') setSelectedLocationId('')
+  }
 
   return (
     <div className="home-shell">
       <Sidebar
         activeSection={activeSection}
-        onChangeSection={setActiveSection}
+        onChangeSection={handleSectionChange}
         onLogout={onLogout}
         showDeviceCenter={isDeviceWorkspaceSection && Boolean(selectedDevice)}
       />
@@ -1632,149 +1736,79 @@ export default function HomeView({
         )}
 
         {activeSection === 'users' && (
-          <section className="card-like section-panel">
-            <div className="section-head">
-              <h2 className="section-title">Users</h2>
-              <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
-            </div>
-            <div className="table-controls">
-              <input placeholder="Search user, email, contact, location..." value={userSearch} onChange={(event) => setUserSearch(event.target.value)} />
-              <select value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
-                <option value="all">All roles</option>
-                <option value="super admin">Super Admin</option>
-                <option value="manager">Manager</option>
-                <option value="user">User</option>
-              </select>
-            </div>
-            <div className="table-shell">
-              <table className="data-table">
-              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th><th>Action</th></tr></thead>
-              <tbody>
-                {pagedUsers.rows.map((u) => (
-                  <tr key={u.id || u.email}>
-                    <td>{`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || '-'}</td>
-                    <td>{u.email || '-'}</td>
-                    <td>{u.userRole || u.role || '-'}</td>
-                    <td>{u.contactNumber || '-'}</td>
-                    <td>{u.locationName || u.location?.name || '-'}</td>
-                    <td>{u.managerName || u.manager?.firstName || '-'}</td>
-                    <td><button className="table-link" type="button" onClick={() => openEditUserModal(u)}>Edit User</button></td>
-                  </tr>
-                ))}
-              </tbody>
-              </table>
-            </div>
-            <div className="table-pagination">
-              <button type="button" className="table-link action-chip action-chip-neutral" disabled={usersPage <= 1} onClick={() => setUsersPage((prev) => Math.max(prev - 1, 1))}>Prev</button>
-              <span>Page {usersPage} of {pagedUsers.totalPages}</span>
-              <button type="button" className="table-link action-chip action-chip-neutral" disabled={usersPage >= pagedUsers.totalPages} onClick={() => setUsersPage((prev) => Math.min(prev + 1, pagedUsers.totalPages))}>Next</button>
-            </div>
-          </section>
+          <UsersPage
+            loadLocations={loadLocations}
+            loadUsers={loadUsers}
+            setShowUserModal={setShowUserModal}
+            userSearch={userSearch}
+            setUserSearch={setUserSearch}
+            userRoleFilter={userRoleFilter}
+            setUserRoleFilter={setUserRoleFilter}
+            pagedUsers={pagedUsers}
+            usersPage={usersPage}
+            setUsersPage={setUsersPage}
+            openUserDetailPage={openUserDetailPage}
+            openEditUserModal={openEditUserModal}
+          />
         )}
 
         {activeSection === 'locations' && (
-          <section className="card-like section-panel">
-            <div className="section-head">
-              <h2 className="section-title">Locations</h2>
-              <button className="mini-action" onClick={() => setShowLocationModal(true)}><AppIcon name="plus" className="btn-icon" />Create Location</button>
-            </div>
-            <div className="table-controls">
-              <input placeholder="Search location or details..." value={locationSearch} onChange={(event) => setLocationSearch(event.target.value)} />
-              <select value={locationDeviceFilter} onChange={(event) => setLocationDeviceFilter(event.target.value)}>
-                <option value="all">All locations</option>
-                <option value="with-devices">With devices</option>
-                <option value="without-devices">Without devices</option>
-              </select>
-            </div>
-            <div className="table-shell">
-              <table className="data-table">
-              <thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th><th>Action</th></tr></thead>
-              <tbody>
-                {pagedLocations.rows.map((l) => (
-                  <tr key={l.id || l.name}>
-                    <td>{l.name || '-'}</td>
-                    <td>{l.details || '-'}</td>
-                    <td>{l.userCount || l.users?.length || 0}</td>
-                    <td>{l.deviceCount || l.devices?.length || 0}</td>
-                    <td><button className="table-link" type="button" onClick={() => openEditLocationModal(l)}>Edit Location</button></td>
-                  </tr>
-                ))}
-              </tbody>
-              </table>
-            </div>
-            <div className="table-pagination">
-              <button type="button" className="table-link action-chip action-chip-neutral" disabled={locationsPage <= 1} onClick={() => setLocationsPage((prev) => Math.max(prev - 1, 1))}>Prev</button>
-              <span>Page {locationsPage} of {pagedLocations.totalPages}</span>
-              <button type="button" className="table-link action-chip action-chip-neutral" disabled={locationsPage >= pagedLocations.totalPages} onClick={() => setLocationsPage((prev) => Math.min(prev + 1, pagedLocations.totalPages))}>Next</button>
-            </div>
-          </section>
+          <LocationsPage
+            setShowLocationModal={setShowLocationModal}
+            locationSearch={locationSearch}
+            setLocationSearch={setLocationSearch}
+            locationDeviceFilter={locationDeviceFilter}
+            setLocationDeviceFilter={setLocationDeviceFilter}
+            pagedLocations={pagedLocations}
+            locationsPage={locationsPage}
+            setLocationsPage={setLocationsPage}
+            openLocationDetailPage={openLocationDetailPage}
+            openEditLocationModal={openEditLocationModal}
+          />
         )}
 
         {activeSection === 'devices' && (
-          <section className="card-like section-panel">
-            <div className="section-head">
-              <h2 className="section-title">Devices</h2>
-              <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}><AppIcon name="plus" className="btn-icon" />Add Device</button>
-            </div>
-            <div className="table-controls">
-              <input placeholder="Search device, owner, location, phone..." value={deviceSearch} onChange={(event) => setDeviceSearch(event.target.value)} />
-              <select value={deviceAlarmFilter} onChange={(event) => setDeviceAlarmFilter(event.target.value)}>
-                <option value="all">All alarms</option>
-                <option value="critical">SOS only</option>
-                <option value="warning">Fall alert only</option>
-                <option value="active">Other active alarms</option>
-                <option value="idle">No active alarm</option>
-              </select>
-            </div>
-            <div className="table-shell">
-              <table className="data-table">
-              <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Last Power ON</th><th>Last Power OFF</th><th>Last Disconnected</th><th>Owner</th><th>Role</th><th>Location</th><th>Edit</th><th>Settings</th></tr></thead>
-              <tbody>
-                {pagedDevices.rows.map((d) => {
-                  const deviceMeta = resolveDeviceMeta(d)
-                  const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(d))
-                  const cancelledAt = getAlarmCancelledAt(d)
-                  return (
-                    <tr key={d.id || d.phoneNumber || d.name}>
-                      <td>{d.name || d.deviceName || '-'}</td>
-                      <td>{d.phoneNumber || '-'}</td>
-                      <td>{d.eviewVersion || d.version || '-'}</td>
-                      <td>{d.externalDeviceId || d.external_device_id || d.deviceId || '-'}</td>
-                      <td>
-                        <div className="alarm-status-inline">
-                          <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
-                          <button
-                            className="table-link table-link-compact action-chip action-chip-danger device-cancel-inline"
-                            type="button"
-                            onClick={() => handleCancelAlarm(d)}
-                            disabled={!resolveLiveAlarmCode(d)}
-                            title={!resolveLiveAlarmCode(d) ? 'No active alarm to cancel' : 'Cancel active alarm'}
-                          >
-                            Cancel Alarm
-                          </button>
-                          {cancelledAt ? <small className="alarm-cancel-meta">Cancelled: {new Date(cancelledAt).toLocaleString()}</small> : null}
-                        </div>
-                      </td>
-                      <td>{formatTimestamp(d.lastPowerOnAt || d.last_power_on_at)}</td>
-                      <td>{formatTimestamp(d.lastPowerOffAt || d.last_power_off_at)}</td>
-                      <td>{formatTimestamp(d.lastDisconnectedAt || d.last_disconnected_at)}</td>
-                      <td>{deviceMeta.ownerName}</td>
-                      <td>{deviceMeta.ownerRole}</td>
-                      <td>{deviceMeta.ownerLocation}</td>
-                      <td><button className="table-link table-link-compact action-chip action-chip-neutral" type="button" onClick={() => openEditDeviceModal(d)}>Edit</button></td>
-                      <td><button className="table-link table-link-compact action-chip action-chip-primary" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-              </table>
-            </div>
-            <div className="table-pagination">
-              <button type="button" className="table-link action-chip action-chip-neutral" disabled={devicesPage <= 1} onClick={() => setDevicesPage((prev) => Math.max(prev - 1, 1))}>Prev</button>
-              <span>Page {devicesPage} of {pagedDevices.totalPages}</span>
-              <button type="button" className="table-link action-chip action-chip-neutral" disabled={devicesPage >= pagedDevices.totalPages} onClick={() => setDevicesPage((prev) => Math.min(prev + 1, pagedDevices.totalPages))}>Next</button>
-            </div>
-          </section>
+          <DevicesPage
+            loadUsers={loadUsers}
+            loadLocations={loadLocations}
+            setShowDeviceModal={setShowDeviceModal}
+            deviceSearch={deviceSearch}
+            setDeviceSearch={setDeviceSearch}
+            deviceAlarmFilter={deviceAlarmFilter}
+            setDeviceAlarmFilter={setDeviceAlarmFilter}
+            pagedDevices={pagedDevices}
+            resolveDeviceMeta={resolveDeviceMeta}
+            getAlarmMeta={getAlarmMeta}
+            resolveLiveAlarmCode={resolveLiveAlarmCode}
+            getAlarmCancelledAt={getAlarmCancelledAt}
+            handleCancelAlarm={handleCancelAlarm}
+            formatTimestamp={formatTimestamp}
+            openLocationDetailPage={openLocationDetailPage}
+            openEditDeviceModal={openEditDeviceModal}
+            openDeviceSettings={openDeviceSettings}
+            devicesPage={devicesPage}
+            setDevicesPage={setDevicesPage}
+          />
+        )}
+
+        {activeSection === 'user-detail' && (
+          <UserDetailPage
+            selectedUser={selectedUser}
+            roleLabel={roleLabel}
+            devices={devices}
+            openDeviceSettings={openDeviceSettings}
+            onBack={() => setActiveSection('users')}
+          />
+        )}
+
+        {activeSection === 'location-detail' && (
+          <LocationDetailPage
+            selectedLocation={selectedLocation}
+            devices={devices}
+            resolveDeviceMeta={resolveDeviceMeta}
+            openDeviceSettings={openDeviceSettings}
+            onBack={() => setActiveSection('locations')}
+          />
         )}
 
         {activeSection === 'device-detail-overview' && (
