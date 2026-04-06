@@ -1673,7 +1673,7 @@ export default function HomeView({
 
                   <aside className="active-alerts card-like">
                     <div className="section-head">
-                      <h3>Active Incidents</h3>
+                      <h3>Active Alerts</h3>
                       <div className="alert-head-actions">
                         <span className="map-kpi-chip compact"><strong>{activeAlarmDevices.length}</strong></span>
                         <button
