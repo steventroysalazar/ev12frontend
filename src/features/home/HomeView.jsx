@@ -1622,19 +1622,31 @@ export default function HomeView({
   const hasCommandChanges = hasActiveCommand && activeCommandPreview !== queuedCommandPreview
   const activeDeviceSettingsSection = activeSection.startsWith('device-detail-') ? activeSection : ''
   const configChangeRows = useMemo(() => {
+    const safeBaseline = configBaseline && typeof configBaseline === 'object' ? configBaseline : {}
+    const safeForm = configForm && typeof configForm === 'object' ? configForm : {}
     const changedKeys = new Set([
-      ...Object.keys(configBaseline || {}),
-      ...Object.keys(configForm || {})
+      ...Object.keys(safeBaseline),
+      ...Object.keys(safeForm)
     ])
 
     return [...changedKeys]
-      .filter((key) => JSON.stringify(configBaseline?.[key] ?? null) !== JSON.stringify(configForm?.[key] ?? null))
+      .filter((key) => JSON.stringify(safeBaseline?.[key] ?? null) !== JSON.stringify(safeForm?.[key] ?? null))
       .map((key) => ({
         key,
-        before: configBaseline?.[key] ?? '-',
-        after: configForm?.[key] ?? '-'
+        before: safeBaseline?.[key] ?? '-',
+        after: safeForm?.[key] ?? '-'
       }))
   }, [configBaseline, configForm])
+
+  const formatConfigValue = (value) => {
+    if (value === null || value === undefined || value === '') return '-'
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value)
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }
 
   const openConfigReview = () => {
     if (!configForm.deviceId) {
@@ -1649,9 +1661,13 @@ export default function HomeView({
   }
 
   const confirmSendConfig = async () => {
-    setShowConfigReviewModal(false)
-    await sendConfig()
-    setConfigBaseline({ ...configForm })
+    try {
+      await sendConfig()
+      setConfigBaseline({ ...(configForm && typeof configForm === 'object' ? configForm : {}) })
+      setShowConfigReviewModal(false)
+    } catch (error) {
+      setActionStatus({ type: 'error', message: `Save & send failed: ${error?.message || 'Unknown error'}` })
+    }
   }
 
   const handleSectionChange = (section) => {
@@ -2496,8 +2512,8 @@ export default function HomeView({
                   {configChangeRows.map((entry) => (
                     <tr key={`config-change-${entry.key}`}>
                       <td>{entry.key}</td>
-                      <td>{typeof entry.before === 'string' ? entry.before : JSON.stringify(entry.before)}</td>
-                      <td>{typeof entry.after === 'string' ? entry.after : JSON.stringify(entry.after)}</td>
+                      <td>{formatConfigValue(entry.before)}</td>
+                      <td>{formatConfigValue(entry.after)}</td>
                     </tr>
                   ))}
                 </tbody>
