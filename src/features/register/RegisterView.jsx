@@ -3,7 +3,6 @@ import QViewLogo from '../../components/branding/QViewLogo'
 import './register.css'
 
 const roleOptions = [
-  { label: 'Super Admin', value: 1 },
   { label: 'Manager', value: 2 },
   { label: 'User', value: 3 }
 ]
