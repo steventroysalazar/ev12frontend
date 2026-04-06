@@ -164,6 +164,8 @@ export default function HomeView({
   const [locations, setLocations] = useState([])
   const [devices, setDevices] = useState([])
   const [dashboardDevicePage, setDashboardDevicePage] = useState(1)
+  const [dashboardDeviceSearch, setDashboardDeviceSearch] = useState('')
+  const [dashboardDeviceAlertFilter, setDashboardDeviceAlertFilter] = useState('all')
   const [activeAlertPage, setActiveAlertPage] = useState(1)
   const [usersPage, setUsersPage] = useState(1)
   const [locationsPage, setLocationsPage] = useState(1)
@@ -1107,17 +1109,6 @@ export default function HomeView({
   const dashboardPageSize = 8
   const activeAlertPageSize = 6
   const listPageSize = 10
-  const dashboardTotalPages = Math.max(1, Math.ceil(devices.length / dashboardPageSize))
-  const paginatedDashboardDevices = useMemo(() => {
-    const start = (dashboardDevicePage - 1) * dashboardPageSize
-    return devices.slice(start, start + dashboardPageSize)
-  }, [dashboardDevicePage, devices])
-
-  useEffect(() => {
-    if (dashboardDevicePage > dashboardTotalPages) {
-      setDashboardDevicePage(dashboardTotalPages)
-    }
-  }, [dashboardDevicePage, dashboardTotalPages])
 
   const resolveLiveAlarmCode = useCallback(
     (device) => {
@@ -1169,6 +1160,45 @@ export default function HomeView({
     () => activeAlarmLocations.find((entry) => entry.deviceKey === String(dashboardMapDeviceId)) || null,
     [activeAlarmLocations, dashboardMapDeviceId]
   )
+  const filteredDashboardDevices = useMemo(() => {
+    const keyword = dashboardDeviceSearch.trim().toLowerCase()
+    return devices
+      .filter((entry) => {
+        const hasActiveAlarm = Boolean(resolveLiveAlarmCode(entry))
+        const alarmMatch =
+          dashboardDeviceAlertFilter === 'all'
+            ? true
+            : dashboardDeviceAlertFilter === 'active'
+              ? hasActiveAlarm
+              : !hasActiveAlarm
+
+        if (!alarmMatch) return false
+        if (!keyword) return true
+
+        const owner = resolveDeviceMeta(entry)
+        const text = `${entry.name || entry.deviceName || ''} ${entry.phoneNumber || ''} ${entry.externalDeviceId || entry.external_device_id || entry.deviceId || ''} ${owner.ownerName} ${owner.ownerRole} ${owner.ownerLocation}`.toLowerCase()
+        return text.includes(keyword)
+      })
+      .sort((a, b) => {
+        const aActive = Boolean(resolveLiveAlarmCode(a))
+        const bActive = Boolean(resolveLiveAlarmCode(b))
+        if (aActive !== bActive) return aActive ? -1 : 1
+        const aName = String(a.name || a.deviceName || '').toLowerCase()
+        const bName = String(b.name || b.deviceName || '').toLowerCase()
+        return aName.localeCompare(bName)
+      })
+  }, [dashboardDeviceAlertFilter, dashboardDeviceSearch, devices, resolveDeviceMeta, resolveLiveAlarmCode])
+  const dashboardTotalPages = Math.max(1, Math.ceil(filteredDashboardDevices.length / dashboardPageSize))
+  const paginatedDashboardDevices = useMemo(() => {
+    const start = (dashboardDevicePage - 1) * dashboardPageSize
+    return filteredDashboardDevices.slice(start, start + dashboardPageSize)
+  }, [dashboardDevicePage, filteredDashboardDevices])
+
+  useEffect(() => {
+    if (dashboardDevicePage > dashboardTotalPages) {
+      setDashboardDevicePage(dashboardTotalPages)
+    }
+  }, [dashboardDevicePage, dashboardTotalPages])
 
   const filteredUsers = useMemo(() => {
     const keyword = userSearch.trim().toLowerCase()
@@ -1229,6 +1259,7 @@ export default function HomeView({
   useEffect(() => setUsersPage(1), [userSearch, userRoleFilter])
   useEffect(() => setLocationsPage(1), [locationSearch, locationDeviceFilter])
   useEffect(() => setDevicesPage(1), [deviceSearch, deviceAlarmFilter])
+  useEffect(() => setDashboardDevicePage(1), [dashboardDeviceSearch, dashboardDeviceAlertFilter])
   useEffect(() => setActiveAlertPage(1), [activeAlarmLocations.length])
   useEffect(() => { if (usersPage > pagedUsers.totalPages) setUsersPage(pagedUsers.totalPages) }, [pagedUsers.totalPages, usersPage])
   useEffect(() => { if (locationsPage > pagedLocations.totalPages) setLocationsPage(pagedLocations.totalPages) }, [locationsPage, pagedLocations.totalPages])
@@ -1575,7 +1606,7 @@ export default function HomeView({
 
         {activeSection === 'dashboard' && (
           <>
-            <h2 className="page-title">{isAdminDashboard ? 'Admin Dashboard' : 'My Device Dashboard'}</h2>
+            <h2 className="page-title">{isAdminDashboard ? 'Dashboard' : 'My Device Dashboard'}</h2>
             <section className="live-alarm-strip">
               <div>
                 <strong>Live alarm feed</strong>
@@ -1613,7 +1644,6 @@ export default function HomeView({
                       <div className="dashboard-hero-actions">
                         <span className="hero-pill">Live</span>
                         <span className="hero-pill">Global</span>
-                        <span className="hero-avatar">{user?.firstName?.[0] || 'A'}</span>
                       </div>
                     </div>
                     <div className="dashboard-hero-widgets">
@@ -1723,6 +1753,18 @@ export default function HomeView({
                 <section className="dashboard-main-grid">
                   <article className="device-overview card-like">
                     <h3>Device List</h3>
+                    <div className="table-controls">
+                      <input
+                        placeholder="Search device, owner, role, location..."
+                        value={dashboardDeviceSearch}
+                        onChange={(event) => setDashboardDeviceSearch(event.target.value)}
+                      />
+                      <select value={dashboardDeviceAlertFilter} onChange={(event) => setDashboardDeviceAlertFilter(event.target.value)}>
+                        <option value="all">All devices</option>
+                        <option value="active">Active alerts only</option>
+                        <option value="inactive">No active alerts</option>
+                      </select>
+                    </div>
                     <div className="table-shell dashboard-device-table">
                       <table className="data-table">
                         <thead><tr><th>Device</th><th>Alarm</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead>
