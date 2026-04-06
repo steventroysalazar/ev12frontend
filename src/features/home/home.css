@@ -417,6 +417,10 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   .dashboard-hero-widgets {
     grid-template-columns: 1fr;
   }
+
+  .dashboard-hero-widgets {
+    grid-template-columns: 1fr;
+  }
 }
 
 .leaflet-map {
