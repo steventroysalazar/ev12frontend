@@ -116,6 +116,7 @@ export default function HomeView({
   const [selectedLocationId, setSelectedLocationId] = useState(() => parseHomeRoute().section === 'location-detail' ? parseHomeRoute().entityId : '')
   const [selectedDevice, setSelectedDevice] = useState(null)
   const [dashboardMapDeviceId, setDashboardMapDeviceId] = useState('')
+  const syncingFromPopStateRef = useRef(false)
 
   useEffect(() => {
     onSectionChange?.(activeSection)
@@ -134,7 +135,15 @@ export default function HomeView({
 
     if (typeof window !== 'undefined') {
       const nextUrl = `${window.location.pathname}?${params.toString()}`
-      window.history.replaceState({}, '', nextUrl)
+      const currentUrl = `${window.location.pathname}${window.location.search}`
+      if (currentUrl === nextUrl) return
+
+      if (syncingFromPopStateRef.current) {
+        syncingFromPopStateRef.current = false
+        window.history.replaceState({}, '', nextUrl)
+      } else {
+        window.history.pushState({}, '', nextUrl)
+      }
     }
   }, [activeSection, selectedLocationId, selectedUserId])
 
@@ -142,6 +151,7 @@ export default function HomeView({
     if (typeof window === 'undefined') return undefined
     const syncSectionFromUrl = () => {
       const route = parseHomeRoute()
+      syncingFromPopStateRef.current = true
       setActiveSection(route.section)
       if (route.section === 'user-detail') setSelectedUserId(route.entityId)
       if (route.section === 'location-detail') setSelectedLocationId(route.entityId)
@@ -176,6 +186,12 @@ export default function HomeView({
   const [userRoleFilter, setUserRoleFilter] = useState('all')
   const [locationDeviceFilter, setLocationDeviceFilter] = useState('all')
   const [deviceAlarmFilter, setDeviceAlarmFilter] = useState('all')
+  const [userDetailDeviceSearch, setUserDetailDeviceSearch] = useState('')
+  const [userDetailDevicePage, setUserDetailDevicePage] = useState(1)
+  const [locationDetailUserSearch, setLocationDetailUserSearch] = useState('')
+  const [locationDetailUserPage, setLocationDetailUserPage] = useState(1)
+  const [locationDetailDeviceSearch, setLocationDetailDeviceSearch] = useState('')
+  const [locationDetailDevicePage, setLocationDetailDevicePage] = useState(1)
 
   const [locationForm, setLocationForm] = useState(initialLocationForm)
   const [userForm, setUserForm] = useState(initialUserForm)
@@ -207,12 +223,12 @@ export default function HomeView({
 
   const roleLabel = useCallback((value) => {
     const normalized = String(value || '').trim().toUpperCase()
-    if (normalized === 'SUPER_ADMIN' || normalized === 'SUPER ADMIN') return 'Super Admin'
+    if (normalized === 'SUPER_ADMIN' || normalized === 'SUPER ADMIN') return 'QView Admin'
     if (normalized === 'MANAGER') return 'Manager'
     if (normalized === 'USER') return 'User'
 
     const role = Number(value)
-    if (role === 1) return 'Super Admin'
+    if (role === 1) return 'QView Admin'
     if (role === 2) return 'Manager'
     if (role === 3) return 'User'
     return value || '-'
@@ -236,7 +252,7 @@ export default function HomeView({
   }, [])
 
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
-  const isAdminDashboard = normalizedRole === 'super admin' || normalizedRole === 'manager'
+  const isAdminDashboard = normalizedRole === 'qview admin' || normalizedRole === 'manager'
 
   const metrics = useMemo(
     () => [
@@ -813,8 +829,9 @@ export default function HomeView({
 
 
 
-  const openEditUserModal = async (user) => {
-    await Promise.all([loadLocations(), loadUsers()])
+  const prepareUserEditor = useCallback((entry) => {
+    if (!entry) return
+    const user = entry
     setEditingUserId(user.id)
     setUserForm({
       email: user.email || '',
@@ -827,10 +844,16 @@ export default function HomeView({
       locationId: user.locationId || user.location_id || user.location?.id || '',
       managerId: user.managerId || user.manager_id || user.manager?.id || ''
     })
+  }, [])
+
+  const openEditUserModal = async (user) => {
+    await Promise.all([loadLocations(), loadUsers()])
+    prepareUserEditor(user)
     setShowEditUserModal(true)
   }
 
   const openEditLocationModal = (location) => {
+    if (!location) return
     setEditingLocationId(location.id)
     setLocationForm({
       name: location.name || '',
@@ -1212,6 +1235,12 @@ export default function HomeView({
     })
   }, [roleLabel, userRoleFilter, userSearch, users])
 
+  const getUserDevices = useCallback((userEntry) => {
+    const currentId = String(userEntry?.id || '')
+    if (!currentId) return []
+    return devices.filter((entry) => String(entry.ownerUserId || entry.userId || entry.user_id || entry.owner?.id || entry.app_user?.id || '') === currentId)
+  }, [devices])
+
   const filteredLocations = useMemo(() => {
     const keyword = locationSearch.trim().toLowerCase()
     return locations.filter((entry) => {
@@ -1265,6 +1294,28 @@ export default function HomeView({
   useEffect(() => { if (locationsPage > pagedLocations.totalPages) setLocationsPage(pagedLocations.totalPages) }, [locationsPage, pagedLocations.totalPages])
   useEffect(() => { if (devicesPage > pagedDevices.totalPages) setDevicesPage(pagedDevices.totalPages) }, [devicesPage, pagedDevices.totalPages])
   useEffect(() => { if (activeAlertPage > activeAlertTotalPages) setActiveAlertPage(activeAlertTotalPages) }, [activeAlertPage, activeAlertTotalPages])
+  useEffect(() => {
+    if (!selectedUser) return
+    prepareUserEditor(selectedUser)
+  }, [prepareUserEditor, selectedUser])
+  useEffect(() => {
+    if (!selectedLocation) return
+    setEditingLocationId(selectedLocation.id)
+    setLocationForm({
+      name: selectedLocation.name || '',
+      details: selectedLocation.details || ''
+    })
+  }, [selectedLocation])
+  useEffect(() => {
+    setUserDetailDeviceSearch('')
+    setUserDetailDevicePage(1)
+  }, [selectedUserId])
+  useEffect(() => {
+    setLocationDetailUserSearch('')
+    setLocationDetailUserPage(1)
+    setLocationDetailDeviceSearch('')
+    setLocationDetailDevicePage(1)
+  }, [selectedLocationId])
 
   useEffect(() => {
     if (!activeAlarmLocations.length) {
@@ -1843,7 +1894,8 @@ export default function HomeView({
             usersPage={usersPage}
             setUsersPage={setUsersPage}
             openUserDetailPage={openUserDetailPage}
-            openEditUserModal={openEditUserModal}
+            roleLabel={roleLabel}
+            getUserDevices={getUserDevices}
           />
         )}
 
@@ -1858,7 +1910,6 @@ export default function HomeView({
             locationsPage={locationsPage}
             setLocationsPage={setLocationsPage}
             openLocationDetailPage={openLocationDetailPage}
-            openEditLocationModal={openEditLocationModal}
           />
         )}
 
@@ -1879,7 +1930,6 @@ export default function HomeView({
             handleCancelAlarm={handleCancelAlarm}
             formatTimestamp={formatTimestamp}
             openLocationDetailPage={openLocationDetailPage}
-            openEditDeviceModal={openEditDeviceModal}
             openDeviceSettings={openDeviceSettings}
             devicesPage={devicesPage}
             setDevicesPage={setDevicesPage}
@@ -1891,7 +1941,14 @@ export default function HomeView({
             selectedUser={selectedUser}
             roleLabel={roleLabel}
             devices={devices}
+            userForm={userForm}
+            setUserForm={setUserForm}
+            onSaveUser={handleUpdateUser}
             openDeviceSettings={openDeviceSettings}
+            userDeviceSearch={userDetailDeviceSearch}
+            setUserDeviceSearch={setUserDetailDeviceSearch}
+            userDevicePage={userDetailDevicePage}
+            setUserDevicePage={setUserDetailDevicePage}
             onBack={() => setActiveSection('users')}
           />
         )}
@@ -1900,8 +1957,20 @@ export default function HomeView({
           <LocationDetailPage
             selectedLocation={selectedLocation}
             devices={devices}
+            users={users}
+            locationForm={locationForm}
+            setLocationForm={setLocationForm}
+            onSaveLocation={handleUpdateLocation}
             resolveDeviceMeta={resolveDeviceMeta}
             openDeviceSettings={openDeviceSettings}
+            locationUserSearch={locationDetailUserSearch}
+            setLocationUserSearch={setLocationDetailUserSearch}
+            locationUserPage={locationDetailUserPage}
+            setLocationUserPage={setLocationDetailUserPage}
+            locationDeviceSearch={locationDetailDeviceSearch}
+            setLocationDeviceSearch={setLocationDetailDeviceSearch}
+            locationDevicePage={locationDetailDevicePage}
+            setLocationDevicePage={setLocationDetailDevicePage}
             onBack={() => setActiveSection('locations')}
           />
         )}
