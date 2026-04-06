@@ -681,7 +681,7 @@ export default function HomeView({
       locationId: resolvedDevice.locationId || resolvedDevice.location_id || '',
       externalDeviceId: resolvedDevice.externalDeviceId || resolvedDevice.external_device_id || resolvedDevice.deviceId || ''
     })
-    setActionStatus({ type: 'success', message: `Opened settings for ${resolvedDevice.name || resolvedDevice.deviceName || 'device'}.` })
+    setActionStatus((prev) => (prev.type === 'error' ? prev : { type: '', message: '' }))
     setActiveSection('device-detail-overview')
   }
 
@@ -1709,7 +1709,7 @@ export default function HomeView({
 
         {activeSection === 'dashboard' && (
           <>
-            <h2 className="page-title">{isAdminDashboard ? 'Dashboard' : 'My Device Dashboard'}</h2>
+            {!isAdminDashboard ? <h2 className="page-title">My Device Dashboard</h2> : null}
             <section className="live-alarm-strip">
               <div>
                 <strong>Live alarm feed</strong>
