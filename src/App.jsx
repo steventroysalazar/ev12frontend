@@ -1134,6 +1134,7 @@ export default function App() {
           setGatewayToken={setGatewayToken}
           configForm={configForm}
           setConfigForm={setConfigForm}
+          configBaseline={configBaseline}
           setConfigBaseline={setConfigBaseline}
           draftCommandPreview={draftCommandPreview}
           configStatus={configStatus}
