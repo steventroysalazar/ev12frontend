@@ -116,6 +116,7 @@ export default function HomeView({
   const [selectedLocationId, setSelectedLocationId] = useState(() => parseHomeRoute().section === 'location-detail' ? parseHomeRoute().entityId : '')
   const [selectedDevice, setSelectedDevice] = useState(null)
   const [dashboardMapDeviceId, setDashboardMapDeviceId] = useState('')
+  const syncingFromPopStateRef = useRef(false)
 
   useEffect(() => {
     onSectionChange?.(activeSection)
@@ -134,7 +135,15 @@ export default function HomeView({
 
     if (typeof window !== 'undefined') {
       const nextUrl = `${window.location.pathname}?${params.toString()}`
-      window.history.replaceState({}, '', nextUrl)
+      const currentUrl = `${window.location.pathname}${window.location.search}`
+      if (currentUrl === nextUrl) return
+
+      if (syncingFromPopStateRef.current) {
+        syncingFromPopStateRef.current = false
+        window.history.replaceState({}, '', nextUrl)
+      } else {
+        window.history.pushState({}, '', nextUrl)
+      }
     }
   }, [activeSection, selectedLocationId, selectedUserId])
 
@@ -142,6 +151,7 @@ export default function HomeView({
     if (typeof window === 'undefined') return undefined
     const syncSectionFromUrl = () => {
       const route = parseHomeRoute()
+      syncingFromPopStateRef.current = true
       setActiveSection(route.section)
       if (route.section === 'user-detail') setSelectedUserId(route.entityId)
       if (route.section === 'location-detail') setSelectedLocationId(route.entityId)
@@ -1920,7 +1930,6 @@ export default function HomeView({
             handleCancelAlarm={handleCancelAlarm}
             formatTimestamp={formatTimestamp}
             openLocationDetailPage={openLocationDetailPage}
-            openEditDeviceModal={openEditDeviceModal}
             openDeviceSettings={openDeviceSettings}
             devicesPage={devicesPage}
             setDevicesPage={setDevicesPage}

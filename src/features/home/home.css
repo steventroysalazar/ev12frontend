@@ -773,6 +773,12 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   white-space: nowrap;
 }
 
+.devices-list-table th,
+.devices-list-table td {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 .table-link {
   background: transparent;
   color: #0f766e;
@@ -836,7 +842,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .map-embed-wrap { padding: 0; overflow: hidden; background: #e5e7eb; }
