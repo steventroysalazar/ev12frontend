@@ -9,8 +9,7 @@ export default function LocationsPage({
   pagedLocations,
   locationsPage,
   setLocationsPage,
-  openLocationDetailPage,
-  openEditLocationModal
+  openLocationDetailPage
 }) {
   return (
     <section className="card-like section-panel">
@@ -38,7 +37,6 @@ export default function LocationsPage({
                 <td>{l.deviceCount || l.devices?.length || 0}</td>
                 <td>
                   <button className="table-link" type="button" onClick={() => openLocationDetailPage(l)}>View Page</button>
-                  <button className="table-link" type="button" onClick={() => openEditLocationModal(l)}>Edit Location</button>
                 </td>
               </tr>
             ))}
