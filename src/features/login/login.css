@@ -1,23 +1,23 @@
 .login-view {
-  max-width: 420px;
+  max-width: 100%;
 }
 
 .auth-status {
   margin-top: 0.75rem;
   margin-bottom: 0;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   text-align: center;
 }
 
 .auth-status-info {
-  color: #475569;
+  color: #93a8bf;
 }
 
 .auth-status-success {
-  color: #0f766e;
+  color: #6de2ca;
 }
 
 .auth-status-error {
-  color: #b91c1c;
+  color: #ff8e8e;
   font-weight: 600;
 }
