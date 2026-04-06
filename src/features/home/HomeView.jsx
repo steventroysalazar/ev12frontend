@@ -82,6 +82,7 @@ export default function HomeView({
   setGatewayToken,
   configForm,
   setConfigForm,
+  configBaseline,
   setConfigBaseline,
   draftCommandPreview,
   configStatus,
