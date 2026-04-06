@@ -116,6 +116,7 @@ export default function HomeView({
   const [selectedLocationId, setSelectedLocationId] = useState(() => parseHomeRoute().section === 'location-detail' ? parseHomeRoute().entityId : '')
   const [selectedDevice, setSelectedDevice] = useState(null)
   const [dashboardMapDeviceId, setDashboardMapDeviceId] = useState('')
+  const syncingFromPopStateRef = useRef(false)
 
   useEffect(() => {
     onSectionChange?.(activeSection)
@@ -134,7 +135,15 @@ export default function HomeView({
 
     if (typeof window !== 'undefined') {
       const nextUrl = `${window.location.pathname}?${params.toString()}`
-      window.history.replaceState({}, '', nextUrl)
+      const currentUrl = `${window.location.pathname}${window.location.search}`
+      if (currentUrl === nextUrl) return
+
+      if (syncingFromPopStateRef.current) {
+        syncingFromPopStateRef.current = false
+        window.history.replaceState({}, '', nextUrl)
+      } else {
+        window.history.pushState({}, '', nextUrl)
+      }
     }
   }, [activeSection, selectedLocationId, selectedUserId])
 
@@ -142,6 +151,7 @@ export default function HomeView({
     if (typeof window === 'undefined') return undefined
     const syncSectionFromUrl = () => {
       const route = parseHomeRoute()
+      syncingFromPopStateRef.current = true
       setActiveSection(route.section)
       if (route.section === 'user-detail') setSelectedUserId(route.entityId)
       if (route.section === 'location-detail') setSelectedLocationId(route.entityId)
@@ -156,6 +166,7 @@ export default function HomeView({
   const [showEditDeviceModal, setShowEditDeviceModal] = useState(false)
   const [showEditUserModal, setShowEditUserModal] = useState(false)
   const [showEditLocationModal, setShowEditLocationModal] = useState(false)
+  const [showConfigReviewModal, setShowConfigReviewModal] = useState(false)
   const [editingUserId, setEditingUserId] = useState(null)
   const [editingLocationId, setEditingLocationId] = useState(null)
   const [editingDeviceId, setEditingDeviceId] = useState(null)
@@ -176,6 +187,12 @@ export default function HomeView({
   const [userRoleFilter, setUserRoleFilter] = useState('all')
   const [locationDeviceFilter, setLocationDeviceFilter] = useState('all')
   const [deviceAlarmFilter, setDeviceAlarmFilter] = useState('all')
+  const [userDetailDeviceSearch, setUserDetailDeviceSearch] = useState('')
+  const [userDetailDevicePage, setUserDetailDevicePage] = useState(1)
+  const [locationDetailUserSearch, setLocationDetailUserSearch] = useState('')
+  const [locationDetailUserPage, setLocationDetailUserPage] = useState(1)
+  const [locationDetailDeviceSearch, setLocationDetailDeviceSearch] = useState('')
+  const [locationDetailDevicePage, setLocationDetailDevicePage] = useState(1)
 
   const [locationForm, setLocationForm] = useState(initialLocationForm)
   const [userForm, setUserForm] = useState(initialUserForm)
@@ -207,12 +224,12 @@ export default function HomeView({
 
   const roleLabel = useCallback((value) => {
     const normalized = String(value || '').trim().toUpperCase()
-    if (normalized === 'SUPER_ADMIN' || normalized === 'SUPER ADMIN') return 'Super Admin'
+    if (normalized === 'SUPER_ADMIN' || normalized === 'SUPER ADMIN') return 'QView Admin'
     if (normalized === 'MANAGER') return 'Manager'
     if (normalized === 'USER') return 'User'
 
     const role = Number(value)
-    if (role === 1) return 'Super Admin'
+    if (role === 1) return 'QView Admin'
     if (role === 2) return 'Manager'
     if (role === 3) return 'User'
     return value || '-'
@@ -236,7 +253,7 @@ export default function HomeView({
   }, [])
 
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
-  const isAdminDashboard = normalizedRole === 'super admin' || normalizedRole === 'manager'
+  const isAdminDashboard = normalizedRole === 'qview admin' || normalizedRole === 'manager'
 
   const metrics = useMemo(
     () => [
@@ -664,7 +681,7 @@ export default function HomeView({
       externalDeviceId: resolvedDevice.externalDeviceId || resolvedDevice.external_device_id || resolvedDevice.deviceId || ''
     })
     setActionStatus({ type: 'success', message: `Opened settings for ${resolvedDevice.name || resolvedDevice.deviceName || 'device'}.` })
-    setActiveSection('device-detail-basic')
+    setActiveSection('device-detail-overview')
   }
 
   const handleCreateLocation = async () => {
@@ -813,8 +830,9 @@ export default function HomeView({
 
 
 
-  const openEditUserModal = async (user) => {
-    await Promise.all([loadLocations(), loadUsers()])
+  const prepareUserEditor = useCallback((entry) => {
+    if (!entry) return
+    const user = entry
     setEditingUserId(user.id)
     setUserForm({
       email: user.email || '',
@@ -827,10 +845,16 @@ export default function HomeView({
       locationId: user.locationId || user.location_id || user.location?.id || '',
       managerId: user.managerId || user.manager_id || user.manager?.id || ''
     })
+  }, [])
+
+  const openEditUserModal = async (user) => {
+    await Promise.all([loadLocations(), loadUsers()])
+    prepareUserEditor(user)
     setShowEditUserModal(true)
   }
 
   const openEditLocationModal = (location) => {
+    if (!location) return
     setEditingLocationId(location.id)
     setLocationForm({
       name: location.name || '',
@@ -1212,6 +1236,12 @@ export default function HomeView({
     })
   }, [roleLabel, userRoleFilter, userSearch, users])
 
+  const getUserDevices = useCallback((userEntry) => {
+    const currentId = String(userEntry?.id || '')
+    if (!currentId) return []
+    return devices.filter((entry) => String(entry.ownerUserId || entry.userId || entry.user_id || entry.owner?.id || entry.app_user?.id || '') === currentId)
+  }, [devices])
+
   const filteredLocations = useMemo(() => {
     const keyword = locationSearch.trim().toLowerCase()
     return locations.filter((entry) => {
@@ -1265,6 +1295,28 @@ export default function HomeView({
   useEffect(() => { if (locationsPage > pagedLocations.totalPages) setLocationsPage(pagedLocations.totalPages) }, [locationsPage, pagedLocations.totalPages])
   useEffect(() => { if (devicesPage > pagedDevices.totalPages) setDevicesPage(pagedDevices.totalPages) }, [devicesPage, pagedDevices.totalPages])
   useEffect(() => { if (activeAlertPage > activeAlertTotalPages) setActiveAlertPage(activeAlertTotalPages) }, [activeAlertPage, activeAlertTotalPages])
+  useEffect(() => {
+    if (!selectedUser) return
+    prepareUserEditor(selectedUser)
+  }, [prepareUserEditor, selectedUser])
+  useEffect(() => {
+    if (!selectedLocation) return
+    setEditingLocationId(selectedLocation.id)
+    setLocationForm({
+      name: selectedLocation.name || '',
+      details: selectedLocation.details || ''
+    })
+  }, [selectedLocation])
+  useEffect(() => {
+    setUserDetailDeviceSearch('')
+    setUserDetailDevicePage(1)
+  }, [selectedUserId])
+  useEffect(() => {
+    setLocationDetailUserSearch('')
+    setLocationDetailUserPage(1)
+    setLocationDetailDeviceSearch('')
+    setLocationDetailDevicePage(1)
+  }, [selectedLocationId])
 
   useEffect(() => {
     if (!activeAlarmLocations.length) {
@@ -1569,6 +1621,39 @@ export default function HomeView({
   const hasQueuedCommand = Boolean(queuedCommandPreview)
   const hasCommandChanges = hasActiveCommand && activeCommandPreview !== queuedCommandPreview
   const activeDeviceSettingsSection = activeSection.startsWith('device-detail-') ? activeSection : ''
+  const configChangeRows = useMemo(() => {
+    const changedKeys = new Set([
+      ...Object.keys(configBaseline || {}),
+      ...Object.keys(configForm || {})
+    ])
+
+    return [...changedKeys]
+      .filter((key) => JSON.stringify(configBaseline?.[key] ?? null) !== JSON.stringify(configForm?.[key] ?? null))
+      .map((key) => ({
+        key,
+        before: configBaseline?.[key] ?? '-',
+        after: configForm?.[key] ?? '-'
+      }))
+  }, [configBaseline, configForm])
+
+  const openConfigReview = () => {
+    if (!configForm.deviceId) {
+      setActionStatus({ type: 'error', message: 'Open a device first before saving SMS changes.' })
+      return
+    }
+    if (!configChangeRows.length) {
+      setActionStatus({ type: 'info', message: 'No SMS-related changes detected yet.' })
+      return
+    }
+    setShowConfigReviewModal(true)
+  }
+
+  const confirmSendConfig = async () => {
+    setShowConfigReviewModal(false)
+    await sendConfig()
+    setConfigBaseline({ ...configForm })
+  }
+
   const handleSectionChange = (section) => {
     setActiveSection(section)
     if (section !== 'user-detail') setSelectedUserId('')
@@ -1590,14 +1675,16 @@ export default function HomeView({
         {isDeviceWorkspaceSection ? (
           <div className="device-workspace-head card-like">
             <aside className="device-detail-sidebar">
-              <strong>Device workspace</strong>
-              <p>{selectedDevice ? (selectedDevice.name || selectedDevice.deviceName || 'Selected device') : 'No device selected yet'}</p>
               <div className="device-detail-nav">
-                <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-overview')}>Device Profile</button>
-                <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-basic')}>Basic Config</button>
-                <button type="button" className={activeDeviceSettingsSection === 'device-detail-advanced' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-advanced')}>Advanced Config</button>
-                <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-location')}>Location</button>
-                <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-commands')}>Commands</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-overview')}><span className="device-nav-dot">◉</span>Device Profile</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-basic')}><span className="device-nav-dot">◉</span>Basic Configuration</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-advanced' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-advanced')}><span className="device-nav-dot">◉</span>Advanced Configuration</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-location')}><span className="device-nav-dot">◉</span>Location Request</button>
+                <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => setActiveSection('device-detail-commands')}><span className="device-nav-dot">◉</span>Commands</button>
+              </div>
+              <div className="device-workspace-actions">
+                <button type="button" className="mini-action" onClick={openConfigReview} disabled={!configForm.deviceId}>Save SMS Changes</button>
+                <small>Or send from Commands section.</small>
               </div>
               <button type="button" className="device-back-button" onClick={() => setActiveSection('devices')}>← Back to devices</button>
             </aside>
@@ -1843,7 +1930,8 @@ export default function HomeView({
             usersPage={usersPage}
             setUsersPage={setUsersPage}
             openUserDetailPage={openUserDetailPage}
-            openEditUserModal={openEditUserModal}
+            roleLabel={roleLabel}
+            getUserDevices={getUserDevices}
           />
         )}
 
@@ -1858,7 +1946,6 @@ export default function HomeView({
             locationsPage={locationsPage}
             setLocationsPage={setLocationsPage}
             openLocationDetailPage={openLocationDetailPage}
-            openEditLocationModal={openEditLocationModal}
           />
         )}
 
@@ -1879,7 +1966,6 @@ export default function HomeView({
             handleCancelAlarm={handleCancelAlarm}
             formatTimestamp={formatTimestamp}
             openLocationDetailPage={openLocationDetailPage}
-            openEditDeviceModal={openEditDeviceModal}
             openDeviceSettings={openDeviceSettings}
             devicesPage={devicesPage}
             setDevicesPage={setDevicesPage}
@@ -1891,7 +1977,14 @@ export default function HomeView({
             selectedUser={selectedUser}
             roleLabel={roleLabel}
             devices={devices}
+            userForm={userForm}
+            setUserForm={setUserForm}
+            onSaveUser={handleUpdateUser}
             openDeviceSettings={openDeviceSettings}
+            userDeviceSearch={userDetailDeviceSearch}
+            setUserDeviceSearch={setUserDetailDeviceSearch}
+            userDevicePage={userDetailDevicePage}
+            setUserDevicePage={setUserDetailDevicePage}
             onBack={() => setActiveSection('users')}
           />
         )}
@@ -1900,8 +1993,20 @@ export default function HomeView({
           <LocationDetailPage
             selectedLocation={selectedLocation}
             devices={devices}
+            users={users}
+            locationForm={locationForm}
+            setLocationForm={setLocationForm}
+            onSaveLocation={handleUpdateLocation}
             resolveDeviceMeta={resolveDeviceMeta}
             openDeviceSettings={openDeviceSettings}
+            locationUserSearch={locationDetailUserSearch}
+            setLocationUserSearch={setLocationDetailUserSearch}
+            locationUserPage={locationDetailUserPage}
+            setLocationUserPage={setLocationDetailUserPage}
+            locationDeviceSearch={locationDetailDeviceSearch}
+            setLocationDeviceSearch={setLocationDetailDeviceSearch}
+            locationDevicePage={locationDetailDevicePage}
+            setLocationDevicePage={setLocationDetailDevicePage}
             onBack={() => setActiveSection('locations')}
           />
         )}
@@ -1925,7 +2030,10 @@ export default function HomeView({
                 <div className="lifecycle-card"><strong>Last Disconnected</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastDisconnectedAt || selectedWorkspaceDevice.last_disconnected_at)}</span></div>
               </div>
             ) : null}
-            <button className="mini-action" disabled={!editingDeviceId} onClick={handleUpdateDevice}>Save Device Profile</button>
+            <div className="device-profile-actions">
+              <button className="mini-action" disabled={!editingDeviceId} onClick={handleUpdateDevice}>Save Device Profile</button>
+              <button className="mini-action" type="button" onClick={openConfigReview} disabled={!configForm.deviceId}>Review SMS Changes</button>
+            </div>
           </section>
         )}
 
@@ -2375,6 +2483,33 @@ export default function HomeView({
           </section>
         )}
       </div>
+
+      {showConfigReviewModal ? (
+        <div className="overlay" onClick={() => setShowConfigReviewModal(false)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Review SMS Changes</h3>
+            <p className="status">Please confirm what changed before sending SMS.</p>
+            <div className="table-shell">
+              <table className="data-table">
+                <thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead>
+                <tbody>
+                  {configChangeRows.map((entry) => (
+                    <tr key={`config-change-${entry.key}`}>
+                      <td>{entry.key}</td>
+                      <td>{typeof entry.before === 'string' ? entry.before : JSON.stringify(entry.before)}</td>
+                      <td>{typeof entry.after === 'string' ? entry.after : JSON.stringify(entry.after)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="section-head">
+              <button className="table-link action-chip action-chip-neutral" type="button" onClick={() => setShowConfigReviewModal(false)}>Cancel</button>
+              <button className="mini-action" type="button" onClick={confirmSendConfig} disabled={loading}>Save &amp; Send SMS</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showUserModal ? (
         <div className="overlay" onClick={() => setShowUserModal(false)}>
