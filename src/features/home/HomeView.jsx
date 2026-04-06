@@ -238,10 +238,10 @@ export default function HomeView({
 
   const metrics = useMemo(
     () => [
-      { label: 'TOTAL USERS', value: users.length, icon: 'users' },
-      { label: 'TOTAL DEVICES', value: devices.length, icon: 'devices' },
-      { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location' },
-      { label: 'RECENT REPLIES', value: repliesCount || 0, icon: 'replies' }
+      { label: 'TOTAL USERS', value: users.length, icon: 'users', section: 'users' },
+      { label: 'TOTAL DEVICES', value: devices.length, icon: 'devices', section: 'devices' },
+      { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location', section: 'locations' },
+      { label: 'RECENT REPLIES', value: repliesCount || 0, icon: 'replies', section: 'replies' }
     ],
     [users.length, devices.length, locations.length, repliesCount]
   )
@@ -1592,16 +1592,42 @@ export default function HomeView({
 
             {isAdminDashboard ? (
               <>
-                <section className="metric-grid">
-                  {metrics.map((metric) => (
-                    <article key={metric.label} className="metric-card">
-                      <div className="metric-icon"><AppIcon name={metric.icon} className="card-icon" /></div>
+                <section className="dashboard-hero-shell">
+                  <article className="dashboard-hero">
+                    <div className="dashboard-hero-backdrop" aria-hidden="true" />
+                    <div className="dashboard-hero-top">
                       <div>
-                        <p>{metric.label}</p>
-                        <h3>{Number(metric.value || 0)}</h3>
+                        <p className="dashboard-hero-kicker">Operations overview</p>
+                        <h3>Mission Control Dashboard</h3>
                       </div>
-                    </article>
-                  ))}
+                      <div className="dashboard-hero-actions">
+                        <span className="hero-pill">Live</span>
+                        <span className="hero-pill">Global</span>
+                        <span className="hero-avatar">{user?.firstName?.[0] || 'A'}</span>
+                      </div>
+                    </div>
+                    <div className="dashboard-hero-widgets">
+                      <section className="metric-grid">
+                        {metrics.map((metric) => (
+                          <button
+                            type="button"
+                            key={metric.label}
+                            className="metric-card metric-card-link"
+                            onClick={() => setActiveSection(metric.section)}
+                          >
+                            <div className="metric-card-head">
+                              <span className="metric-card-title"><AppIcon name={metric.icon} className="card-icon" />{metric.label}</span>
+                              <span className="metric-card-menu">⋮</span>
+                            </div>
+                            <div className="metric-card-body">
+                              <h3>{Number(metric.value || 0).toLocaleString()}</h3>
+                              <span className="metric-card-jump">↗</span>
+                            </div>
+                          </button>
+                        ))}
+                      </section>
+                    </div>
+                  </article>
                 </section>
 
                 <section className="dashboard-top-layout">
@@ -1709,11 +1735,23 @@ export default function HomeView({
                     </div>
                   </article>
 
-                  <aside className="action-stack card-like">
-                    <h3>Quick Actions</h3>
-                    <button disabled={loading} onClick={sendConfig}><AppIcon name="command" className="btn-icon" />Send Command</button>
-                    <button disabled={loading} onClick={sendMessage}><AppIcon name="location" className="btn-icon" />Request Location</button>
-                    <button disabled={loading} onClick={fetchReplies}><AppIcon name="replies" className="btn-icon" />Fetch Replies</button>
+                  <aside className="action-stack card-like dashboard-status-panel">
+                    <h3>System Pulse</h3>
+                    <p>Keep an eye on feed health and latest incoming alarm events.</p>
+                    <div className="dashboard-status-items">
+                      <div>
+                        <strong>{alarmStreamConnected ? 'Connected' : 'Reconnecting'}</strong>
+                        <span>Alarm stream state</span>
+                      </div>
+                      <div>
+                        <strong>{alarmFeed.length}</strong>
+                        <span>Recent feed events</span>
+                      </div>
+                      <div>
+                        <strong>{activeAlarmDevices.length}</strong>
+                        <span>Devices with active alerts</span>
+                      </div>
+                    </div>
                   </aside>
                 </section>
               </>
