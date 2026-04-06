@@ -10,11 +10,11 @@
 }
 
 .dashboard-content {
-  background: linear-gradient(180deg, #f8fbff 0%, #f3f7fd 100%);
-  border: 1px solid #dbe5f0;
-  border-radius: 18px;
+  background: linear-gradient(180deg, #f8fbfa 0%, #f5f8fc 45%, #f8fbff 100%);
+  border: 1px solid #dfe7ef;
+  border-radius: 24px;
   padding: 1.2rem;
-  box-shadow: 0 18px 45px -34px rgba(19, 38, 73, 0.45);
+  box-shadow: 0 18px 45px -36px rgba(20, 35, 62, 0.55);
   min-width: 0;
   height: 100%;
   overflow-y: auto;
@@ -50,11 +50,11 @@
 .metric-card,
 .card-like,
 .modal {
-  border: 1px solid #dfe7f1;
-  border-radius: 16px;
-  background: #fff;
+  border: 1px solid #dbe4ed;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #fff 0%, #f9fbff 100%);
   padding: 1.05rem;
-  box-shadow: 0 14px 34px -30px rgba(15, 23, 42, 0.55);
+  box-shadow: 0 20px 30px -32px rgba(12, 20, 34, 0.65);
 }
 
 .metric-card {
@@ -66,9 +66,9 @@
 .metric-icon {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: #eef3f6;
-  color: #b6bfca;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #f2f7ec, #ecf3f8);
+  color: #7f92a8;
   display: grid;
   place-items: center;
 }
@@ -82,7 +82,7 @@
 .metric-card p {
   margin: 0;
   font-size: 0.78rem;
-  color: #a7b1bd;
+  color: #7f8da1;
   font-weight: 700;
 }
 
@@ -90,7 +90,7 @@
   margin: 0;
   font-size: 2rem;
   line-height: 1;
-  color: #222f45;
+  color: #1f2d43;
 }
 
 .dashboard-main-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 0.9rem; }
@@ -102,9 +102,9 @@
 }
 .live-alarm-strip {
   margin: 0 0 1rem;
-  border: 1px solid #d6e0ea;
-  background: linear-gradient(180deg, #f9fcff 0%, #f2f7fb 100%);
-  border-radius: 12px;
+  border: 1px solid #dbe6e1;
+  background: linear-gradient(180deg, #f7fcf6 0%, #f2f9f5 100%);
+  border-radius: 16px;
   padding: 0.7rem 0.8rem;
   display: flex;
   justify-content: space-between;
@@ -200,7 +200,8 @@ input,select,textarea { background: #f4f7fa; border: 1px solid #dde4ec; border-r
 .location-grid,.commands-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
 .dashboard-live-map {
   overflow: hidden;
-  border: 1px solid #d6e0ea;
+  border: 1px solid #dbe6ef;
+  border-radius: 20px;
 }
 
 .leaflet-map {
