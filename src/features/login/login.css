@@ -1,5 +1,5 @@
-.login-view {
-  max-width: 420px;
+.auth-layout-card-login .login-view {
+  max-width: none;
 }
 
 .auth-status {
