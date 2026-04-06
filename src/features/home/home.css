@@ -44,9 +44,9 @@
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
   gap: 0.9rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 }
 
 .metric-card,
@@ -64,6 +64,9 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 0.68rem;
+  background: rgba(245, 248, 252, 0.88);
+  border-color: rgba(214, 222, 231, 0.9);
+  backdrop-filter: blur(4px);
 }
 
 .metric-icon {
@@ -106,6 +109,125 @@
   grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
   gap: 0.9rem;
   margin-bottom: 0.9rem;
+}
+
+.dashboard-hero-shell {
+  margin-bottom: 1rem;
+}
+
+.dashboard-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 30px;
+  border: 1px solid #cfd8dd;
+  padding: 1.1rem;
+  min-height: 280px;
+  background: linear-gradient(140deg, #dbe7eb 0%, #c8e1dc 45%, #dbe9d2 100%);
+}
+
+.dashboard-hero-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 24% 25%, rgba(255, 255, 255, 0.33) 0%, transparent 54%),
+    radial-gradient(circle at 82% 15%, rgba(169, 196, 205, 0.27) 0%, transparent 44%),
+    linear-gradient(140deg, rgba(35, 65, 80, 0.28) 0%, rgba(86, 129, 131, 0.2) 42%, rgba(177, 214, 186, 0.2) 100%);
+}
+
+.dashboard-hero-top,
+.dashboard-hero-widgets {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.dashboard-hero-top h3 {
+  margin: 0.16rem 0 0;
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  color: #eef5f8;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-hero-kicker {
+  margin: 0;
+  color: rgba(239, 246, 249, 0.84);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.dashboard-hero-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.46rem;
+}
+
+.hero-pill,
+.hero-avatar {
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  border: 1px solid rgba(233, 241, 245, 0.8);
+  background: rgba(240, 246, 248, 0.5);
+  color: #f7fbfd;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0 0.68rem;
+}
+
+.hero-avatar {
+  width: 32px;
+  padding: 0;
+}
+
+.dashboard-hero-widgets {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 272px);
+  gap: 0.9rem;
+  align-items: stretch;
+}
+
+.dashboard-hero-cta {
+  border: 1px solid rgba(213, 223, 182, 0.92);
+  background: linear-gradient(180deg, rgba(230, 242, 187, 0.92), rgba(223, 236, 176, 0.9));
+  border-radius: 24px;
+  padding: 0.9rem;
+  display: grid;
+  align-content: start;
+  gap: 0.7rem;
+  box-shadow: 0 14px 30px -30px rgba(44, 50, 56, 0.55);
+}
+
+.dashboard-hero-cta h4 {
+  margin: 0;
+  color: #22241d;
+  font-size: 0.98rem;
+}
+
+.dashboard-hero-cta-actions {
+  display: grid;
+  gap: 0.46rem;
+}
+
+.dashboard-hero-cta-actions button {
+  margin: 0;
+  width: 100%;
+  justify-content: center;
+  background: rgba(253, 255, 245, 0.85);
+  color: #2d302b;
+  border: 1px solid rgba(196, 204, 170, 0.9);
+  font-size: 0.78rem;
+  padding: 0.45rem 0.7rem;
 }
 .live-alarm-strip {
   margin: 0 0 1rem;
@@ -167,6 +289,34 @@
 
 .action-stack { display: grid; align-content: start; gap: 0.6rem; }
 .action-stack button,.mini-action { margin-top: 0; background: linear-gradient(135deg, #141518, #22242a); color: #fff; border-radius: 999px; font-weight: 600; font-size: 0.82rem; padding: 0.58rem 0.92rem; display:inline-flex; align-items:center; gap:0.4rem; border: 1px solid #141518; letter-spacing: 0.01em; }
+.dashboard-status-panel p {
+  margin: 0;
+  color: #616a74;
+  font-size: 0.85rem;
+}
+
+.dashboard-status-items {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.dashboard-status-items div {
+  border-radius: 14px;
+  border: 1px solid #dde2e8;
+  background: #f5f7f9;
+  padding: 0.55rem 0.65rem;
+}
+
+.dashboard-status-items strong {
+  display: block;
+  color: #1f2630;
+  font-size: 0.88rem;
+}
+
+.dashboard-status-items span {
+  color: #6a7480;
+  font-size: 0.75rem;
+}
 
 .section-panel,.map-panel,.gateway-panel { margin-bottom: 0.9rem; }
 .field-grid { display: grid; gap: 0.7rem; }
@@ -214,6 +364,10 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 @media (max-width: 1280px) {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+
+  .dashboard-hero-widgets {
+    grid-template-columns: 1fr;
   }
 }
 
