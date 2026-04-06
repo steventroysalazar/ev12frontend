@@ -1663,7 +1663,7 @@ export default function HomeView({
 
                   <aside className="active-alerts card-like">
                     <div className="section-head">
-                      <h3>Active Alert Devices</h3>
+                      <h3>Active Incidents</h3>
                       <div className="alert-head-actions">
                         <span className="map-kpi-chip compact"><strong>{activeAlarmDevices.length}</strong></span>
                         <button
@@ -1688,11 +1688,19 @@ export default function HomeView({
                             className={`active-alert-row ${isMapFocused ? 'is-map-focused' : ''}`}
                             onClick={() => setDashboardMapDeviceId(deviceKey)}
                           >
-                            <strong>{device.name || device.deviceName || 'Unnamed device'}</strong>
-                            <span>{meta.ownerName}</span>
-                            <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
-                            <small>{latitude.toFixed(5)}, {longitude.toFixed(5)}</small>
-                            <small>{updatedAt ? new Date(updatedAt).toLocaleString() : 'Timestamp unavailable'}</small>
+                            <div className="active-alert-row-top">
+                              <span className={`active-alert-dot tone-${alarmMeta.tone}`} aria-hidden="true" />
+                              <div className="active-alert-row-copy">
+                                <strong>{device.name || device.deviceName || 'Unnamed device'}</strong>
+                                <span>{meta.ownerName}</span>
+                              </div>
+                              <span className="active-alert-chevron" aria-hidden="true">›</span>
+                            </div>
+                            <div className="active-alert-row-meta">
+                              <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
+                              <small>{updatedAt ? new Date(updatedAt).toLocaleString() : 'Timestamp unavailable'}</small>
+                              <small>{latitude.toFixed(5)}, {longitude.toFixed(5)}</small>
+                            </div>
                           </button>
                         )
                       }) : <p className="status">No active alerts right now.</p>}
