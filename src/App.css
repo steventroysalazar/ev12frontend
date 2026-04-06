@@ -1,8 +1,20 @@
 .container {
-  --dashboard-layout-offset: 5.25rem;
-  width: min(1800px, calc(100vw - 2rem));
-  margin: 1rem auto;
-  padding: 0 0.75rem;
+  width: min(1800px, 100%);
+  height: 100dvh;
+  margin: 0 auto;
+  padding: 1rem 0.75rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.container-home {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+.container-auth {
+  overflow-y: auto;
 }
 
 .card {

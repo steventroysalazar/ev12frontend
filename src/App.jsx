@@ -1094,7 +1094,7 @@ export default function App() {
   }, [configQueue?.pending, configQueue?.deviceId, refreshConfigQueueStatus])
 
   return (
-    <main className="container">
+    <main className={`container ${activeView === 'home' ? 'container-home' : 'container-auth'}`}>
       {activeView === 'home' ? (
         <Navbar
           user={auth.user}

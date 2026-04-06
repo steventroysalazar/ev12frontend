@@ -4,6 +4,12 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   background:
@@ -12,4 +18,5 @@ body {
     #e9eaec;
   color: #111214;
   letter-spacing: -0.01em;
+  overflow: hidden;
 }
