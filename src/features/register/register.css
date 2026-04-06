@@ -1,3 +1,25 @@
 .register-view {
-  max-width: 560px;
+  max-width: 100%;
+}
+
+.register-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.2rem 0.6rem;
+}
+
+.field-span-2 {
+  grid-column: span 2;
+}
+
+.register-view label {
+  margin-top: 0.35rem;
+}
+
+.register-view .auth-submit {
+  margin-top: 0.65rem;
+}
+
+.register-visual .auth-quote-card {
+  max-width: 390px;
 }

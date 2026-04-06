@@ -11,46 +11,51 @@ const statusTone = (status) => {
 export default function LoginView({ loginForm, setLoginForm, onLogin, session, onGoRegister, authStatus, authLoading }) {
   return (
     <section className="auth-shell">
-      <div className="auth-brand-panel">
-        <div className="auth-brand-lockup">
-          <QViewLogo className="auth-brand-logo" />
-          <h1>QView PORTAL</h1>
-        </div>
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-      </div>
+      <div className="auth-frame">
+        <form
+          className="auth-panel auth-form-card login-view"
+          onSubmit={(event) => {
+            event.preventDefault()
+            onLogin()
+          }}
+        >
+          <QViewLogo className="auth-brand-logo auth-logo-inline" />
+          <h2>Welcome back</h2>
+          <p className="auth-intro">Sign in to continue to your QView dashboard.</p>
 
-      <form
-        className="card auth-form-card login-view"
-        onSubmit={(event) => {
-          event.preventDefault()
-          onLogin()
-        }}
-      >
-        <h2>Login</h2>
-        <label>Email</label>
-        <input
-          placeholder="johndoe_123@example.com"
-          value={loginForm.email}
-          onChange={(event) => setLoginForm((prev) => ({ ...prev, email: event.target.value }))}
-        />
-
-        <label>Password</label>
-        <div className="password-field">
+          <label>Email</label>
           <input
-            placeholder="••••••••••••"
-            type="password"
-            value={loginForm.password}
-            onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
+            placeholder="johndoe_123@example.com"
+            value={loginForm.email}
+            onChange={(event) => setLoginForm((prev) => ({ ...prev, email: event.target.value }))}
           />
-          <span>show</span>
-        </div>
 
-        <button className="auth-submit" type="submit" disabled={authLoading}>{authLoading ? 'Signing In...' : 'Sign In'}</button>
-        {authStatus ? <p className={`auth-status auth-status-${statusTone(authStatus)}`}>{authStatus}</p> : null}
-        <p className="auth-link" onClick={onGoRegister}>Need an account? Register</p>
-        <p className="forgot-link">Forgot password?</p>
-        {session ? <pre className="replies">{JSON.stringify(session, null, 2)}</pre> : null}
-      </form>
+          <label>Password</label>
+          <div className="password-field">
+            <input
+              placeholder="••••••••••••"
+              type="password"
+              value={loginForm.password}
+              onChange={(event) => setLoginForm((prev) => ({ ...prev, password: event.target.value }))}
+            />
+            <span>show</span>
+          </div>
+
+          <button className="auth-submit" type="submit" disabled={authLoading}>{authLoading ? 'Signing In...' : 'Sign In'}</button>
+          {authStatus ? <p className={`auth-status auth-status-${statusTone(authStatus)}`}>{authStatus}</p> : null}
+          <p className="auth-link" onClick={onGoRegister}>Need an account? Register</p>
+          <p className="forgot-link">Forgot password?</p>
+          {session ? <pre className="replies">{JSON.stringify(session, null, 2)}</pre> : null}
+        </form>
+
+        <div className="auth-panel auth-visual-panel">
+          <div className="auth-visual-plant" aria-hidden="true" />
+          <div className="auth-quote-card">
+            <p className="auth-quote-eyebrow">QView Intelligence</p>
+            <p>Proactive monitoring with a cleaner command center for high-stakes response teams.</p>
+          </div>
+        </div>
+      </div>
     </section>
   )
 }
