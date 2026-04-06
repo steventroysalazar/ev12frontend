@@ -16,7 +16,6 @@ export default function DevicesPage({
   handleCancelAlarm,
   formatTimestamp,
   openLocationDetailPage,
-  openEditDeviceModal,
   openDeviceSettings,
   devicesPage,
   setDevicesPage
@@ -38,8 +37,8 @@ export default function DevicesPage({
         </select>
       </div>
       <div className="table-shell">
-        <table className="data-table">
-          <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Last Power ON</th><th>Last Power OFF</th><th>Last Disconnected</th><th>Owner</th><th>Role</th><th>Location</th><th>Edit</th><th>Settings</th></tr></thead>
+        <table className="data-table devices-list-table">
+          <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Last Power ON</th><th>Last Power OFF</th><th>Last Disconnected</th><th>Owner</th><th>Role</th><th>Location</th><th>Settings</th></tr></thead>
           <tbody>
             {pagedDevices.rows.map((d) => {
               const deviceMeta = resolveDeviceMeta(d)
@@ -73,7 +72,6 @@ export default function DevicesPage({
                   <td>{deviceMeta.ownerName}</td>
                   <td>{deviceMeta.ownerRole}</td>
                   <td>{deviceLocationId ? <button className="table-link table-link-compact" type="button" onClick={() => openLocationDetailPage({ id: deviceLocationId })}>{deviceMeta.ownerLocation}</button> : deviceMeta.ownerLocation}</td>
-                  <td><button className="table-link table-link-compact action-chip action-chip-neutral" type="button" onClick={() => openEditDeviceModal(d)}>Edit</button></td>
                   <td><button className="table-link table-link-compact action-chip action-chip-primary" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
                 </tr>
               )
