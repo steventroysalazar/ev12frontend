@@ -1309,11 +1309,21 @@ export default function HomeView({
     markersLayer.clearLayers()
 
     const markerBounds = []
-    activeAlarmLocations.forEach(({ device, alarmCode, latitude, longitude, deviceKey }) => {
+    activeAlarmLocations.forEach(({ device, alarmCode, latitude, longitude, deviceKey, updatedAt }) => {
       const meta = resolveDeviceMeta(device)
       const alarmMeta = getAlarmMeta(alarmCode)
+      const locationUpdatedAt = updatedAt ? new Date(updatedAt).toLocaleString() : 'Timestamp unavailable'
+      const popupDetails = [
+        `<strong>${device.name || device.deviceName || `Device ${deviceKey}`}</strong>`,
+        `Owner: ${meta.ownerName}`,
+        `Role: ${meta.ownerRole}`,
+        `Location: ${meta.ownerLocation}`,
+        `Alert: ${alarmMeta.label}`,
+        `Updated: ${locationUpdatedAt}`,
+        `Lat/Lng: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+      ].join('<br/>')
       const marker = L.marker([latitude, longitude])
-        .bindPopup(`<strong>${device.name || device.deviceName || `Device ${deviceKey}`}</strong><br/>Owner: ${meta.ownerName}<br/>Alert: ${alarmMeta.label}<br/>Lat/Lng: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`)
+        .bindPopup(popupDetails)
         .on('click', () => setDashboardMapDeviceId(deviceKey))
 
       if (String(dashboardMapDeviceId) === String(deviceKey)) {
@@ -1663,7 +1673,7 @@ export default function HomeView({
 
                   <aside className="active-alerts card-like">
                     <div className="section-head">
-                      <h3>Active Alert Devices</h3>
+                      <h3>Active Incidents</h3>
                       <div className="alert-head-actions">
                         <span className="map-kpi-chip compact"><strong>{activeAlarmDevices.length}</strong></span>
                         <button
@@ -1677,7 +1687,7 @@ export default function HomeView({
                       </div>
                     </div>
                     <div className="active-alerts-list">
-                      {activeAlarmLocations.length ? paginatedActiveAlerts.map(({ device, alarmCode, latitude, longitude, updatedAt, deviceKey }) => {
+                      {activeAlarmLocations.length ? paginatedActiveAlerts.map(({ device, alarmCode, updatedAt, deviceKey }) => {
                         const meta = resolveDeviceMeta(device)
                         const alarmMeta = getAlarmMeta(alarmCode)
                         const isMapFocused = String(dashboardMapDeviceId) === String(deviceKey)
@@ -1688,11 +1698,16 @@ export default function HomeView({
                             className={`active-alert-row ${isMapFocused ? 'is-map-focused' : ''}`}
                             onClick={() => setDashboardMapDeviceId(deviceKey)}
                           >
-                            <strong>{device.name || device.deviceName || 'Unnamed device'}</strong>
-                            <span>{meta.ownerName}</span>
-                            <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
-                            <small>{latitude.toFixed(5)}, {longitude.toFixed(5)}</small>
-                            <small>{updatedAt ? new Date(updatedAt).toLocaleString() : 'Timestamp unavailable'}</small>
+                            <div className="active-alert-row-inline">
+                              <span className={`active-alert-dot tone-${alarmMeta.tone}`} aria-hidden="true" />
+                              <div className="active-alert-row-copy">
+                                <strong>{device.name || device.deviceName || 'Unnamed device'}</strong>
+                                <span>{meta.ownerName}</span>
+                              </div>
+                              <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
+                              <small>{updatedAt ? new Date(updatedAt).toLocaleString() : 'Timestamp unavailable'}</small>
+                              <span className="active-alert-chevron" aria-hidden="true">›</span>
+                            </div>
                           </button>
                         )
                       }) : <p className="status">No active alerts right now.</p>}
