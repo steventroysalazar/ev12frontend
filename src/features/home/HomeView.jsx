@@ -207,7 +207,8 @@ export default function HomeView({
   const [clearingWebhookEvents, setClearingWebhookEvents] = useState(false)
   const [webhookLimit, setWebhookLimit] = useState('10')
   const [locationDeviceId, setLocationDeviceId] = useState('')
-  const [alarmLogDeviceId, setAlarmLogDeviceId] = useState('')
+  const [alarmLogDeviceFilter, setAlarmLogDeviceFilter] = useState('all')
+  const [alarmLogLocationFilter, setAlarmLogLocationFilter] = useState('all')
   const [alarmLogs, setAlarmLogs] = useState([])
   const [alarmLogsStatus, setAlarmLogsStatus] = useState('')
   const [locationBreadcrumbs, setLocationBreadcrumbs] = useState([])
@@ -255,6 +256,17 @@ export default function HomeView({
 
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
   const isAdminDashboard = normalizedRole === 'qview admin' || normalizedRole === 'manager'
+  const locationDeviceOptions = useMemo(() => {
+    if (isAdminDashboard) return devices
+
+    const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
+    if (!currentUserId) return devices
+
+    return devices.filter((device) => {
+      const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
+      return ownerId === currentUserId
+    })
+  }, [devices, isAdminDashboard, user])
 
   const metrics = useMemo(
     () => [
@@ -371,24 +383,53 @@ export default function HomeView({
     setDevices(flattened)
   }, [asCollection, fetchJson])
 
-  const loadAlarmLogs = useCallback(async (deviceId) => {
-    if (!deviceId) {
+  const loadAlarmLogs = useCallback(async () => {
+    if (!locationDeviceOptions.length) {
       setAlarmLogs([])
-      setAlarmLogsStatus('Select a device to load alarm logs.')
+      setAlarmLogsStatus('No devices available to load alarm logs.')
       return
     }
 
-    setAlarmLogsStatus('Loading alarm logs...')
+    setAlarmLogsStatus('Loading alarm logs for all devices...')
     try {
-      const payload = await fetchJson(`/api/devices/${deviceId}/alarm-logs`, { headers: {} })
-      const rows = asCollection(payload, ['alarmLogs', 'logs'])
-      setAlarmLogs(rows)
-      setAlarmLogsStatus(rows.length ? `Showing ${rows.length} alarm log entr${rows.length === 1 ? 'y' : 'ies'}.` : 'No alarm logs recorded for this device.')
+      const responses = await Promise.all(
+        locationDeviceOptions.map(async (device) => {
+          const deviceId = String(device.id || device.deviceId || '').trim()
+          if (!deviceId) return { rows: [], failed: false }
+
+          try {
+            const payload = await fetchJson(`/api/devices/${deviceId}/alarm-logs`, { headers: {} })
+            const rows = asCollection(payload, ['alarmLogs', 'logs']).map((entry) => ({
+              ...entry,
+              deviceId,
+              deviceName: device.name || device.deviceName || `Device ${deviceId}`,
+              locationId: String(device.locationId || device.location_id || ''),
+              locationName: device.locationName || ''
+            }))
+            return { rows, failed: false }
+          } catch {
+            return { rows: [], failed: true }
+          }
+        })
+      )
+
+      const rows = responses.flatMap((entry) => entry.rows)
+      const failedCount = responses.filter((entry) => entry.failed).length
+      const sortedRows = [...rows].sort((a, b) => new Date(b.eventAt || 0).getTime() - new Date(a.eventAt || 0).getTime())
+      setAlarmLogs(sortedRows)
+
+      if (!rows.length && !failedCount) {
+        setAlarmLogsStatus('No alarm logs recorded for available devices.')
+      } else if (failedCount) {
+        setAlarmLogsStatus(`Showing ${rows.length} alarm log entr${rows.length === 1 ? 'y' : 'ies'}. ${failedCount} device log source${failedCount === 1 ? '' : 's'} could not be loaded.`)
+      } else {
+        setAlarmLogsStatus(`Showing ${rows.length} alarm log entr${rows.length === 1 ? 'y' : 'ies'} across all devices.`)
+      }
     } catch (error) {
       setAlarmLogs([])
       setAlarmLogsStatus(`Failed to load alarm logs: ${error.message}`)
     }
-  }, [asCollection, fetchJson])
+  }, [asCollection, fetchJson, locationDeviceOptions])
 
   const loadLocationBreadcrumbs = useCallback(async (deviceId) => {
     if (!deviceId) {
@@ -537,8 +578,8 @@ export default function HomeView({
       loadDevices()
       return
     }
-    loadAlarmLogs(alarmLogDeviceId)
-  }, [activeSection, alarmLogDeviceId, devices.length, loadAlarmLogs, loadDevices])
+    loadAlarmLogs()
+  }, [activeSection, devices.length, loadAlarmLogs, loadDevices])
 
 
   const clearWebhookEvents = useCallback(async () => {
@@ -1029,18 +1070,6 @@ export default function HomeView({
       .sort((a, b) => b.updatedAtMs - a.updatedAtMs)
   }, [devices, resolveValidCoordinates])
 
-  const locationDeviceOptions = useMemo(() => {
-    if (isAdminDashboard) return devices
-
-    const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
-    if (!currentUserId) return devices
-
-    return devices.filter((device) => {
-      const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
-      return ownerId === currentUserId
-    })
-  }, [devices, isAdminDashboard, user])
-
   useEffect(() => {
     if (!locationDeviceOptions.length) {
       setLocationDeviceId('')
@@ -1058,17 +1087,40 @@ export default function HomeView({
   }, [locationDeviceOptions, locationDeviceId, configForm.deviceId])
 
   useEffect(() => {
-    if (!locationDeviceOptions.length) {
-      setAlarmLogDeviceId('')
-      return
-    }
+    if (locationDeviceOptions.some((device) => String(device.id || device.deviceId || '') === String(alarmLogDeviceFilter))) return
+    setAlarmLogDeviceFilter('all')
+  }, [alarmLogDeviceFilter, locationDeviceOptions])
 
-    if (alarmLogDeviceId && locationDeviceOptions.some((device) => String(device.id || device.deviceId || '') === String(alarmLogDeviceId))) {
-      return
-    }
+  const alarmLogLocationOptions = useMemo(() => {
+    const seen = new Set()
+    return locationDeviceOptions
+      .map((device) => ({
+        id: String(device.locationId || device.location_id || '').trim(),
+        name: device.locationName || ''
+      }))
+      .filter((location) => location.id)
+      .filter((location) => {
+        if (seen.has(location.id)) return false
+        seen.add(location.id)
+        return true
+      })
+  }, [locationDeviceOptions])
 
-    setAlarmLogDeviceId(String(locationDeviceOptions[0].id || locationDeviceOptions[0].deviceId || ''))
-  }, [alarmLogDeviceId, locationDeviceOptions])
+  useEffect(() => {
+    if (alarmLogLocationFilter === 'all') return
+    if (alarmLogLocationOptions.some((location) => location.id === alarmLogLocationFilter)) return
+    setAlarmLogLocationFilter('all')
+  }, [alarmLogLocationFilter, alarmLogLocationOptions])
+
+  const filteredAlarmLogs = useMemo(() => {
+    return alarmLogs.filter((entry) => {
+      const entryLocationId = String(entry.locationId || '').trim()
+      const entryDeviceId = String(entry.deviceId || '').trim()
+      const locationMatches = alarmLogLocationFilter === 'all' || entryLocationId === alarmLogLocationFilter
+      const deviceMatches = alarmLogDeviceFilter === 'all' || entryDeviceId === alarmLogDeviceFilter
+      return locationMatches && deviceMatches
+    })
+  }, [alarmLogDeviceFilter, alarmLogLocationFilter, alarmLogs])
 
   const selectedLocationDevice = useMemo(
     () => locationDeviceOptions.find((device) => String(device.id || device.deviceId || '') === String(locationDeviceId)) || null,
@@ -2262,12 +2314,28 @@ export default function HomeView({
             <article className="card-like">
               <div className="field-grid location-device-picker">
                 <div>
-                  <label htmlFor="alarm-log-device-select">Device</label>
+                  <label htmlFor="alarm-log-location-filter">Location filter</label>
                   <select
-                    id="alarm-log-device-select"
-                    value={alarmLogDeviceId}
-                    onChange={(event) => setAlarmLogDeviceId(event.target.value)}
+                    id="alarm-log-location-filter"
+                    value={alarmLogLocationFilter}
+                    onChange={(event) => setAlarmLogLocationFilter(event.target.value)}
                   >
+                    <option value="all">All locations</option>
+                    {alarmLogLocationOptions.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name || `Location ${location.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="alarm-log-device-filter">Device filter</label>
+                  <select
+                    id="alarm-log-device-filter"
+                    value={alarmLogDeviceFilter}
+                    onChange={(event) => setAlarmLogDeviceFilter(event.target.value)}
+                  >
+                    <option value="all">All devices</option>
                     {locationDeviceOptions.map((device) => (
                       <option key={device.id || device.deviceId || device.phoneNumber} value={String(device.id || device.deviceId || '')}>
                         {device.name || device.deviceName || `Device ${device.id || device.deviceId}`} ({device.phoneNumber || 'No phone'})
@@ -2284,6 +2352,8 @@ export default function HomeView({
                       <th>Event At</th>
                       <th>Action</th>
                       <th>Alarm Code</th>
+                      <th>Device</th>
+                      <th>Location</th>
                       <th>Source</th>
                       <th>Latitude</th>
                       <th>Longitude</th>
@@ -2291,11 +2361,13 @@ export default function HomeView({
                     </tr>
                   </thead>
                   <tbody>
-                    {alarmLogs.length ? alarmLogs.map((entry) => (
+                    {filteredAlarmLogs.length ? filteredAlarmLogs.map((entry) => (
                       <tr key={entry.id || `${entry.eventAt || ''}-${entry.action || ''}`}>
                         <td>{entry.eventAt ? new Date(entry.eventAt).toLocaleString() : '-'}</td>
                         <td>{entry.action || '-'}</td>
                         <td>{entry.alarmCode || '-'}</td>
+                        <td>{entry.deviceName || entry.deviceId || '-'}</td>
+                        <td>{entry.locationName || entry.locationId || '-'}</td>
                         <td>{entry.source || '-'}</td>
                         <td>{entry.latitude ?? '-'}</td>
                         <td>{entry.longitude ?? '-'}</td>
@@ -2303,7 +2375,7 @@ export default function HomeView({
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan={7}>No alarm logs to show.</td>
+                        <td colSpan={9}>No alarm logs to show for this filter.</td>
                       </tr>
                     )}
                   </tbody>
