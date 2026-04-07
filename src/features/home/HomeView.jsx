@@ -209,6 +209,7 @@ export default function HomeView({
   const [locationDeviceId, setLocationDeviceId] = useState('')
   const [alarmLogDeviceFilter, setAlarmLogDeviceFilter] = useState('all')
   const [alarmLogLocationFilter, setAlarmLogLocationFilter] = useState('all')
+  const [alarmLogAlertFilter, setAlarmLogAlertFilter] = useState('all')
   const [alarmLogs, setAlarmLogs] = useState([])
   const [alarmLogsStatus, setAlarmLogsStatus] = useState('')
   const [locationBreadcrumbs, setLocationBreadcrumbs] = useState([])
@@ -246,6 +247,22 @@ export default function HomeView({
     if (normalizedLower.includes('fall')) return { label: 'Fall-Down Alert', tone: 'warning' }
 
     return { label: normalizedCode, tone: 'active' }
+  }, [])
+
+  const isConnectivityLog = useCallback((entry) => {
+    const text = `${entry?.action || ''} ${entry?.alarmCode || ''} ${entry?.note || ''} ${entry?.source || ''}`.toLowerCase()
+    return text.includes('connect') || text.includes('disconnect') || text.includes('online') || text.includes('offline')
+  }, [])
+
+  const matchesAlertFilter = useCallback((entry, filterValue) => {
+    if (filterValue === 'all') return true
+
+    const normalizedCode = String(entry?.alarmCode || '').trim().toLowerCase()
+    if (!normalizedCode) return filterValue === 'no-code'
+    if (filterValue === 'sos') return normalizedCode.includes('sos')
+    if (filterValue === 'fall') return normalizedCode.includes('fall')
+    if (filterValue === 'other') return !normalizedCode.includes('sos') && !normalizedCode.includes('fall')
+    return true
   }, [])
 
   const formatTimestamp = useCallback((value) => {
@@ -418,18 +435,21 @@ export default function HomeView({
       const sortedRows = [...rows].sort((a, b) => new Date(b.eventAt || 0).getTime() - new Date(a.eventAt || 0).getTime())
       setAlarmLogs(sortedRows)
 
+      const connectivityCount = rows.filter((entry) => isConnectivityLog(entry)).length
+      const alarmEventCount = rows.length - connectivityCount
+
       if (!rows.length && !failedCount) {
         setAlarmLogsStatus('No alarm logs recorded for available devices.')
       } else if (failedCount) {
-        setAlarmLogsStatus(`Showing ${rows.length} alarm log entr${rows.length === 1 ? 'y' : 'ies'}. ${failedCount} device log source${failedCount === 1 ? '' : 's'} could not be loaded.`)
+        setAlarmLogsStatus(`Showing ${alarmEventCount} alarm entr${alarmEventCount === 1 ? 'y' : 'ies'} and ${connectivityCount} connectivity entr${connectivityCount === 1 ? 'y' : 'ies'}. ${failedCount} device log source${failedCount === 1 ? '' : 's'} could not be loaded.`)
       } else {
-        setAlarmLogsStatus(`Showing ${rows.length} alarm log entr${rows.length === 1 ? 'y' : 'ies'} across all devices.`)
+        setAlarmLogsStatus(`Showing ${alarmEventCount} alarm entr${alarmEventCount === 1 ? 'y' : 'ies'} and ${connectivityCount} connectivity entr${connectivityCount === 1 ? 'y' : 'ies'} across all devices.`)
       }
     } catch (error) {
       setAlarmLogs([])
       setAlarmLogsStatus(`Failed to load alarm logs: ${error.message}`)
     }
-  }, [asCollection, fetchJson, locationDeviceOptions])
+  }, [asCollection, fetchJson, isConnectivityLog, locationDeviceOptions])
 
   const loadLocationBreadcrumbs = useCallback(async (deviceId) => {
     if (!deviceId) {
@@ -1114,13 +1134,26 @@ export default function HomeView({
 
   const filteredAlarmLogs = useMemo(() => {
     return alarmLogs.filter((entry) => {
+      if (isConnectivityLog(entry)) return false
+      const entryLocationId = String(entry.locationId || '').trim()
+      const entryDeviceId = String(entry.deviceId || '').trim()
+      const locationMatches = alarmLogLocationFilter === 'all' || entryLocationId === alarmLogLocationFilter
+      const deviceMatches = alarmLogDeviceFilter === 'all' || entryDeviceId === alarmLogDeviceFilter
+      const alertMatches = matchesAlertFilter(entry, alarmLogAlertFilter)
+      return locationMatches && deviceMatches && alertMatches
+    })
+  }, [alarmLogAlertFilter, alarmLogDeviceFilter, alarmLogLocationFilter, alarmLogs, isConnectivityLog, matchesAlertFilter])
+
+  const filteredConnectivityLogs = useMemo(() => {
+    return alarmLogs.filter((entry) => {
+      if (!isConnectivityLog(entry)) return false
       const entryLocationId = String(entry.locationId || '').trim()
       const entryDeviceId = String(entry.deviceId || '').trim()
       const locationMatches = alarmLogLocationFilter === 'all' || entryLocationId === alarmLogLocationFilter
       const deviceMatches = alarmLogDeviceFilter === 'all' || entryDeviceId === alarmLogDeviceFilter
       return locationMatches && deviceMatches
     })
-  }, [alarmLogDeviceFilter, alarmLogLocationFilter, alarmLogs])
+  }, [alarmLogDeviceFilter, alarmLogLocationFilter, alarmLogs, isConnectivityLog])
 
   const selectedLocationDevice = useMemo(
     () => locationDeviceOptions.find((device) => String(device.id || device.deviceId || '') === String(locationDeviceId)) || null,
@@ -2343,8 +2376,23 @@ export default function HomeView({
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label htmlFor="alarm-log-alert-filter">Alert filter</label>
+                  <select
+                    id="alarm-log-alert-filter"
+                    value={alarmLogAlertFilter}
+                    onChange={(event) => setAlarmLogAlertFilter(event.target.value)}
+                  >
+                    <option value="all">All alerts</option>
+                    <option value="sos">SOS alerts</option>
+                    <option value="fall">Fall alerts</option>
+                    <option value="other">Other alarm alerts</option>
+                    <option value="no-code">No alarm code</option>
+                  </select>
+                </div>
               </div>
               <p className="status">{alarmLogsStatus}</p>
+              <h3>Alarm Event Logs</h3>
               <div className="table-wrap">
                 <table className="data-table">
                   <thead>
@@ -2376,6 +2424,37 @@ export default function HomeView({
                     )) : (
                       <tr>
                         <td colSpan={9}>No alarm logs to show for this filter.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <h3>Device Connection Logs</h3>
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Event At</th>
+                      <th>Action</th>
+                      <th>Device</th>
+                      <th>Location</th>
+                      <th>Source</th>
+                      <th>Note</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredConnectivityLogs.length ? filteredConnectivityLogs.map((entry) => (
+                      <tr key={`connectivity-${entry.id || `${entry.eventAt || ''}-${entry.action || ''}-${entry.deviceId || ''}`}`}>
+                        <td>{entry.eventAt ? new Date(entry.eventAt).toLocaleString() : '-'}</td>
+                        <td>{entry.action || '-'}</td>
+                        <td>{entry.deviceName || entry.deviceId || '-'}</td>
+                        <td>{entry.locationName || entry.locationId || '-'}</td>
+                        <td>{entry.source || '-'}</td>
+                        <td>{entry.note || '-'}</td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={6}>No connection logs to show for this filter.</td>
                       </tr>
                     )}
                   </tbody>
