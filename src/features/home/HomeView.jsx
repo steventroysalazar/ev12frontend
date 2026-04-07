@@ -256,6 +256,17 @@ export default function HomeView({
 
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
   const isAdminDashboard = normalizedRole === 'qview admin' || normalizedRole === 'manager'
+  const locationDeviceOptions = useMemo(() => {
+    if (isAdminDashboard) return devices
+
+    const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
+    if (!currentUserId) return devices
+
+    return devices.filter((device) => {
+      const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
+      return ownerId === currentUserId
+    })
+  }, [devices, isAdminDashboard, user])
 
   const metrics = useMemo(
     () => [
@@ -1058,18 +1069,6 @@ export default function HomeView({
       .filter(Boolean)
       .sort((a, b) => b.updatedAtMs - a.updatedAtMs)
   }, [devices, resolveValidCoordinates])
-
-  const locationDeviceOptions = useMemo(() => {
-    if (isAdminDashboard) return devices
-
-    const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
-    if (!currentUserId) return devices
-
-    return devices.filter((device) => {
-      const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
-      return ownerId === currentUserId
-    })
-  }, [devices, isAdminDashboard, user])
 
   useEffect(() => {
     if (!locationDeviceOptions.length) {
