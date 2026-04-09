@@ -166,6 +166,17 @@ const normalizeAlarmUpdatePayload = (update) => {
   }
 }
 
+const pickChangedFields = (current = {}, baseline = null) => {
+  if (!baseline || typeof baseline !== 'object') return { ...current }
+
+  return Object.entries(current).reduce((accumulator, [key, value]) => {
+    if (JSON.stringify(value) !== JSON.stringify(baseline[key])) {
+      accumulator[key] = value
+    }
+    return accumulator
+  }, {})
+}
+
 export default function App() {
   const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
   const [activeView, setActiveView] = useState(() => {
@@ -194,7 +205,7 @@ export default function App() {
   const [configResult, setConfigResult] = useState(null)
   const [configQueue, setConfigQueue] = useState(null)
   const [configForm, setConfigForm] = useState(initialConfigForm)
-  const [configBaseline, setConfigBaseline] = useState(null)
+  const [configBaseline, setConfigBaseline] = useState(() => ({ ...initialConfigForm }))
   const [locationResult, setLocationResult] = useState(null)
   const [alarmStateByDevice, setAlarmStateByDevice] = useState({})
   const [alarmFeed, setAlarmFeed] = useState([])
@@ -202,6 +213,7 @@ export default function App() {
   const [homeActiveSection, setHomeActiveSection] = useState('dashboard')
   const [alarmCancelledAtByDevice, setAlarmCancelledAtByDevice] = useState({})
   const alarmCancelledAtRef = useRef({})
+  const queuedCommandByDeviceRef = useRef({})
 
   const updateUrlForView = useCallback((view, { replace = false } = {}) => {
     if (typeof window === 'undefined') return
@@ -995,10 +1007,12 @@ export default function App() {
         return
       }
 
+      const changedProtocolSettings = pickChangedFields(configForm, baselineForDiff)
+
       const payload = {
         ...configForm,
         deviceId: hasDeviceId ? normalizedDeviceId : configForm.deviceId,
-        protocolSettings,
+        protocolSettings: changedProtocolSettings,
         to,
         command
       }
@@ -1056,6 +1070,7 @@ export default function App() {
       setStatus(`Message sent to ${to}.`)
 
       if (hasDeviceId) {
+        queuedCommandByDeviceRef.current[normalizedDeviceId] = command
         const queueStatus = {
           deviceId: normalizedDeviceId,
           status: String(data.status || data.configStatus || 'PENDING').toUpperCase(),
@@ -1063,7 +1078,7 @@ export default function App() {
           lastSentAt: data.sentAt || data.lastSentAt || new Date().toISOString(),
           appliedAt: data.appliedAt || null,
           nextResendAt: data.nextResendAt || null,
-          commandPreview: data.commandPreview || command,
+          commandPreview: command,
           source: 'send'
         }
         setConfigQueue(queueStatus)
@@ -1096,6 +1111,9 @@ export default function App() {
       if (!response.ok) throw new Error(body.error || body.message || 'Unable to load config queue status')
 
       const normalizedStatus = String(body.status || body.configStatus || 'IDLE').toUpperCase()
+      if (normalizedStatus !== 'PENDING') {
+        delete queuedCommandByDeviceRef.current[resolvedId]
+      }
       setConfigQueue((prev) => ({
         deviceId: resolvedId,
         status: normalizedStatus,
@@ -1103,7 +1121,7 @@ export default function App() {
         lastSentAt: body.lastSentAt || body.configLastSentAt || null,
         appliedAt: body.appliedAt || body.configAppliedAt || null,
         nextResendAt: body.nextResendAt || null,
-        commandPreview: body.commandPreview || prev?.commandPreview || '',
+        commandPreview: queuedCommandByDeviceRef.current[resolvedId] || body.commandPreview || prev?.commandPreview || '',
         source: 'status'
       }))
     } catch (error) {
