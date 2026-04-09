@@ -233,6 +233,7 @@ export default function HomeView({
   const [alarmLogDeviceFilter, setAlarmLogDeviceFilter] = useState('all')
   const [alarmLogLocationFilter, setAlarmLogLocationFilter] = useState('all')
   const [alarmLogAlertFilter, setAlarmLogAlertFilter] = useState('all')
+  const [alarmLogConnectionFilter, setAlarmLogConnectionFilter] = useState('all')
   const [alarmLogs, setAlarmLogs] = useState([])
   const [alarmLogsStatus, setAlarmLogsStatus] = useState('')
   const [locationBreadcrumbs, setLocationBreadcrumbs] = useState([])
@@ -323,6 +324,22 @@ export default function HomeView({
     if (filterValue === 'sos') return normalizedCode.includes('sos')
     if (filterValue === 'fall') return normalizedCode.includes('fall')
     if (filterValue === 'other') return !normalizedCode.includes('sos') && !normalizedCode.includes('fall')
+    return true
+  }, [])
+
+  const matchesConnectionFilter = useCallback((entry, filterValue) => {
+    if (filterValue === 'all') return true
+
+    const text = `${entry?.action || ''} ${entry?.alarmCode || ''} ${entry?.note || ''}`.toLowerCase()
+    const source = String(entry?.source || '').toLowerCase()
+    const isWebhookLog = source.includes('webhook')
+    const isConnected = text.includes('connect') || text.includes('online')
+    const isDisconnected = text.includes('disconnect') || text.includes('offline')
+
+    if (filterValue === 'webhook-connected') return isWebhookLog && isConnected
+    if (filterValue === 'webhook-disconnected') return isWebhookLog && isDisconnected
+    if (filterValue === 'connected') return isConnected
+    if (filterValue === 'disconnected') return isDisconnected
     return true
   }, [])
 
@@ -1212,9 +1229,10 @@ export default function HomeView({
       const entryDeviceId = String(entry.deviceId || '').trim()
       const locationMatches = alarmLogLocationFilter === 'all' || entryLocationId === alarmLogLocationFilter
       const deviceMatches = alarmLogDeviceFilter === 'all' || entryDeviceId === alarmLogDeviceFilter
-      return locationMatches && deviceMatches
+      const connectionMatches = matchesConnectionFilter(entry, alarmLogConnectionFilter)
+      return locationMatches && deviceMatches && connectionMatches
     })
-  }, [alarmLogDeviceFilter, alarmLogLocationFilter, alarmLogs, isConnectivityLog])
+  }, [alarmLogConnectionFilter, alarmLogDeviceFilter, alarmLogLocationFilter, alarmLogs, isConnectivityLog, matchesConnectionFilter])
 
   const selectedLocationDevice = useMemo(
     () => locationDeviceOptions.find((device) => String(device.id || device.deviceId || '') === String(locationDeviceId)) || null,
@@ -2447,17 +2465,31 @@ export default function HomeView({
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="alarm-log-alert-filter">Alert filter</label>
+                  <label htmlFor="alarm-log-alert-filter">Alarm type</label>
                   <select
                     id="alarm-log-alert-filter"
                     value={alarmLogAlertFilter}
                     onChange={(event) => setAlarmLogAlertFilter(event.target.value)}
                   >
-                    <option value="all">All alerts</option>
-                    <option value="sos">SOS alerts</option>
-                    <option value="fall">Fall alerts</option>
-                    <option value="other">Other alarm alerts</option>
+                    <option value="all">All alarm types</option>
+                    <option value="sos">SOS alert codes</option>
+                    <option value="fall">Fall alert codes</option>
+                    <option value="other">Other alert codes</option>
                     <option value="no-code">No alarm code</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="alarm-log-connection-filter">Connection logs</label>
+                  <select
+                    id="alarm-log-connection-filter"
+                    value={alarmLogConnectionFilter}
+                    onChange={(event) => setAlarmLogConnectionFilter(event.target.value)}
+                  >
+                    <option value="all">All connection logs</option>
+                    <option value="webhook-connected">Webhook connected</option>
+                    <option value="webhook-disconnected">Webhook disconnected</option>
+                    <option value="connected">Any connected / online</option>
+                    <option value="disconnected">Any disconnected / offline</option>
                   </select>
                 </div>
               </div>
