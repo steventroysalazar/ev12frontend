@@ -232,6 +232,7 @@ export default function HomeView({
   const [locationDeviceId, setLocationDeviceId] = useState('')
   const [alarmLogDeviceFilter, setAlarmLogDeviceFilter] = useState('all')
   const [alarmLogLocationFilter, setAlarmLogLocationFilter] = useState('all')
+  const [alarmLogTypeFilter, setAlarmLogTypeFilter] = useState('all')
   const [alarmLogAlertFilter, setAlarmLogAlertFilter] = useState('all')
   const [alarmLogConnectionFilter, setAlarmLogConnectionFilter] = useState('all')
   const [alarmLogs, setAlarmLogs] = useState([])
@@ -1233,6 +1234,14 @@ export default function HomeView({
       return locationMatches && deviceMatches && connectionMatches
     })
   }, [alarmLogConnectionFilter, alarmLogDeviceFilter, alarmLogLocationFilter, alarmLogs, isConnectivityLog, matchesConnectionFilter])
+
+  const visibleAlarmLogs = useMemo(() => (
+    alarmLogTypeFilter === 'connection' ? [] : filteredAlarmLogs
+  ), [alarmLogTypeFilter, filteredAlarmLogs])
+
+  const visibleConnectivityLogs = useMemo(() => (
+    alarmLogTypeFilter === 'alerts' ? [] : filteredConnectivityLogs
+  ), [alarmLogTypeFilter, filteredConnectivityLogs])
 
   const selectedLocationDevice = useMemo(
     () => locationDeviceOptions.find((device) => String(device.id || device.deviceId || '') === String(locationDeviceId)) || null,
@@ -2465,103 +2474,127 @@ export default function HomeView({
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="alarm-log-alert-filter">Alarm type</label>
+                  <label htmlFor="alarm-log-type-filter">Log type</label>
                   <select
-                    id="alarm-log-alert-filter"
-                    value={alarmLogAlertFilter}
-                    onChange={(event) => setAlarmLogAlertFilter(event.target.value)}
+                    id="alarm-log-type-filter"
+                    value={alarmLogTypeFilter}
+                    onChange={(event) => setAlarmLogTypeFilter(event.target.value)}
                   >
-                    <option value="all">All alarm types</option>
-                    <option value="sos">SOS alert codes</option>
-                    <option value="fall">Fall alert codes</option>
-                    <option value="other">Other alert codes</option>
-                    <option value="no-code">No alarm code</option>
+                    <option value="all">All logs</option>
+                    <option value="alerts">Alert logs only</option>
+                    <option value="connection">Connection logs only</option>
                   </select>
                 </div>
-                <div>
-                  <label htmlFor="alarm-log-connection-filter">Connection logs</label>
-                  <select
-                    id="alarm-log-connection-filter"
-                    value={alarmLogConnectionFilter}
-                    onChange={(event) => setAlarmLogConnectionFilter(event.target.value)}
-                  >
-                    <option value="all">All connection logs</option>
-                    <option value="webhook-connected">Webhook connected</option>
-                    <option value="webhook-disconnected">Webhook disconnected</option>
-                    <option value="connected">Any connected / online</option>
-                    <option value="disconnected">Any disconnected / offline</option>
-                  </select>
-                </div>
+                {alarmLogTypeFilter !== 'connection' && (
+                  <div>
+                    <label htmlFor="alarm-log-alert-filter">Alarm type</label>
+                    <select
+                      id="alarm-log-alert-filter"
+                      value={alarmLogAlertFilter}
+                      onChange={(event) => setAlarmLogAlertFilter(event.target.value)}
+                    >
+                      <option value="all">All alarm types</option>
+                      <option value="sos">SOS alert codes</option>
+                      <option value="fall">Fall alert codes</option>
+                      <option value="other">Other alert codes</option>
+                      <option value="no-code">No alarm code</option>
+                    </select>
+                  </div>
+                )}
+                {alarmLogTypeFilter !== 'alerts' && (
+                  <div>
+                    <label htmlFor="alarm-log-connection-filter">Connection logs</label>
+                    <select
+                      id="alarm-log-connection-filter"
+                      value={alarmLogConnectionFilter}
+                      onChange={(event) => setAlarmLogConnectionFilter(event.target.value)}
+                    >
+                      <option value="all">All connection logs</option>
+                      <option value="webhook-connected">Webhook connected</option>
+                      <option value="webhook-disconnected">Webhook disconnected</option>
+                      <option value="connected">Any connected / online</option>
+                      <option value="disconnected">Any disconnected / offline</option>
+                    </select>
+                  </div>
+                )}
               </div>
               <p className="status">{alarmLogsStatus}</p>
-              <h3>Alarm Event Logs</h3>
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Event At</th>
-                      <th>Action</th>
-                      <th>Alarm Code</th>
-                      <th>Device</th>
-                      <th>Location</th>
-                      <th>Source</th>
-                      <th>Latitude</th>
-                      <th>Longitude</th>
-                      <th>Note</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAlarmLogs.length ? filteredAlarmLogs.map((entry) => (
-                      <tr key={entry.id || `${entry.eventAt || ''}-${entry.action || ''}`}>
-                        <td>{entry.eventAt ? new Date(entry.eventAt).toLocaleString() : '-'}</td>
-                        <td>{entry.action || '-'}</td>
-                        <td>{entry.alarmCode || '-'}</td>
-                        <td>{entry.deviceName || entry.deviceId || '-'}</td>
-                        <td>{entry.locationName || entry.locationId || '-'}</td>
-                        <td>{entry.source || '-'}</td>
-                        <td>{entry.latitude ?? '-'}</td>
-                        <td>{entry.longitude ?? '-'}</td>
-                        <td>{entry.note || '-'}</td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan={9}>No alarm logs to show for this filter.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <h3>Device Connection Logs</h3>
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Event At</th>
-                      <th>Action</th>
-                      <th>Device</th>
-                      <th>Location</th>
-                      <th>Source</th>
-                      <th>Note</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredConnectivityLogs.length ? filteredConnectivityLogs.map((entry) => (
-                      <tr key={`connectivity-${entry.id || `${entry.eventAt || ''}-${entry.action || ''}-${entry.deviceId || ''}`}`}>
-                        <td>{entry.eventAt ? new Date(entry.eventAt).toLocaleString() : '-'}</td>
-                        <td>{entry.action || '-'}</td>
-                        <td>{entry.deviceName || entry.deviceId || '-'}</td>
-                        <td>{entry.locationName || entry.locationId || '-'}</td>
-                        <td>{entry.source || '-'}</td>
-                        <td>{entry.note || '-'}</td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan={6}>No connection logs to show for this filter.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              {alarmLogTypeFilter !== 'connection' && (
+                <>
+                  <h3>Alarm Event Logs</h3>
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Event At</th>
+                          <th>Action</th>
+                          <th>Alarm Code</th>
+                          <th>Device</th>
+                          <th>Location</th>
+                          <th>Source</th>
+                          <th>Latitude</th>
+                          <th>Longitude</th>
+                          <th>Note</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visibleAlarmLogs.length ? visibleAlarmLogs.map((entry) => (
+                          <tr key={entry.id || `${entry.eventAt || ''}-${entry.action || ''}`}>
+                            <td>{entry.eventAt ? new Date(entry.eventAt).toLocaleString() : '-'}</td>
+                            <td>{entry.action || '-'}</td>
+                            <td>{entry.alarmCode || '-'}</td>
+                            <td>{entry.deviceName || entry.deviceId || '-'}</td>
+                            <td>{entry.locationName || entry.locationId || '-'}</td>
+                            <td>{entry.source || '-'}</td>
+                            <td>{entry.latitude ?? '-'}</td>
+                            <td>{entry.longitude ?? '-'}</td>
+                            <td>{entry.note || '-'}</td>
+                          </tr>
+                        )) : (
+                          <tr>
+                            <td colSpan={9}>No alarm logs to show for this filter.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+              {alarmLogTypeFilter !== 'alerts' && (
+                <>
+                  <h3>Device Connection Logs</h3>
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Event At</th>
+                          <th>Action</th>
+                          <th>Device</th>
+                          <th>Location</th>
+                          <th>Source</th>
+                          <th>Note</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visibleConnectivityLogs.length ? visibleConnectivityLogs.map((entry) => (
+                          <tr key={`connectivity-${entry.id || `${entry.eventAt || ''}-${entry.action || ''}-${entry.deviceId || ''}`}`}>
+                            <td>{entry.eventAt ? new Date(entry.eventAt).toLocaleString() : '-'}</td>
+                            <td>{entry.action || '-'}</td>
+                            <td>{entry.deviceName || entry.deviceId || '-'}</td>
+                            <td>{entry.locationName || entry.locationId || '-'}</td>
+                            <td>{entry.source || '-'}</td>
+                            <td>{entry.note || '-'}</td>
+                          </tr>
+                        )) : (
+                          <tr>
+                            <td colSpan={6}>No connection logs to show for this filter.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </article>
           </section>
         )}
