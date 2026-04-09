@@ -2427,8 +2427,8 @@ export default function HomeView({
                     value={configForm.motionAlarmType || 'motion'}
                     onChange={(event) => setConfigForm((prev) => ({ ...prev, motionAlarmType: event.target.value }))}
                   >
-                    <option value="motion">Motion Alarm (M0)</option>
-                    <option value="no-motion">No Motion Alarm (NM0)</option>
+                    <option value="motion">Motion Alarm (mo)</option>
+                    <option value="no-motion">No Motion Alarm (nm0)</option>
                   </select>
                   <label>Enable</label>
                   <label className="switch-row">
