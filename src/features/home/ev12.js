@@ -19,6 +19,7 @@ export const initialConfigForm = {
   fallDownEnabled: '1',
   fallDownSensitivity: 5,
   fallDownCall: true,
+  motionAlarmType: 'motion',
   motionEnabled: '1',
   motionStaticTime: '05m',
   motionDurationTime: '03s',
@@ -38,6 +39,7 @@ export const initialConfigForm = {
 }
 
 const boolToFlag = (value) => (value ? 1 : 0)
+const normalizeMotionAlarmType = (value) => (value === 'no-motion' ? 'no-motion' : 'motion')
 
 const normalizedContacts = (form) => {
   if (Array.isArray(form.contacts) && form.contacts.length) {
@@ -81,7 +83,20 @@ const buildCommandEntries = (form) => {
   if (form.requestLbsLocation) entries.push({ key: 'requestLbsLocation', command: 'LBS1' })
   if (form.sosMode && form.sosActionTime) entries.push({ key: 'sos', command: `SOS${form.sosMode},${form.sosActionTime}` })
   if (form.fallDownEnabled !== '') entries.push({ key: 'fallDown', command: `fl${form.fallDownEnabled},${form.fallDownSensitivity || 5},${boolToFlag(form.fallDownCall)}` })
-  if (form.motionEnabled !== '') entries.push({ key: 'motion', command: `mo${form.motionEnabled},${form.motionStaticTime || '05m'},${form.motionDurationTime || '03s'},${boolToFlag(form.motionCall)}` })
+  if (form.motionEnabled !== '') {
+    const motionAlarmType = normalizeMotionAlarmType(form.motionAlarmType)
+    if (motionAlarmType === 'no-motion') {
+      entries.push({
+        key: 'motion',
+        command: `NM0${form.motionEnabled},${form.motionStaticTime || '05m'},${boolToFlag(form.motionCall)}`
+      })
+    } else {
+      entries.push({
+        key: 'motion',
+        command: `M0${form.motionEnabled},${form.motionStaticTime || '05m'},${form.motionDurationTime || '03s'},${boolToFlag(form.motionCall)}`
+      })
+    }
+  }
   if (form.overSpeedEnabled !== '' && form.overSpeedLimit) entries.push({ key: 'overSpeed', command: `Speed${form.overSpeedEnabled},${form.overSpeedLimit}` })
   if (form.geoFenceEnabled !== '' && form.geoFenceRadius) entries.push({ key: 'geoFence', command: `Geo1,${form.geoFenceEnabled},${form.geoFenceMode || 0},${form.geoFenceRadius}` })
   if (form.wifiEnabled !== '') entries.push({ key: 'wifiEnabled', command: `Wifi${form.wifiEnabled}` })
