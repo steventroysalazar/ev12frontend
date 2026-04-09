@@ -1712,6 +1712,7 @@ export default function HomeView({
       (activeSection !== 'settings-advanced' && activeSection !== 'device-detail-advanced') ||
       !leafletReady ||
       !geofenceLeafletRef.current ||
+      !displayedLocation ||
       typeof window === 'undefined' ||
       !window.L
     ) return
@@ -1736,9 +1737,7 @@ export default function HomeView({
     const layer = geofenceLeafletLayerRef.current || L.layerGroup().addTo(map)
     layer.clearLayers()
 
-    const center = displayedLocation
-      ? [displayedLocation.latitude, displayedLocation.longitude]
-      : [22.6583923, 114.0004503]
+    const center = [displayedLocation.latitude, displayedLocation.longitude]
     const radiusMeters = parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)
     const modeLabel = String(configForm.geoFenceMode || '0') === '1' ? 'Enter alert' : 'Leave alert'
     const enabled = String(configForm.geoFenceEnabled || '0') === '1'
@@ -1754,7 +1753,7 @@ export default function HomeView({
       weight: 2
     }).addTo(layer)
 
-    map.setView(center, displayedLocation ? 15 : 13)
+    map.setView(center, 15)
     setTimeout(() => map.invalidateSize(), 120)
   }, [activeSection, configForm.geoFenceEnabled, configForm.geoFenceMode, configForm.geoFenceRadius, displayedLocation, leafletReady])
 
@@ -2467,7 +2466,7 @@ export default function HomeView({
                     <input
                       type="range"
                       min="100"
-                      max="2000"
+                      max="65535"
                       step="10"
                       value={parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)}
                       onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: `${event.target.value}m` }))}
@@ -2485,14 +2484,14 @@ export default function HomeView({
                 </div>
               </div>
               <div className="map-placeholder map-square geofence-leaflet-wrap">
-                {leafletReady
+                {leafletReady && displayedLocation
                   ? <div ref={geofenceLeafletRef} className="leaflet-map geofence-leaflet-map" />
-                  : <span className="map-chip">Loading geo-fence map…</span>}
+                  : <span className="map-chip">{leafletReady ? 'Waiting for current device coordinates…' : 'Loading geo-fence map…'}</span>}
               </div>
               <p className="status">
                 {displayedLocation
                   ? `Geo-fence center follows the latest device location (${displayedLocation.latitude}, ${displayedLocation.longitude}).`
-                  : 'No recent location available. Showing default center until a location update is received.'}
+                  : 'No current device coordinates yet. Request device location (Loc) to set geo-fence center.'}
               </p>
             </article>
           </section>
