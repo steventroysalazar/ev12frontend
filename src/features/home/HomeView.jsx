@@ -96,6 +96,18 @@ const parseDurationToMs = (value) => {
   return null
 }
 
+const parseGeoFenceRadiusToMeters = (value) => {
+  const raw = String(value || '').trim().toLowerCase()
+  if (!raw) return 100
+  const match = raw.match(/^(\d+(?:\.\d+)?)(m|meter|meters|km|kilometer|kilometers)?$/)
+  if (!match) return 100
+  const amount = Number.parseFloat(match[1])
+  if (!Number.isFinite(amount) || amount <= 0) return 100
+  const unit = match[2] || 'm'
+  const meters = unit.startsWith('k') ? amount * 1000 : amount
+  return Math.round(Math.min(65535, Math.max(100, meters)))
+}
+
 export default function HomeView({
   user,
   onLogout,
@@ -247,6 +259,9 @@ export default function HomeView({
   const locationLeafletRef = useRef(null)
   const locationLeafletMapRef = useRef(null)
   const locationLeafletLayerRef = useRef(null)
+  const geofenceLeafletRef = useRef(null)
+  const geofenceLeafletMapRef = useRef(null)
+  const geofenceLeafletLayerRef = useRef(null)
   const [leafletReady, setLeafletReady] = useState(false)
   const isDeviceWorkspaceSection = ['device-detail-overview', 'device-detail-basic', 'device-detail-advanced', 'device-detail-location', 'device-detail-commands'].includes(activeSection)
   const isDeviceDetailLocationSection = activeSection === 'device-detail-location'
@@ -1692,6 +1707,65 @@ export default function HomeView({
     }
   }, [])
 
+  useEffect(() => {
+    if (
+      (activeSection !== 'settings-advanced' && activeSection !== 'device-detail-advanced') ||
+      !leafletReady ||
+      !geofenceLeafletRef.current ||
+      !displayedLocation ||
+      typeof window === 'undefined' ||
+      !window.L
+    ) return
+
+    const L = window.L
+    const currentContainer = geofenceLeafletMapRef.current?.getContainer?.()
+    if (geofenceLeafletMapRef.current && currentContainer !== geofenceLeafletRef.current) {
+      geofenceLeafletMapRef.current.remove()
+      geofenceLeafletMapRef.current = null
+      geofenceLeafletLayerRef.current = null
+    }
+
+    if (!geofenceLeafletMapRef.current) {
+      geofenceLeafletMapRef.current = L.map(geofenceLeafletRef.current, { zoomControl: true })
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(geofenceLeafletMapRef.current)
+      geofenceLeafletLayerRef.current = L.layerGroup().addTo(geofenceLeafletMapRef.current)
+    }
+
+    const map = geofenceLeafletMapRef.current
+    const layer = geofenceLeafletLayerRef.current || L.layerGroup().addTo(map)
+    layer.clearLayers()
+
+    const center = [displayedLocation.latitude, displayedLocation.longitude]
+    const radiusMeters = parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)
+    const modeLabel = String(configForm.geoFenceMode || '0') === '1' ? 'Enter alert' : 'Leave alert'
+    const enabled = String(configForm.geoFenceEnabled || '0') === '1'
+
+    L.marker(center)
+      .bindPopup(`Geo-fence center<br/>Mode: ${modeLabel}<br/>Radius: ${radiusMeters} m`)
+      .addTo(layer)
+    L.circle(center, {
+      radius: radiusMeters,
+      color: enabled ? '#0369a1' : '#6b7280',
+      fillColor: enabled ? '#38bdf8' : '#d1d5db',
+      fillOpacity: enabled ? 0.22 : 0.12,
+      weight: 2
+    }).addTo(layer)
+
+    map.setView(center, 15)
+    setTimeout(() => map.invalidateSize(), 120)
+  }, [activeSection, configForm.geoFenceEnabled, configForm.geoFenceMode, configForm.geoFenceRadius, displayedLocation, leafletReady])
+
+  useEffect(() => {
+    return () => {
+      if (geofenceLeafletMapRef.current) {
+        geofenceLeafletMapRef.current.remove()
+        geofenceLeafletMapRef.current = null
+      }
+    }
+  }, [])
+
   const userDeviceRows = useMemo(() => {
     const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
     const ownedDevices = devices.filter((device) => {
@@ -2366,6 +2440,59 @@ export default function HomeView({
                   />
                 </div>
               </div>
+            </article>
+
+            <article className="settings-group">
+              <h3 className="block-title">Geo-fencing</h3>
+              <p className="status">Command format: <code>Geo1,n,on/off,distance</code>. Radius range: 100-65535 meters.</p>
+              <div className="field-grid two-col">
+                <div>
+                  <label>Geo-fence 1 (Enable)</label>
+                  <label className="switch-row">
+                    <input type="checkbox" checked={configForm.geoFenceEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, geoFenceEnabled: prev.geoFenceEnabled === '1' ? '0' : '1' }))} />
+                    <span>{configForm.geoFenceEnabled === '1' ? 'On' : 'Off'}</span>
+                  </label>
+                </div>
+                <div>
+                  <label>Trigger Mode</label>
+                  <select value={configForm.geoFenceMode || '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceMode: event.target.value }))}>
+                    <option value="0">Leave Area (0)</option>
+                    <option value="1">Enter Area (1)</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Radius (meters)</label>
+                  <div className="range-with-value">
+                    <input
+                      type="range"
+                      min="100"
+                      max="65535"
+                      step="10"
+                      value={parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)}
+                      onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: `${event.target.value}m` }))}
+                    />
+                    <span className="range-value">{parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)}</span>
+                  </div>
+                </div>
+                <div>
+                  <label>Radius Manual Override</label>
+                  <input
+                    value={configForm.geoFenceRadius}
+                    onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))}
+                    placeholder="100m"
+                  />
+                </div>
+              </div>
+              <div className="map-placeholder map-square geofence-leaflet-wrap">
+                {leafletReady && displayedLocation
+                  ? <div ref={geofenceLeafletRef} className="leaflet-map geofence-leaflet-map" />
+                  : <span className="map-chip">{leafletReady ? 'Waiting for current device coordinates…' : 'Loading geo-fence map…'}</span>}
+              </div>
+              <p className="status">
+                {displayedLocation
+                  ? `Geo-fence center follows the latest device location (${displayedLocation.latitude}, ${displayedLocation.longitude}).`
+                  : 'No current device coordinates yet. Request device location (Loc) to set geo-fence center.'}
+              </p>
             </article>
           </section>
         )}
