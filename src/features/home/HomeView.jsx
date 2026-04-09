@@ -2442,7 +2442,7 @@ export default function HomeView({
           <section className="section-panel">
             <h2 className="page-title">Alarm Logs</h2>
             <article className="card-like">
-              <div className="field-grid location-device-picker">
+              <div className="field-grid location-device-picker location-device-picker-inline">
                 <div>
                   <label htmlFor="alarm-log-location-filter">Location filter</label>
                   <select
