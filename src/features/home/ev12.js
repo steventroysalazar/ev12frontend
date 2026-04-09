@@ -40,6 +40,18 @@ export const initialConfigForm = {
 
 const boolToFlag = (value) => (value ? 1 : 0)
 const normalizeMotionAlarmType = (value) => (value === 'no-motion' ? 'no-motion' : 'motion')
+const normalizeTimeToken = (value, fallback) => {
+  const raw = String(value || '').trim()
+  if (!raw) return fallback
+
+  const match = raw.match(/^(\d+)\s*([smhSMH]?)$/)
+  if (!match) return fallback
+
+  const [, amount, unit] = match
+  const normalizedAmount = String(Number(amount))
+  const normalizedUnit = (unit || 's').toLowerCase()
+  return `${normalizedAmount}${normalizedUnit}`
+}
 
 const normalizedContacts = (form) => {
   if (Array.isArray(form.contacts) && form.contacts.length) {
@@ -85,15 +97,17 @@ const buildCommandEntries = (form) => {
   if (form.fallDownEnabled !== '') entries.push({ key: 'fallDown', command: `fl${form.fallDownEnabled},${form.fallDownSensitivity || 5},${boolToFlag(form.fallDownCall)}` })
   if (form.motionEnabled !== '') {
     const motionAlarmType = normalizeMotionAlarmType(form.motionAlarmType)
+    const staticTime = normalizeTimeToken(form.motionStaticTime, '5m')
+    const durationTime = normalizeTimeToken(form.motionDurationTime, '3s')
     if (motionAlarmType === 'no-motion') {
       entries.push({
         key: 'motion',
-        command: `NM0${form.motionEnabled},${form.motionStaticTime || '05m'},${boolToFlag(form.motionCall)}`
+        command: `nm0${form.motionEnabled},${staticTime},${boolToFlag(form.motionCall)}`
       })
     } else {
       entries.push({
         key: 'motion',
-        command: `M0${form.motionEnabled},${form.motionStaticTime || '05m'},${form.motionDurationTime || '03s'},${boolToFlag(form.motionCall)}`
+        command: `mo${form.motionEnabled},${staticTime},${durationTime},${boolToFlag(form.motionCall)}`
       })
     }
   }
