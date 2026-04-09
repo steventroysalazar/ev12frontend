@@ -964,6 +964,9 @@ export default function App() {
     setConfigStatus('Sending configuration...')
     try {
       const protocolSettings = { ...configForm }
+      let baselineForDiff = (configBaseline && typeof configBaseline === 'object')
+        ? { ...configBaseline, deviceId: hasDeviceId ? normalizedDeviceId : configBaseline.deviceId }
+        : null
 
       if (hasDeviceId) {
         try {
@@ -972,19 +975,19 @@ export default function App() {
           })
           const deviceBody = await response.json().catch(() => ({}))
           if (response.ok && deviceBody?.protocolSettings && typeof deviceBody.protocolSettings === 'object') {
-            const baselineFromDevice = {
-              ...configForm,
+            baselineForDiff = {
+              ...(baselineForDiff || {}),
               ...deviceBody.protocolSettings,
               deviceId: normalizedDeviceId
-            }
-            const changedOnlyCommand = buildEv12Preview(configForm, baselineFromDevice).trim()
-            if (changedOnlyCommand) {
-              command = changedOnlyCommand
             }
           }
         } catch {
           // Best effort only: continue with current preview if baseline refresh fails.
         }
+      }
+
+      if (baselineForDiff) {
+        command = buildEv12Preview(configForm, baselineForDiff).trim()
       }
 
       if (!command) {
