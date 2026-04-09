@@ -24,6 +24,7 @@ const initialUserForm = {
 const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '', externalDeviceId: '' }
 const WEBHOOK_STORAGE_KEY = 'ev12:webhook-events'
 const DEFAULT_HOME_SECTION = 'dashboard'
+const DEFAULT_MOTION_ALERT_DURATION_MS = 3000
 const supportedSections = new Set([
   'dashboard',
   'users',
@@ -71,6 +72,28 @@ const parseStoredWebhookEvents = () => {
 const persistWebhookEvents = (events) => {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(WEBHOOK_STORAGE_KEY, JSON.stringify(events))
+}
+
+const parseDurationToMs = (value) => {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'number' && Number.isFinite(value)) return value > 0 ? value : null
+
+  const raw = String(value).trim()
+  if (!raw) return null
+
+  const normalized = raw.toLowerCase()
+  const match = normalized.match(/^(\d+(?:\.\d+)?)(ms|s|m|h)?$/)
+  if (!match) return null
+
+  const amount = Number.parseFloat(match[1])
+  if (!Number.isFinite(amount) || amount <= 0) return null
+
+  const unit = match[2] || 's'
+  if (unit === 'ms') return Math.round(amount)
+  if (unit === 's') return Math.round(amount * 1000)
+  if (unit === 'm') return Math.round(amount * 60 * 1000)
+  if (unit === 'h') return Math.round(amount * 60 * 60 * 1000)
+  return null
 }
 
 export default function HomeView({
@@ -216,6 +239,7 @@ export default function HomeView({
   const [alarmLogsStatus, setAlarmLogsStatus] = useState('')
   const [locationBreadcrumbs, setLocationBreadcrumbs] = useState([])
   const [locationBreadcrumbsStatus, setLocationBreadcrumbsStatus] = useState('')
+  const [alarmNowMs, setAlarmNowMs] = useState(() => Date.now())
   const webhookFingerprintRef = useRef('')
   const dashboardLeafletRef = useRef(null)
   const dashboardLeafletMapRef = useRef(null)
@@ -247,8 +271,45 @@ export default function HomeView({
     const normalizedLower = normalizedCode.toLowerCase()
     if (normalizedLower.includes('sos')) return { label: 'SOS Alert', tone: 'critical' }
     if (normalizedLower.includes('fall')) return { label: 'Fall-Down Alert', tone: 'warning' }
+    if (/\bno[-\s]?motion\b/i.test(normalizedCode)) return { label: 'No-Motion Alert', tone: 'warning' }
+    if (/\bmotion\b/i.test(normalizedCode)) return { label: 'Motion Alert', tone: 'active' }
 
     return { label: normalizedCode, tone: 'active' }
+  }, [])
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setAlarmNowMs(Date.now())
+    }, 1000)
+    return () => clearInterval(intervalId)
+  }, [])
+
+  const isMotionAlarmCode = useCallback((alarmCode) => {
+    const normalized = String(alarmCode || '').trim()
+    if (!normalized) return false
+    return /\bno[-\s]?motion\b/i.test(normalized) || /\bmotion\b/i.test(normalized)
+  }, [])
+
+  const getDeviceMotionAlertDurationMs = useCallback((device) => {
+    const candidates = [
+      device?.motionDurationTime,
+      device?.motion_duration_time,
+      device?.motionAlertDuration,
+      device?.motion_alert_duration,
+      device?.settings?.motionDurationTime,
+      device?.settings?.motion_duration_time,
+      device?.config?.motionDurationTime,
+      device?.config?.motion_duration_time,
+      device?.advancedSettings?.motionDurationTime,
+      device?.advancedSettings?.motion_duration_time
+    ]
+
+    for (const candidate of candidates) {
+      const parsed = parseDurationToMs(candidate)
+      if (parsed) return parsed
+    }
+
+    return DEFAULT_MOTION_ALERT_DURATION_MS
   }, [])
 
   const isConnectivityLog = useCallback((entry) => {
@@ -1257,9 +1318,18 @@ export default function HomeView({
 
       if (!liveEntry) return device?.alarmCode ?? null
       if (liveEntry.alarmCode === null) return null
+
+      if (isMotionAlarmCode(liveEntry.alarmCode)) {
+        const updatedAtMs = new Date(liveEntry?.updatedAt || liveEntry?.receivedAt || liveEntry?.timestamp || 0).getTime()
+        if (Number.isFinite(updatedAtMs) && updatedAtMs > 0) {
+          const motionDurationMs = getDeviceMotionAlertDurationMs(device)
+          if (alarmNowMs - updatedAtMs >= motionDurationMs) return null
+        }
+      }
+
       return liveEntry.alarmCode || device?.alarmCode || null
     },
-    [alarmStateByDevice]
+    [alarmNowMs, alarmStateByDevice, getDeviceMotionAlertDurationMs, isMotionAlarmCode]
   )
 
   const activeAlarmDevices = useMemo(
