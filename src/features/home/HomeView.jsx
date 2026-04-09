@@ -2340,7 +2340,32 @@ export default function HomeView({
                   </div>
                 </div>
               </div>
-              <div className="alarm-card"><h3>Motion / No Motion</h3><div className="alarm-row"><label>Enable</label><label className="switch-row"><input type="checkbox" checked={configForm.motionEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, motionEnabled: prev.motionEnabled === '1' ? '0' : '1' }))} /><span>{configForm.motionEnabled === '1' ? 'On' : 'Off'}</span></label><label>Duration</label><input value={configForm.motionDurationTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionDurationTime: event.target.value }))} /></div></div>
+              <div className="alarm-card">
+                <h3>Motion / No Motion</h3>
+                <div className="alarm-row">
+                  <label>Alarm Type</label>
+                  <select
+                    value={configForm.motionAlarmType || 'motion'}
+                    onChange={(event) => setConfigForm((prev) => ({ ...prev, motionAlarmType: event.target.value }))}
+                  >
+                    <option value="motion">Motion Alarm (M0)</option>
+                    <option value="no-motion">No Motion Alarm (NM0)</option>
+                  </select>
+                  <label>Enable</label>
+                  <label className="switch-row">
+                    <input type="checkbox" checked={configForm.motionEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, motionEnabled: prev.motionEnabled === '1' ? '0' : '1' }))} />
+                    <span>{configForm.motionEnabled === '1' ? 'On' : 'Off'}</span>
+                  </label>
+                  <label>Static Time</label>
+                  <input value={configForm.motionStaticTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionStaticTime: event.target.value }))} />
+                  <label>Duration</label>
+                  <input
+                    value={configForm.motionDurationTime}
+                    onChange={(event) => setConfigForm((prev) => ({ ...prev, motionDurationTime: event.target.value }))}
+                    disabled={(configForm.motionAlarmType || 'motion') === 'no-motion'}
+                  />
+                </div>
+              </div>
             </article>
           </section>
         )}
