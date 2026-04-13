@@ -9,6 +9,9 @@ export default function UsersPage({
   setUserSearch,
   userRoleFilter,
   setUserRoleFilter,
+  userLocationFilter,
+  setUserLocationFilter,
+  userLocationOptions,
   pagedUsers,
   usersPage,
   setUsersPage,
@@ -18,6 +21,7 @@ export default function UsersPage({
 }) {
   const [deviceSearchByUser, setDeviceSearchByUser] = useState({})
   const [devicePageByUser, setDevicePageByUser] = useState({})
+  const [locationFilterInput, setLocationFilterInput] = useState('')
   const devicePageSize = 20
 
   const getRowUserKey = (user) => String(user.id || user.email || user.name || 'user')
@@ -37,6 +41,11 @@ export default function UsersPage({
     return { allDevices, search, filtered, totalPages, currentPage, pageRows, userKey }
   }
 
+  const selectedLocationOption = userLocationFilter === 'all'
+    ? null
+    : userLocationOptions.find((entry) => entry.id === userLocationFilter) || null
+  const selectedLocationLabel = selectedLocationOption?.name || ''
+
   return (
     <section className="card-like section-panel">
       <div className="section-head">
@@ -51,6 +60,30 @@ export default function UsersPage({
           <option value="manager">Manager</option>
           <option value="user">User</option>
         </select>
+        <input
+          list="users-location-filter-options"
+          placeholder="All locations"
+          value={locationFilterInput || selectedLocationLabel}
+          onChange={(event) => {
+            const value = event.target.value
+            setLocationFilterInput(value)
+            if (!value.trim()) {
+              setUserLocationFilter('all')
+              return
+            }
+            const match = userLocationOptions.find((entry) => entry.name.toLowerCase() === value.trim().toLowerCase())
+            if (match) {
+              setUserLocationFilter(match.id)
+              setLocationFilterInput(match.name)
+            }
+          }}
+          onBlur={() => setLocationFilterInput(selectedLocationLabel)}
+        />
+        <datalist id="users-location-filter-options">
+          {userLocationOptions.map((entry) => (
+            <option key={`users-location-filter-${entry.id}`} value={entry.name} />
+          ))}
+        </datalist>
       </div>
       <div className="table-shell">
         <table className="data-table">
