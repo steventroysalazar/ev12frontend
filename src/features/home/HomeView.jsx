@@ -1281,6 +1281,21 @@ export default function HomeView({
       })
   }, [locationDeviceOptions])
 
+  const alarmLogCodeOptions = useMemo(() => {
+    const fallbackCodes = alarmLogs.map((entry) => String(entry?.alarmCode || '').trim()).filter(Boolean)
+    return [...new Set([...(alertLogLookupFilters.alarmCodes || []), ...fallbackCodes])]
+  }, [alarmLogs, alertLogLookupFilters.alarmCodes])
+
+  const alertLogActionOptions = useMemo(() => {
+    const fallbackActions = alarmLogs.map((entry) => String(entry?.action || '').trim()).filter(Boolean)
+    return [...new Set([...(alertLogLookupFilters.actions || []), ...fallbackActions])]
+  }, [alarmLogs, alertLogLookupFilters.actions])
+
+  const alertLogSourceOptions = useMemo(() => {
+    const fallbackSources = alarmLogs.map((entry) => String(entry?.source || '').trim()).filter(Boolean)
+    return [...new Set([...(alertLogLookupFilters.sources || []), ...fallbackSources])]
+  }, [alarmLogs, alertLogLookupFilters.sources])
+
   useEffect(() => {
     if (alarmLogLocationFilter === 'all') return
     if (alarmLogLocationOptions.some((location) => location.id === alarmLogLocationFilter)) return
@@ -1451,18 +1466,6 @@ export default function HomeView({
     const fallbackCodes = activeAlarmDevices.map((entry) => String(entry.alarmCode || '').trim()).filter(Boolean)
     return [...new Set([...(alertLookupCodes || []), ...fallbackCodes])]
   }, [activeAlarmDevices, alertLookupCodes])
-  const alertLogCodeOptions = useMemo(() => {
-    const fallbackCodes = alarmLogs.map((entry) => String(entry?.alarmCode || '').trim()).filter(Boolean)
-    return [...new Set([...(alertLogLookupFilters.alarmCodes || []), ...fallbackCodes])]
-  }, [alarmLogs, alertLogLookupFilters.alarmCodes])
-  const alertLogActionOptions = useMemo(() => {
-    const fallbackActions = alarmLogs.map((entry) => String(entry?.action || '').trim()).filter(Boolean)
-    return [...new Set([...(alertLogLookupFilters.actions || []), ...fallbackActions])]
-  }, [alarmLogs, alertLogLookupFilters.actions])
-  const alertLogSourceOptions = useMemo(() => {
-    const fallbackSources = alarmLogs.map((entry) => String(entry?.source || '').trim()).filter(Boolean)
-    return [...new Set([...(alertLogLookupFilters.sources || []), ...fallbackSources])]
-  }, [alarmLogs, alertLogLookupFilters.sources])
   const activeAlarmLocations = useMemo(
     () =>
       activeAlarmDevices
