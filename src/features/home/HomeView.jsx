@@ -227,6 +227,7 @@ export default function HomeView({
   const [locationSearch, setLocationSearch] = useState('')
   const [deviceSearch, setDeviceSearch] = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('all')
+  const [userLocationFilter, setUserLocationFilter] = useState('all')
   const [locationDeviceFilter, setLocationDeviceFilter] = useState('all')
   const [deviceAlarmFilter, setDeviceAlarmFilter] = useState('all')
   const [userDetailDeviceSearch, setUserDetailDeviceSearch] = useState('')
@@ -1545,11 +1546,20 @@ export default function HomeView({
       const rawRole = entry.userRole || entry.role || entry.user_role || ''
       const role = String(roleLabel(rawRole)).toLowerCase()
       const roleMatch = userRoleFilter === 'all' ? true : role === userRoleFilter
+      const locationId = String(entry.locationId || entry.location?.id || '')
+      const locationMatch = userLocationFilter === 'all' ? true : locationId === userLocationFilter
       const text = `${entry.firstName || ''} ${entry.lastName || ''} ${entry.email || ''} ${entry.contactNumber || ''} ${entry.locationName || entry.location?.name || ''}`.toLowerCase()
       const textMatch = !keyword || text.includes(keyword)
-      return roleMatch && textMatch
+      return roleMatch && locationMatch && textMatch
     })
-  }, [roleLabel, userRoleFilter, userSearch, users])
+  }, [roleLabel, userLocationFilter, userRoleFilter, userSearch, users])
+
+  const userLocationOptions = useMemo(() => (
+    locations
+      .map((entry) => ({ id: String(entry.id || ''), name: entry.name || `Location ${entry.id}` }))
+      .filter((entry) => entry.id)
+      .sort((a, b) => a.name.localeCompare(b.name))
+  ), [locations])
 
   const getUserDevices = useCallback((userEntry) => {
     const currentId = String(userEntry?.id || '')
@@ -1601,7 +1611,7 @@ export default function HomeView({
     return activeAlarmLocations.slice(start, start + activeAlertPageSize)
   }, [activeAlertPage, activeAlarmLocations])
 
-  useEffect(() => setUsersPage(1), [userSearch, userRoleFilter])
+  useEffect(() => setUsersPage(1), [userLocationFilter, userSearch, userRoleFilter])
   useEffect(() => setLocationsPage(1), [locationSearch, locationDeviceFilter])
   useEffect(() => setDevicesPage(1), [deviceSearch, deviceAlarmFilter])
   useEffect(() => setDashboardDevicePage(1), [dashboardDeviceSearch, dashboardDeviceAlertFilter])
@@ -2325,6 +2335,9 @@ export default function HomeView({
             setUserSearch={setUserSearch}
             userRoleFilter={userRoleFilter}
             setUserRoleFilter={setUserRoleFilter}
+            userLocationFilter={userLocationFilter}
+            setUserLocationFilter={setUserLocationFilter}
+            userLocationOptions={userLocationOptions}
             pagedUsers={pagedUsers}
             usersPage={usersPage}
             setUsersPage={setUsersPage}
@@ -2774,7 +2787,7 @@ export default function HomeView({
                     >
                       <option value="all">All alarm types</option>
                       <option value="no-code">No alarm code</option>
-                      {alertLogCodeOptions.map((alarmCode) => (
+                      {alarmLogCodeOptions.map((alarmCode) => (
                         <option key={`alarm-log-code-${alarmCode}`} value={`code:${alarmCode}`}>
                           {alarmCode}
                         </option>
