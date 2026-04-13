@@ -210,6 +210,12 @@ export default function HomeView({
   const [users, setUsers] = useState([])
   const [locations, setLocations] = useState([])
   const [devices, setDevices] = useState([])
+  const [managerLookupUsers, setManagerLookupUsers] = useState([])
+  const [roleUserLookupUsers, setRoleUserLookupUsers] = useState([])
+  const [superAdminLookupUsers, setSuperAdminLookupUsers] = useState([])
+  const [locationLookupRows, setLocationLookupRows] = useState([])
+  const [alertLookupCodes, setAlertLookupCodes] = useState([])
+  const [alertLogLookupFilters, setAlertLogLookupFilters] = useState({ alarmCodes: [], actions: [], sources: [] })
   const [dashboardDevicePage, setDashboardDevicePage] = useState(1)
   const [dashboardDeviceSearch, setDashboardDeviceSearch] = useState('')
   const [dashboardDeviceAlertFilter, setDashboardDeviceAlertFilter] = useState('all')
@@ -246,6 +252,8 @@ export default function HomeView({
   const [alarmLogLocationFilter, setAlarmLogLocationFilter] = useState('all')
   const [alarmLogTypeFilter, setAlarmLogTypeFilter] = useState('all')
   const [alarmLogAlertFilter, setAlarmLogAlertFilter] = useState('all')
+  const [alarmLogActionFilter, setAlarmLogActionFilter] = useState('all')
+  const [alarmLogSourceFilter, setAlarmLogSourceFilter] = useState('all')
   const [alarmLogConnectionFilter, setAlarmLogConnectionFilter] = useState('all')
   const [alarmLogs, setAlarmLogs] = useState([])
   const [alarmLogsStatus, setAlarmLogsStatus] = useState('')
@@ -336,6 +344,7 @@ export default function HomeView({
     if (filterValue === 'all') return true
 
     const normalizedCode = String(entry?.alarmCode || '').trim().toLowerCase()
+    if (filterValue.startsWith('code:')) return normalizedCode === filterValue.slice(5).toLowerCase()
     if (!normalizedCode) return filterValue === 'no-code'
     if (filterValue === 'sos') return normalizedCode.includes('sos')
     if (filterValue === 'fall') return normalizedCode.includes('fall')
@@ -494,6 +503,44 @@ export default function HomeView({
     setDevices(flattened)
   }, [asCollection, fetchJson])
 
+  const loadLookups = useCallback(async () => {
+    const [managersResult, roleUsersResult, superAdminsResult, locationsResult, alertsResult, alertLogsResult] = await Promise.allSettled([
+      fetchJson('/api/lookups/managers', { headers: {} }),
+      fetchJson('/api/lookups/users', { headers: {} }),
+      fetchJson('/api/lookups/super-admins', { headers: {} }),
+      fetchJson('/api/lookups/locations', { headers: {} }),
+      fetchJson('/api/lookups/alerts', { headers: {} }),
+      fetchJson('/api/lookups/alert-logs', { headers: {} })
+    ])
+
+    setManagerLookupUsers(
+      managersResult.status === 'fulfilled' ? asCollection(managersResult.value, ['users']) : []
+    )
+    setRoleUserLookupUsers(
+      roleUsersResult.status === 'fulfilled' ? asCollection(roleUsersResult.value, ['users']) : []
+    )
+    setSuperAdminLookupUsers(
+      superAdminsResult.status === 'fulfilled' ? asCollection(superAdminsResult.value, ['users']) : []
+    )
+    setLocationLookupRows(
+      locationsResult.status === 'fulfilled' ? asCollection(locationsResult.value, ['locations']) : []
+    )
+    setAlertLookupCodes(
+      alertsResult.status === 'fulfilled' && Array.isArray(alertsResult.value)
+        ? alertsResult.value
+        : []
+    )
+    setAlertLogLookupFilters(
+      alertLogsResult.status === 'fulfilled' && alertLogsResult.value && typeof alertLogsResult.value === 'object'
+        ? {
+            alarmCodes: Array.isArray(alertLogsResult.value.alarmCodes) ? alertLogsResult.value.alarmCodes : [],
+            actions: Array.isArray(alertLogsResult.value.actions) ? alertLogsResult.value.actions : [],
+            sources: Array.isArray(alertLogsResult.value.sources) ? alertLogsResult.value.sources : []
+          }
+        : { alarmCodes: [], actions: [], sources: [] }
+    )
+  }, [asCollection, fetchJson])
+
   const loadAlarmLogs = useCallback(async () => {
     if (!locationDeviceOptions.length) {
       setAlarmLogs([])
@@ -567,6 +614,7 @@ export default function HomeView({
   useEffect(() => {
     const load = async () => {
       try {
+        await loadLookups()
         if (activeSection === 'users' || activeSection === 'user-detail') await loadUsers()
         if (activeSection === 'locations' || activeSection === 'location-detail') await loadLocations()
         if (activeSection === 'devices') await loadDevices()
@@ -583,7 +631,7 @@ export default function HomeView({
     }
 
     load()
-  }, [activeSection, loadUsers, loadLocations, loadDevices])
+  }, [activeSection, loadUsers, loadLocations, loadDevices, loadLookups])
 
   useEffect(() => {
     if (activeSection !== 'replies' || !autoFetchReplies) return undefined
@@ -1092,7 +1140,20 @@ export default function HomeView({
     }
   }
 
-  const managers = users.filter((nextUser) => Number(nextUser.userRole) === 2)
+  const managers = managerLookupUsers.length
+    ? managerLookupUsers
+    : users.filter((nextUser) => Number(nextUser.userRole) === 2)
+  const selectableLocations = locationLookupRows.length ? locationLookupRows : locations
+  const selectableUsers = roleUserLookupUsers.length
+    ? roleUserLookupUsers
+    : users.filter((nextUser) => Number(nextUser.userRole) === 3)
+  const fallbackAdminUsers = users.filter((nextUser) => Number(nextUser.userRole) === 1)
+  const selectableSuperAdmins = superAdminLookupUsers.length ? superAdminLookupUsers : fallbackAdminUsers
+  const assignableUsers = [...selectableUsers, ...managers, ...selectableSuperAdmins].filter((entry, index, all) => {
+    const id = Number(entry?.id)
+    if (!Number.isFinite(id) || id <= 0) return false
+    return all.findIndex((nextEntry) => Number(nextEntry?.id) === id) === index
+  })
 
   const resolveDeviceMeta = (device) => {
     const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
@@ -1220,35 +1281,77 @@ export default function HomeView({
       })
   }, [locationDeviceOptions])
 
+  const alarmLogCodeOptions = useMemo(() => {
+    const fallbackCodes = alarmLogs.map((entry) => String(entry?.alarmCode || '').trim()).filter(Boolean)
+    return [...new Set([...(alertLogLookupFilters.alarmCodes || []), ...fallbackCodes])]
+  }, [alarmLogs, alertLogLookupFilters.alarmCodes])
+
+  const alertLogActionOptions = useMemo(() => {
+    const fallbackActions = alarmLogs.map((entry) => String(entry?.action || '').trim()).filter(Boolean)
+    return [...new Set([...(alertLogLookupFilters.actions || []), ...fallbackActions])]
+  }, [alarmLogs, alertLogLookupFilters.actions])
+
+  const alertLogSourceOptions = useMemo(() => {
+    const fallbackSources = alarmLogs.map((entry) => String(entry?.source || '').trim()).filter(Boolean)
+    return [...new Set([...(alertLogLookupFilters.sources || []), ...fallbackSources])]
+  }, [alarmLogs, alertLogLookupFilters.sources])
+
   useEffect(() => {
     if (alarmLogLocationFilter === 'all') return
     if (alarmLogLocationOptions.some((location) => location.id === alarmLogLocationFilter)) return
     setAlarmLogLocationFilter('all')
   }, [alarmLogLocationFilter, alarmLogLocationOptions])
 
+  useEffect(() => {
+    if (alarmLogAlertFilter === 'all' || alarmLogAlertFilter === 'no-code') return
+    if (alarmLogAlertFilter === 'sos' || alarmLogAlertFilter === 'fall' || alarmLogAlertFilter === 'other') return
+    if (alarmLogCodeOptions.some((code) => `code:${code}` === alarmLogAlertFilter)) return
+    setAlarmLogAlertFilter('all')
+  }, [alarmLogAlertFilter, alarmLogCodeOptions])
+
+  useEffect(() => {
+    if (alarmLogActionFilter === 'all') return
+    if (alertLogActionOptions.includes(alarmLogActionFilter)) return
+    setAlarmLogActionFilter('all')
+  }, [alarmLogActionFilter, alertLogActionOptions])
+
+  useEffect(() => {
+    if (alarmLogSourceFilter === 'all') return
+    if (alertLogSourceOptions.includes(alarmLogSourceFilter)) return
+    setAlarmLogSourceFilter('all')
+  }, [alarmLogSourceFilter, alertLogSourceOptions])
+
   const filteredAlarmLogs = useMemo(() => {
     return alarmLogs.filter((entry) => {
       if (isConnectivityLog(entry)) return false
       const entryLocationId = String(entry.locationId || '').trim()
       const entryDeviceId = String(entry.deviceId || '').trim()
+      const action = String(entry.action || '').trim()
+      const source = String(entry.source || '').trim()
       const locationMatches = alarmLogLocationFilter === 'all' || entryLocationId === alarmLogLocationFilter
       const deviceMatches = alarmLogDeviceFilter === 'all' || entryDeviceId === alarmLogDeviceFilter
       const alertMatches = matchesAlertFilter(entry, alarmLogAlertFilter)
-      return locationMatches && deviceMatches && alertMatches
+      const actionMatches = alarmLogActionFilter === 'all' || action === alarmLogActionFilter
+      const sourceMatches = alarmLogSourceFilter === 'all' || source === alarmLogSourceFilter
+      return locationMatches && deviceMatches && alertMatches && actionMatches && sourceMatches
     })
-  }, [alarmLogAlertFilter, alarmLogDeviceFilter, alarmLogLocationFilter, alarmLogs, isConnectivityLog, matchesAlertFilter])
+  }, [alarmLogActionFilter, alarmLogAlertFilter, alarmLogDeviceFilter, alarmLogLocationFilter, alarmLogSourceFilter, alarmLogs, isConnectivityLog, matchesAlertFilter])
 
   const filteredConnectivityLogs = useMemo(() => {
     return alarmLogs.filter((entry) => {
       if (!isConnectivityLog(entry)) return false
       const entryLocationId = String(entry.locationId || '').trim()
       const entryDeviceId = String(entry.deviceId || '').trim()
+      const action = String(entry.action || '').trim()
+      const source = String(entry.source || '').trim()
       const locationMatches = alarmLogLocationFilter === 'all' || entryLocationId === alarmLogLocationFilter
       const deviceMatches = alarmLogDeviceFilter === 'all' || entryDeviceId === alarmLogDeviceFilter
       const connectionMatches = matchesConnectionFilter(entry, alarmLogConnectionFilter)
-      return locationMatches && deviceMatches && connectionMatches
+      const actionMatches = alarmLogActionFilter === 'all' || action === alarmLogActionFilter
+      const sourceMatches = alarmLogSourceFilter === 'all' || source === alarmLogSourceFilter
+      return locationMatches && deviceMatches && connectionMatches && actionMatches && sourceMatches
     })
-  }, [alarmLogConnectionFilter, alarmLogDeviceFilter, alarmLogLocationFilter, alarmLogs, isConnectivityLog, matchesConnectionFilter])
+  }, [alarmLogActionFilter, alarmLogConnectionFilter, alarmLogDeviceFilter, alarmLogLocationFilter, alarmLogSourceFilter, alarmLogs, isConnectivityLog, matchesConnectionFilter])
 
   const visibleAlarmLogs = useMemo(() => (
     alarmLogTypeFilter === 'connection' ? [] : filteredAlarmLogs
@@ -1359,6 +1462,10 @@ export default function HomeView({
         .filter((entry) => Boolean(entry.alarmCode)),
     [devices, resolveLiveAlarmCode]
   )
+  const dashboardAlertCodeOptions = useMemo(() => {
+    const fallbackCodes = activeAlarmDevices.map((entry) => String(entry.alarmCode || '').trim()).filter(Boolean)
+    return [...new Set([...(alertLookupCodes || []), ...fallbackCodes])]
+  }, [activeAlarmDevices, alertLookupCodes])
   const activeAlarmLocations = useMemo(
     () =>
       activeAlarmDevices
@@ -1392,12 +1499,17 @@ export default function HomeView({
     return devices
       .filter((entry) => {
         const hasActiveAlarm = Boolean(resolveLiveAlarmCode(entry))
+        const normalizedAlarmCode = String(resolveLiveAlarmCode(entry) || '').trim().toLowerCase()
         const alarmMatch =
           dashboardDeviceAlertFilter === 'all'
             ? true
             : dashboardDeviceAlertFilter === 'active'
               ? hasActiveAlarm
-              : !hasActiveAlarm
+              : dashboardDeviceAlertFilter === 'inactive'
+                ? !hasActiveAlarm
+                : dashboardDeviceAlertFilter.startsWith('code:')
+                  ? normalizedAlarmCode === dashboardDeviceAlertFilter.slice(5).toLowerCase()
+                  : true
 
         if (!alarmMatch) return false
         if (!keyword) return true
@@ -1493,6 +1605,11 @@ export default function HomeView({
   useEffect(() => setLocationsPage(1), [locationSearch, locationDeviceFilter])
   useEffect(() => setDevicesPage(1), [deviceSearch, deviceAlarmFilter])
   useEffect(() => setDashboardDevicePage(1), [dashboardDeviceSearch, dashboardDeviceAlertFilter])
+  useEffect(() => {
+    if (dashboardDeviceAlertFilter === 'all' || dashboardDeviceAlertFilter === 'active' || dashboardDeviceAlertFilter === 'inactive') return
+    if (dashboardAlertCodeOptions.some((code) => `code:${code}` === dashboardDeviceAlertFilter)) return
+    setDashboardDeviceAlertFilter('all')
+  }, [dashboardAlertCodeOptions, dashboardDeviceAlertFilter])
   useEffect(() => setActiveAlertPage(1), [activeAlarmLocations.length])
   useEffect(() => { if (usersPage > pagedUsers.totalPages) setUsersPage(pagedUsers.totalPages) }, [pagedUsers.totalPages, usersPage])
   useEffect(() => { if (locationsPage > pagedLocations.totalPages) setLocationsPage(pagedLocations.totalPages) }, [locationsPage, pagedLocations.totalPages])
@@ -2127,6 +2244,11 @@ export default function HomeView({
                         <option value="all">All devices</option>
                         <option value="active">Active alerts only</option>
                         <option value="inactive">No active alerts</option>
+                        {dashboardAlertCodeOptions.map((alarmCode) => (
+                          <option key={`dashboard-alert-code-${alarmCode}`} value={`code:${alarmCode}`}>
+                            {alarmCode}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div className="table-shell dashboard-device-table">
@@ -2297,8 +2419,8 @@ export default function HomeView({
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
               <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
               <input placeholder="Webhook Device ID" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
-              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{users.map((entry) => <option key={entry.id || entry.email} value={entry.id || ''}>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.email}</option>)}</select>
-              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((entry) => <option key={entry.id || entry.name} value={entry.id || ''}>{entry.name || 'Unknown location'}</option>)}</select>
+              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((entry) => <option key={entry.id || entry.email} value={entry.id || ''}>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.email}</option>)}</select>
+              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((entry) => <option key={entry.id || entry.name} value={entry.id || ''}>{entry.name || 'Unknown location'}</option>)}</select>
             </div>
             {selectedWorkspaceDevice ? (
               <div className="lifecycle-grid">
@@ -2651,13 +2773,45 @@ export default function HomeView({
                       onChange={(event) => setAlarmLogAlertFilter(event.target.value)}
                     >
                       <option value="all">All alarm types</option>
-                      <option value="sos">SOS alert codes</option>
-                      <option value="fall">Fall alert codes</option>
-                      <option value="other">Other alert codes</option>
                       <option value="no-code">No alarm code</option>
+                      {alertLogCodeOptions.map((alarmCode) => (
+                        <option key={`alarm-log-code-${alarmCode}`} value={`code:${alarmCode}`}>
+                          {alarmCode}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 )}
+                <div>
+                  <label htmlFor="alarm-log-action-filter">Action</label>
+                  <select
+                    id="alarm-log-action-filter"
+                    value={alarmLogActionFilter}
+                    onChange={(event) => setAlarmLogActionFilter(event.target.value)}
+                  >
+                    <option value="all">All actions</option>
+                    {alertLogActionOptions.map((action) => (
+                      <option key={`alarm-log-action-${action}`} value={action}>
+                        {action}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="alarm-log-source-filter">Source</label>
+                  <select
+                    id="alarm-log-source-filter"
+                    value={alarmLogSourceFilter}
+                    onChange={(event) => setAlarmLogSourceFilter(event.target.value)}
+                  >
+                    <option value="all">All sources</option>
+                    {alertLogSourceOptions.map((source) => (
+                      <option key={`alarm-log-source-${source}`} value={source}>
+                        {source}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 {alarmLogTypeFilter !== 'alerts' && (
                   <div>
                     <label htmlFor="alarm-log-connection-filter">Connection logs</label>
@@ -2981,7 +3135,7 @@ export default function HomeView({
               <input placeholder="Password" type="password" value={userForm.password} onChange={(event) => setUserForm((prev) => ({ ...prev, password: event.target.value }))} />
               <input placeholder="Contact Number" value={userForm.contactNumber} onChange={(event) => setUserForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
               <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>User</option><option value={2}>Manager</option><option value={1}>Super Admin</option></select>
-              <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+              <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
               <select value={userForm.managerId} onChange={(event) => setUserForm((prev) => ({ ...prev, managerId: event.target.value }))}><option value="">Manager (Optional)</option>{managers.map((manager) => <option key={manager.id || manager.email} value={manager.id || ''}>{`${manager.firstName || ''} ${manager.lastName || ''}`.trim() || manager.email}</option>)}</select>
             </div>
             <button className="mini-action" onClick={handleCreateUser}>Create</button>
@@ -3015,7 +3169,7 @@ export default function HomeView({
               <input placeholder="Contact Number" value={userForm.contactNumber} onChange={(event) => setUserForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
               <input placeholder="Address" value={userForm.address} onChange={(event) => setUserForm((prev) => ({ ...prev, address: event.target.value }))} />
               <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>User</option><option value={2}>Manager</option><option value={1}>Super Admin</option></select>
-              <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+              <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
               <select value={userForm.managerId} onChange={(event) => setUserForm((prev) => ({ ...prev, managerId: event.target.value }))}><option value="">Manager (Optional)</option>{managers.map((manager) => <option key={manager.id || manager.email} value={manager.id || ''}>{`${manager.firstName || ''} ${manager.lastName || ''}`.trim() || manager.email}</option>)}</select>
             </div>
             <button className="mini-action" onClick={handleUpdateUser}>Save User</button>
@@ -3045,8 +3199,8 @@ export default function HomeView({
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
               <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
               <input placeholder="Webhook Device ID (externalDeviceId)" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
-              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{users.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
-              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
+              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
             </div>
             <button className="mini-action" onClick={handleCreateDevice}>Add Device</button>
           </div>
@@ -3062,8 +3216,8 @@ export default function HomeView({
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
               <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
               <input placeholder="Webhook Device ID (externalDeviceId)" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
-              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{users.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
-              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{locations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
+              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
             </div>
             <button className="mini-action" onClick={handleUpdateDevice}>Save Device</button>
           </div>
