@@ -672,6 +672,14 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   position: relative;
 }
 
+.device-workspace-head .workspace-setting-search {
+  display: none;
+}
+
+.workspace-status-row .workspace-setting-search {
+  display: block;
+}
+
 .workspace-setting-search input {
   min-width: 250px;
   border-radius: 999px;
