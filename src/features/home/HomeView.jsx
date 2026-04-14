@@ -225,7 +225,7 @@ export default function HomeView({
   const [devicesPage, setDevicesPage] = useState(1)
   const [userSearch, setUserSearch] = useState('')
   const [locationSearch, setLocationSearch] = useState('')
-  const [deviceSearch, setDeviceSearch] = useState('')
+  const [deviceFilters, setDeviceFilters] = useState({ device: '', owner: '', location: '', phone: '' })
   const [userRoleFilter, setUserRoleFilter] = useState('all')
   const [userLocationFilter, setUserLocationFilter] = useState('all')
   const [locationDeviceFilter, setLocationDeviceFilter] = useState('all')
@@ -1584,16 +1584,26 @@ export default function HomeView({
   }, [locationDeviceFilter, locationSearch, locations])
 
   const filteredDevices = useMemo(() => {
-    const keyword = deviceSearch.trim().toLowerCase()
+    const deviceKeyword = deviceFilters.device.trim().toLowerCase()
+    const ownerKeyword = deviceFilters.owner.trim().toLowerCase()
+    const locationKeyword = deviceFilters.location.trim().toLowerCase()
+    const phoneKeyword = deviceFilters.phone.trim().toLowerCase()
     return devices.filter((entry) => {
       const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(entry))
       const alarmMatch = deviceAlarmFilter === 'all' ? true : alarmMeta.tone === deviceAlarmFilter
       const owner = resolveDeviceMeta(entry)
-      const text = `${entry.name || entry.deviceName || ''} ${entry.phoneNumber || ''} ${entry.externalDeviceId || entry.external_device_id || entry.deviceId || ''} ${owner.ownerName} ${owner.ownerLocation}`.toLowerCase()
-      const textMatch = !keyword || text.includes(keyword)
-      return alarmMatch && textMatch
+      const deviceText = String(entry.name || entry.deviceName || '').toLowerCase()
+      const ownerText = String(owner.ownerName || '').toLowerCase()
+      const locationText = String(owner.ownerLocation || '').toLowerCase()
+      const phoneText = String(entry.phoneNumber || '').toLowerCase()
+
+      const deviceMatch = !deviceKeyword || deviceText.includes(deviceKeyword)
+      const ownerMatch = !ownerKeyword || ownerText.includes(ownerKeyword)
+      const locationMatch = !locationKeyword || locationText.includes(locationKeyword)
+      const phoneMatch = !phoneKeyword || phoneText.includes(phoneKeyword)
+      return alarmMatch && deviceMatch && ownerMatch && locationMatch && phoneMatch
     })
-  }, [deviceAlarmFilter, deviceSearch, devices, getAlarmMeta, resolveDeviceMeta, resolveLiveAlarmCode])
+  }, [deviceAlarmFilter, deviceFilters, devices, getAlarmMeta, resolveDeviceMeta, resolveLiveAlarmCode])
 
   const toPagedRows = useCallback((rows, page) => {
     const totalPages = Math.max(1, Math.ceil(rows.length / listPageSize))
@@ -1613,7 +1623,7 @@ export default function HomeView({
 
   useEffect(() => setUsersPage(1), [userLocationFilter, userSearch, userRoleFilter])
   useEffect(() => setLocationsPage(1), [locationSearch, locationDeviceFilter])
-  useEffect(() => setDevicesPage(1), [deviceSearch, deviceAlarmFilter])
+  useEffect(() => setDevicesPage(1), [deviceAlarmFilter, deviceFilters])
   useEffect(() => setDashboardDevicePage(1), [dashboardDeviceSearch, dashboardDeviceAlertFilter])
   useEffect(() => {
     if (dashboardDeviceAlertFilter === 'all' || dashboardDeviceAlertFilter === 'active' || dashboardDeviceAlertFilter === 'inactive') return
@@ -2363,11 +2373,12 @@ export default function HomeView({
 
         {activeSection === 'devices' && (
           <DevicesPage
+            devices={devices}
             loadUsers={loadUsers}
             loadLocations={loadLocations}
             setShowDeviceModal={setShowDeviceModal}
-            deviceSearch={deviceSearch}
-            setDeviceSearch={setDeviceSearch}
+            deviceFilters={deviceFilters}
+            setDeviceFilters={setDeviceFilters}
             deviceAlarmFilter={deviceAlarmFilter}
             setDeviceAlarmFilter={setDeviceAlarmFilter}
             pagedDevices={pagedDevices}
