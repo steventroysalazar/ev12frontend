@@ -657,6 +657,51 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   display: inline-flex;
   align-items: center;
   margin-left: 0;
+  gap: 0.55rem;
+  position: relative;
+}
+
+.workspace-setting-search {
+  position: relative;
+}
+
+.workspace-setting-search input {
+  min-width: 250px;
+  border-radius: 999px;
+  border: 1px solid #cdd9e8;
+  background: #ffffff;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.82rem;
+}
+
+.workspace-setting-dropdown {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 0.3rem);
+  width: min(460px, 72vw);
+  background: #ffffff;
+  border: 1px solid #cfd8e6;
+  border-radius: 14px;
+  box-shadow: 0 16px 30px -26px rgba(22, 35, 55, 0.9);
+  padding: 0.3rem;
+  display: grid;
+  gap: 0.2rem;
+  z-index: 15;
+}
+
+.workspace-setting-option {
+  border: none;
+  background: #f6f8fb;
+  color: #233b58;
+  text-align: left;
+  border-radius: 10px;
+  padding: 0.46rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.workspace-setting-option:hover {
+  background: #eaf1f9;
 }
 
 .device-back-button {
@@ -703,6 +748,10 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   .device-workspace-actions,
   .device-back-button {
     justify-self: center;
+  }
+
+  .workspace-setting-search input {
+    min-width: 220px;
   }
 
   .workspace-device-context-head {
@@ -774,6 +823,32 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   margin-top: 0.22rem;
   font-size: 0.75rem;
   color: #577194;
+}
+
+.advanced-tab-row {
+  display: inline-flex;
+  gap: 0.38rem;
+  background: #f4f7fb;
+  border: 1px solid #d9e3ef;
+  border-radius: 999px;
+  padding: 0.25rem;
+  margin-bottom: 0.72rem;
+}
+
+.advanced-tab-row button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #425770;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.4rem 0.74rem;
+}
+
+.advanced-tab-row button.is-active {
+  background: #ffffff;
+  border-color: #c9d8ea;
+  color: #223a58;
 }
 
 .active-alert-row small {

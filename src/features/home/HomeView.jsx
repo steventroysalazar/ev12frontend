@@ -125,6 +125,24 @@ const resolveConfigSectionForField = (fieldKey) => {
   return 'device-detail-overview'
 }
 
+const workspaceSettingCatalog = [
+  { key: 'device-name', label: 'Device Name', section: 'device-detail-overview', anchorId: 'setting-device-name' },
+  { key: 'device-owner', label: 'Device Owner', section: 'device-detail-overview', anchorId: 'setting-device-owner' },
+  { key: 'basic-identity', label: 'Basic: Device Name / Identity', section: 'device-detail-basic', anchorId: 'setting-prefix-name' },
+  { key: 'basic-sms-password', label: 'Basic: SMS Password', section: 'device-detail-basic', anchorId: 'setting-sms-password' },
+  { key: 'basic-contacts', label: 'Basic: Contact Information', section: 'device-detail-basic', anchorId: 'setting-contacts' },
+  { key: 'advanced-general-wifi', label: 'Advanced: Wi-Fi Positioning', section: 'device-detail-advanced', anchorId: 'setting-wifi-enabled', advancedTab: 'general' },
+  { key: 'advanced-general-volume', label: 'Advanced: Speaker Volume', section: 'device-detail-advanced', anchorId: 'setting-speaker-volume', advancedTab: 'general' },
+  { key: 'advanced-general-timezone', label: 'Advanced: Timezone', section: 'device-detail-advanced', anchorId: 'setting-timezone', advancedTab: 'general' },
+  { key: 'advanced-alarm-sos', label: 'Advanced: SOS Action', section: 'device-detail-advanced', anchorId: 'setting-sos', advancedTab: 'alarm' },
+  { key: 'advanced-alarm-fall', label: 'Advanced: Fall Detection', section: 'device-detail-advanced', anchorId: 'setting-fall', advancedTab: 'alarm' },
+  { key: 'advanced-alarm-motion', label: 'Advanced: Motion / No Motion', section: 'device-detail-advanced', anchorId: 'setting-motion', advancedTab: 'alarm' },
+  { key: 'advanced-geofence', label: 'Advanced: Geo-fencing', section: 'device-detail-advanced', anchorId: 'setting-geofence', advancedTab: 'geofence' },
+  { key: 'live-location-map', label: 'Live Location: Device Map', section: 'device-detail-location', anchorId: 'setting-live-location-map' },
+  { key: 'commands-input', label: 'Send Commands: Command Input', section: 'device-detail-commands', anchorId: 'setting-command-input' },
+  { key: 'commands-queue', label: 'Send Commands: Command Queue', section: 'device-detail-commands', anchorId: 'setting-command-queue' }
+]
+
 export default function HomeView({
   user,
   onLogout,
@@ -221,6 +239,8 @@ export default function HomeView({
   const [showEditLocationModal, setShowEditLocationModal] = useState(false)
   const [showConfigReviewModal, setShowConfigReviewModal] = useState(false)
   const [deviceWorkspaceLoading, setDeviceWorkspaceLoading] = useState(false)
+  const [advancedSettingsTab, setAdvancedSettingsTab] = useState('general')
+  const [workspaceSettingQuery, setWorkspaceSettingQuery] = useState('')
   const [editingUserId, setEditingUserId] = useState(null)
   const [editingLocationId, setEditingLocationId] = useState(null)
   const [editingDeviceId, setEditingDeviceId] = useState(null)
@@ -2094,6 +2114,13 @@ export default function HomeView({
   }), [configForm.deviceId, displayedLocation, workspaceConfigChangesBySection, workspaceDeviceProfileChanged])
   const geoFenceRawRadius = String(configForm.geoFenceRadius || '').trim().toLowerCase()
   const isGeoFenceRadiusRawValid = !geoFenceRawRadius || /^(\d+(?:\.\d+)?)(m|meter|meters|km|kilometer|kilometers)?$/.test(geoFenceRawRadius)
+  const workspaceSettingSuggestions = useMemo(() => {
+    const query = workspaceSettingQuery.trim().toLowerCase()
+    if (!query) return workspaceSettingCatalog.slice(0, 8)
+    return workspaceSettingCatalog
+      .filter((entry) => entry.label.toLowerCase().includes(query))
+      .slice(0, 8)
+  }, [workspaceSettingQuery])
 
   const formatConfigValue = (value) => {
     if (value === null || value === undefined || value === '') return '-'
@@ -2144,6 +2171,20 @@ export default function HomeView({
     moveToDeviceSection(section, { force: true })
   }
 
+  const openWorkspaceSetting = (entry) => {
+    if (!entry) return
+    if (entry.advancedTab) setAdvancedSettingsTab(entry.advancedTab)
+    moveToDeviceSection(entry.section, { force: true })
+    setWorkspaceSettingQuery('')
+    if (!entry.anchorId || typeof window === 'undefined') return
+    window.setTimeout(() => {
+      const target = document.getElementById(entry.anchorId)
+      if (!target) return
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      if (typeof target.focus === 'function') target.focus({ preventScroll: true })
+    }, 120)
+  }
+
   const handleSectionChange = (section) => {
     moveToDeviceSection(section)
     if (section !== 'user-detail') setSelectedUserId('')
@@ -2173,6 +2214,34 @@ export default function HomeView({
                 <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-commands', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="command" className="btn-icon" /></span>Send Commands <small>{sectionBadges['device-detail-commands']}</small></button>
               </div>
               <div className="device-workspace-actions">
+                <div className="workspace-setting-search">
+                  <input
+                    value={workspaceSettingQuery}
+                    onChange={(event) => setWorkspaceSettingQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && workspaceSettingSuggestions.length) {
+                        event.preventDefault()
+                        openWorkspaceSetting(workspaceSettingSuggestions[0])
+                      }
+                    }}
+                    placeholder="Find setting or command..."
+                    aria-label="Search settings"
+                  />
+                  {workspaceSettingQuery.trim() && workspaceSettingSuggestions.length ? (
+                    <div className="workspace-setting-dropdown">
+                      {workspaceSettingSuggestions.map((entry) => (
+                        <button
+                          key={entry.key}
+                          type="button"
+                          className="workspace-setting-option"
+                          onClick={() => openWorkspaceSetting(entry)}
+                        >
+                          {entry.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
                 <button type="button" className="mini-action" onClick={openConfigReview} disabled={!configForm.deviceId || !configChangeRows.length}>Review &amp; Send</button>
               </div>
               <button type="button" className="device-back-button" onClick={() => moveToDeviceSection('devices')}>← Back to devices</button>
@@ -2530,11 +2599,11 @@ export default function HomeView({
             {selectedDevice ? <p className="status-success">Edit details for {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Open a device workspace from Devices list first.</p>}
             {deviceWorkspaceLoading ? <p className="status">Refreshing latest server values…</p> : null}
             <div className="field-grid two-col">
-              <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
+              <input id="setting-device-name" placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
               <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
               <input placeholder="Webhook Device ID" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
-              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((entry) => <option key={entry.id || entry.email} value={entry.id || ''}>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.email}</option>)}</select>
+              <select id="setting-device-owner" value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((entry) => <option key={entry.id || entry.email} value={entry.id || ''}>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.email}</option>)}</select>
               <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((entry) => <option key={entry.id || entry.name} value={entry.id || ''}>{entry.name || 'Unknown location'}</option>)}</select>
             </div>
             {selectedWorkspaceDevice ? (
@@ -2567,13 +2636,13 @@ export default function HomeView({
               <h3 className="block-title">Basic Configurations</h3>
               <div className="field-grid two-col">
                 <div><label>IMEI</label><input value={configForm.imei} readOnly /></div>
-                <div><label>Device Name / Identity</label><input value={configForm.prefixName} onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
-                <div><label>SMS Password</label><input value={configForm.smsPassword} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} /><small className="field-hint">Default is usually 123456 unless changed on the device.</small></div>
+                <div id="setting-prefix-name" tabIndex={-1}><label>Device Name / Identity</label><input value={configForm.prefixName} onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
+                <div id="setting-sms-password" tabIndex={-1}><label>SMS Password</label><input value={configForm.smsPassword} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} /><small className="field-hint">Default is usually 123456 unless changed on the device.</small></div>
                 <div><label>SMS White List</label><label className="switch-row"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={() => toggle('smsWhitelistEnabled')} /><span>{configForm.smsWhitelistEnabled ? 'On' : 'Off'}</span></label></div>
               </div>
             </article>
 
-            <article className="settings-group">
+            <article className="settings-group" id="setting-contacts" tabIndex={-1}>
               <div className="section-head">
                 <h3 className="block-title">Contact Information (Max 10)</h3>
                 <button
@@ -2607,8 +2676,14 @@ export default function HomeView({
             <h2 className="section-title">Settings &gt; Advanced Configuration</h2>
             {selectedDevice ? <p className="status-success">Advanced settings for {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Select a device from Devices list to configure advanced settings.</p>}
             <p className="status">Use values in seconds for timing fields; avoid blank values to prevent malformed SMS commands.</p>
+            <div className="advanced-tab-row">
+              <button type="button" className={advancedSettingsTab === 'general' ? 'is-active' : ''} onClick={() => setAdvancedSettingsTab('general')}>General</button>
+              <button type="button" className={advancedSettingsTab === 'alarm' ? 'is-active' : ''} onClick={() => setAdvancedSettingsTab('alarm')}>Alarm Controls</button>
+              <button type="button" className={advancedSettingsTab === 'geofence' ? 'is-active' : ''} onClick={() => setAdvancedSettingsTab('geofence')}>Geo-fencing</button>
+            </div>
 
-            <article className="settings-group">
+            {advancedSettingsTab === 'general' ? (
+              <article className="settings-group" id="setting-wifi-enabled" tabIndex={-1}>
               <h3 className="block-title">Advanced Configurations</h3>
               <div className="field-grid two-col">
                 <div>
@@ -2618,7 +2693,7 @@ export default function HomeView({
                     <span>{configForm.wifiEnabled === '1' ? 'On' : 'Off'}</span>
                   </label>
                 </div>
-                <div>
+                <div id="setting-speaker-volume" tabIndex={-1}>
                   <label>Speaker Volume (0-100)</label>
                   <div className="range-with-value">
                     <input
@@ -2633,12 +2708,14 @@ export default function HomeView({
                 </div>
                 <div><label>Continuous Tracking Interval (seconds)</label><input type="number" min="5" step="1" value={configForm.continuousLocateInterval} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateInterval: event.target.value }))} /><small className="field-hint">Recommended: 30-300s.</small></div>
                 <div><label>Continuous Tracking Duration (seconds)</label><input type="number" min="30" step="1" value={configForm.continuousLocateDuration} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateDuration: event.target.value }))} /><small className="field-hint">Recommended: 60-3600s.</small></div>
-                <div><label>Timezone (UTC offset)</label><input placeholder="e.g. +0 or +8" value={configForm.timeZone} onChange={(event) => setConfigForm((prev) => ({ ...prev, timeZone: event.target.value }))} /><small className="field-hint">Use device-supported offset format.</small></div>
+                <div id="setting-timezone" tabIndex={-1}><label>Timezone (UTC offset)</label><input placeholder="e.g. +0 or +8" value={configForm.timeZone} onChange={(event) => setConfigForm((prev) => ({ ...prev, timeZone: event.target.value }))} /><small className="field-hint">Use device-supported offset format.</small></div>
                 <div><label>Include Status Command</label><label className="switch-row"><input type="checkbox" checked={configForm.checkStatus} onChange={() => toggle('checkStatus')} /><span>{configForm.checkStatus ? 'On' : 'Off'}</span></label></div>
               </div>
             </article>
+            ) : null}
 
-            <article className="settings-group">
+            {advancedSettingsTab === 'alarm' ? (
+            <article className="settings-group" id="setting-sos" tabIndex={-1}>
               <h3 className="block-title">Alarm Controls</h3>
               <div className="alarm-card">
                 <h3>SOS Action</h3>
@@ -2652,7 +2729,7 @@ export default function HomeView({
                   </div>
                 </div>
               </div>
-              <div className="alarm-card">
+              <div className="alarm-card" id="setting-fall" tabIndex={-1}>
                 <h3>Fall Detection</h3>
                 <div className="alarm-row">
                   <label>Enable</label>
@@ -2664,7 +2741,7 @@ export default function HomeView({
                   </div>
                 </div>
               </div>
-              <div className="alarm-card">
+              <div className="alarm-card" id="setting-motion" tabIndex={-1}>
                 <h3>Motion / No Motion</h3>
                 <div className="alarm-row">
                   <label>Alarm Type</label>
@@ -2694,8 +2771,10 @@ export default function HomeView({
                 </div>
               </div>
             </article>
+            ) : null}
 
-            <article className="settings-group">
+            {advancedSettingsTab === 'geofence' ? (
+            <article className="settings-group" id="setting-geofence" tabIndex={-1}>
               <h3 className="block-title">Geo-fencing</h3>
               <p className="status">Command format: <code>Geo1,n,on/off,distance</code>. Radius range: 100-65535 meters.</p>
               <div className="field-grid two-col">
@@ -2748,6 +2827,7 @@ export default function HomeView({
                   : 'No device coordinates in database yet. Update device location first to set geo-fence center.'}
               </p>
             </article>
+            ) : null}
           </section>
         )}
 
@@ -2793,7 +2873,7 @@ export default function HomeView({
               {displayedLocation ? (
                 <>
                   <div className={`location-viewer-layout ${isDeviceDetailLocationSection ? 'is-device-workspace' : ''}`}>
-                    <div className="map-placeholder map-square location-leaflet-wrap">
+                    <div className="map-placeholder map-square location-leaflet-wrap" id="setting-live-location-map" tabIndex={-1}>
                       {leafletReady
                         ? <div ref={locationLeafletRef} className="leaflet-map location-leaflet-map" />
                         : <span className="map-chip">Loading map…</span>}
@@ -3041,8 +3121,8 @@ export default function HomeView({
           <section>
             <h2 className="page-title">Send Commands</h2>
             <div className="commands-layout">
-              <article className="card-like"><h3>Command Input</h3><p className="status">Review values below before sending. Commands use the selected device in this workspace.</p><div className="field-grid"><div><label>Contact Number</label><input value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} /></div><div><label>SOS Action</label><input value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div><div><label>Geo-fence</label><input value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div></div><button className="mini-action" disabled={loading} onClick={sendConfig}>Send Command</button></article>
-              <article className="card-like queue-card">
+              <article className="card-like" id="setting-command-input" tabIndex={-1}><h3>Command Input</h3><p className="status">Review values below before sending. Commands use the selected device in this workspace.</p><div className="field-grid"><div><label>Contact Number</label><input title="Phone number used for command payloads." value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} /></div><div><label>SOS Action</label><input title="Sets SOS action time in seconds for generated commands." value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div><div><label>Geo-fence</label><input title="Geo-fence radius command value (e.g. 500m)." value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div></div><button className="mini-action" title="Send the currently prepared command set to the selected device." disabled={loading} onClick={sendConfig}>Send Command</button></article>
+              <article className="card-like queue-card" id="setting-command-queue" tabIndex={-1}>
                 <h3>Command Queue</h3>
                 <div className="queue-grid">
                   <p><strong>Status:</strong> <span className={`queue-chip queue-${queueStatusLabel.toLowerCase()}`}>{queueStatusLabel}</span></p>
@@ -3052,12 +3132,12 @@ export default function HomeView({
                   <p><strong>Cooldown:</strong> {resendRemainingText}</p>
                 </div>
                 <div className="queue-actions">
-                  <button className="mini-action" disabled={loading || !configForm.deviceId} onClick={() => refreshConfigQueueStatus(configForm.deviceId)}>Refresh Queue</button>
+                  <button className="mini-action" title="Fetch the latest queue status from the backend." disabled={loading || !configForm.deviceId} onClick={() => refreshConfigQueueStatus(configForm.deviceId)}>Refresh Queue</button>
                   <button
                     className="mini-action"
+                    title="Retry the pending SMS command if cooldown allows."
                     disabled={loading || !isQueuePending || resendCooldownActive}
                     onClick={resendPendingConfig}
-                    title={!isQueuePending ? 'Resend is available only while status is PENDING.' : resendCooldownActive ? 'Resend cooldown is active for 5 minutes after send.' : 'Resend pending SMS command'}
                   >
                     {resendCooldownActive ? `Resend in ${resendRemainingText}` : 'Resend SMS Command'}
                   </button>
