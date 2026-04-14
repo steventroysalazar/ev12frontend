@@ -1,6 +1,22 @@
 import AppIcon from '../../../components/icons/AppIcon'
-import Autocomplete from '@mui/material/Autocomplete'
-import TextField from '@mui/material/TextField'
+
+function SuggestionInput({ id, placeholder, value, options, onChange }) {
+  return (
+    <>
+      <input
+        list={id}
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <datalist id={id}>
+        {options.map((entry) => (
+          <option key={`${id}-${entry}`} value={entry} />
+        ))}
+      </datalist>
+    </>
+  )
+}
 
 export default function DevicesPage({
   devices,
@@ -49,33 +65,33 @@ export default function DevicesPage({
       </div>
       <div className="table-controls">
         <div className="device-filter-grid">
-          <Autocomplete
-            freeSolo
-            options={[...filterOptions.device].sort((a, b) => a.localeCompare(b))}
+          <SuggestionInput
+            id="device-filter-device"
+            placeholder="Search by device..."
             value={deviceFilters.device}
-            onInputChange={(_, value) => updateFilter('device', value)}
-            renderInput={(params) => <TextField {...params} placeholder="Search by device..." size="small" />}
+            options={[...filterOptions.device].sort((a, b) => a.localeCompare(b))}
+            onChange={(value) => updateFilter('device', value)}
           />
-          <Autocomplete
-            freeSolo
-            options={[...filterOptions.owner].sort((a, b) => a.localeCompare(b))}
+          <SuggestionInput
+            id="device-filter-owner"
+            placeholder="Search by owner..."
             value={deviceFilters.owner}
-            onInputChange={(_, value) => updateFilter('owner', value)}
-            renderInput={(params) => <TextField {...params} placeholder="Search by owner..." size="small" />}
+            options={[...filterOptions.owner].sort((a, b) => a.localeCompare(b))}
+            onChange={(value) => updateFilter('owner', value)}
           />
-          <Autocomplete
-            freeSolo
-            options={[...filterOptions.location].sort((a, b) => a.localeCompare(b))}
+          <SuggestionInput
+            id="device-filter-location"
+            placeholder="Search by location..."
             value={deviceFilters.location}
-            onInputChange={(_, value) => updateFilter('location', value)}
-            renderInput={(params) => <TextField {...params} placeholder="Search by location..." size="small" />}
+            options={[...filterOptions.location].sort((a, b) => a.localeCompare(b))}
+            onChange={(value) => updateFilter('location', value)}
           />
-          <Autocomplete
-            freeSolo
-            options={[...filterOptions.phone].sort((a, b) => a.localeCompare(b))}
+          <SuggestionInput
+            id="device-filter-phone"
+            placeholder="Search by phone..."
             value={deviceFilters.phone}
-            onInputChange={(_, value) => updateFilter('phone', value)}
-            renderInput={(params) => <TextField {...params} placeholder="Search by phone..." size="small" />}
+            options={[...filterOptions.phone].sort((a, b) => a.localeCompare(b))}
+            onChange={(value) => updateFilter('phone', value)}
           />
         </div>
         <select value={deviceAlarmFilter} onChange={(event) => setDeviceAlarmFilter(event.target.value)}>
