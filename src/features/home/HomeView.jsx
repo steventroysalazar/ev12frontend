@@ -2242,6 +2242,36 @@ export default function HomeView({
         {isDeviceWorkspaceSection ? (
           <div className="device-workspace-head card-like">
             <aside className="device-detail-sidebar">
+              <div className="device-workspace-toolbar">
+                <div className="workspace-setting-search">
+                  <input
+                    value={workspaceSettingQuery}
+                    onChange={(event) => setWorkspaceSettingQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && workspaceSettingSuggestions.length) {
+                        event.preventDefault()
+                        openWorkspaceSetting(workspaceSettingSuggestions[0])
+                      }
+                    }}
+                    placeholder="Find setting or command..."
+                    aria-label="Search settings"
+                  />
+                  {workspaceSettingQuery.trim() && workspaceSettingSuggestions.length ? (
+                    <div className="workspace-setting-dropdown">
+                      {workspaceSettingSuggestions.map((entry) => (
+                        <button
+                          key={entry.key}
+                          type="button"
+                          className="workspace-setting-option"
+                          onClick={() => openWorkspaceSetting(entry)}
+                        >
+                          {entry.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
               <div className="device-detail-nav">
                 <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-overview', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="devices" className="btn-icon" /></span>Device Info <small>{sectionBadges['device-detail-overview']}</small></button>
                 <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-basic', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="settings" className="btn-icon" /></span>Basic Config <small>{sectionBadges['device-detail-basic']}</small></button>
