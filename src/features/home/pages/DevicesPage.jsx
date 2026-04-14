@@ -1,11 +1,14 @@
 import AppIcon from '../../../components/icons/AppIcon'
+import Autocomplete from '@mui/material/Autocomplete'
+import TextField from '@mui/material/TextField'
 
 export default function DevicesPage({
+  devices,
   loadUsers,
   loadLocations,
   setShowDeviceModal,
-  deviceSearch,
-  setDeviceSearch,
+  deviceFilters,
+  setDeviceFilters,
   deviceAlarmFilter,
   setDeviceAlarmFilter,
   pagedDevices,
@@ -20,6 +23,24 @@ export default function DevicesPage({
   devicesPage,
   setDevicesPage
 }) {
+  const filterOptions = devices.reduce((acc, entry) => {
+    const owner = resolveDeviceMeta(entry)
+    const deviceName = entry.name || entry.deviceName || ''
+    const phone = entry.phoneNumber || ''
+    const location = owner.ownerLocation || ''
+    const ownerName = owner.ownerName || ''
+
+    if (deviceName) acc.device.add(deviceName)
+    if (phone) acc.phone.add(phone)
+    if (location) acc.location.add(location)
+    if (ownerName) acc.owner.add(ownerName)
+    return acc
+  }, { device: new Set(), owner: new Set(), location: new Set(), phone: new Set() })
+
+  const updateFilter = (key, value) => {
+    setDeviceFilters((prev) => ({ ...prev, [key]: value || '' }))
+  }
+
   return (
     <section className="card-like section-panel">
       <div className="section-head">
@@ -27,7 +48,36 @@ export default function DevicesPage({
         <button className="mini-action" onClick={async () => { await Promise.all([loadUsers(), loadLocations()]); setShowDeviceModal(true) }}><AppIcon name="plus" className="btn-icon" />Add Device</button>
       </div>
       <div className="table-controls">
-        <input placeholder="Search device, owner, location, phone..." value={deviceSearch} onChange={(event) => setDeviceSearch(event.target.value)} />
+        <div className="device-filter-grid">
+          <Autocomplete
+            freeSolo
+            options={[...filterOptions.device].sort((a, b) => a.localeCompare(b))}
+            value={deviceFilters.device}
+            onInputChange={(_, value) => updateFilter('device', value)}
+            renderInput={(params) => <TextField {...params} placeholder="Search by device..." size="small" />}
+          />
+          <Autocomplete
+            freeSolo
+            options={[...filterOptions.owner].sort((a, b) => a.localeCompare(b))}
+            value={deviceFilters.owner}
+            onInputChange={(_, value) => updateFilter('owner', value)}
+            renderInput={(params) => <TextField {...params} placeholder="Search by owner..." size="small" />}
+          />
+          <Autocomplete
+            freeSolo
+            options={[...filterOptions.location].sort((a, b) => a.localeCompare(b))}
+            value={deviceFilters.location}
+            onInputChange={(_, value) => updateFilter('location', value)}
+            renderInput={(params) => <TextField {...params} placeholder="Search by location..." size="small" />}
+          />
+          <Autocomplete
+            freeSolo
+            options={[...filterOptions.phone].sort((a, b) => a.localeCompare(b))}
+            value={deviceFilters.phone}
+            onInputChange={(_, value) => updateFilter('phone', value)}
+            renderInput={(params) => <TextField {...params} placeholder="Search by phone..." size="small" />}
+          />
+        </div>
         <select value={deviceAlarmFilter} onChange={(event) => setDeviceAlarmFilter(event.target.value)}>
           <option value="all">All alarms</option>
           <option value="critical">SOS only</option>

@@ -523,6 +523,12 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   margin-bottom: 0.7rem;
 }
 
+.device-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
 .detail-overview-card,
 .detail-edit-card {
   margin-bottom: 0.8rem;
@@ -1424,6 +1430,10 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   }
 
   .table-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .device-filter-grid {
     grid-template-columns: 1fr;
   }
 }
