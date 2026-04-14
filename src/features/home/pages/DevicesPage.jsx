@@ -97,7 +97,7 @@ export default function DevicesPage({
               const deviceLocationId = d.locationId || d.location_id || d.location?.id || ''
               return (
                 <tr key={d.id || d.phoneNumber || d.name}>
-                  <td><button className="table-link table-link-compact action-chip action-chip-primary" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
+                  <td><button className="table-link table-link-compact action-chip action-chip-primary" type="button" onClick={() => openDeviceSettings(d)}>Open Device Center</button></td>
                   <td>{d.name || d.deviceName || '-'}</td>
                   <td>{d.phoneNumber || '-'}</td>
                   <td>{d.eviewVersion || d.version || '-'}</td>

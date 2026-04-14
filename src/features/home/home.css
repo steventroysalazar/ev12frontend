@@ -610,6 +610,18 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   gap: 0.48rem;
   transition: background 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease;
   min-height: 42px;
+  justify-content: space-between;
+  min-width: 170px;
+}
+
+.device-detail-nav button small {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #5d6777;
+  background: #e9edf2;
+  border: 1px solid #d6dde8;
+  border-radius: 999px;
+  padding: 0.08rem 0.42rem;
 }
 
 .device-detail-nav button.is-active {
@@ -633,6 +645,12 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 .device-detail-nav button.is-active .device-nav-dot {
   background: rgba(255, 255, 255, 0.16);
   color: #ffffff;
+}
+
+.device-detail-nav button.is-active small {
+  color: #e9f1fb;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(223, 236, 255, 0.35);
 }
 
 .device-workspace-actions {
@@ -686,12 +704,76 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   .device-back-button {
     justify-self: center;
   }
+
+  .workspace-device-context-head {
+    flex-direction: column;
+  }
+
+  .workspace-context-chips {
+    justify-content: flex-start;
+  }
 }
 
 .device-profile-actions {
   margin-top: 0.7rem;
   display: inline-flex;
   gap: 0.55rem;
+}
+
+.workspace-device-context {
+  margin-bottom: 0.85rem;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(180deg, #fdfefe 0%, #f5f8fb 100%);
+}
+
+.workspace-device-context-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+
+.workspace-device-context h3 {
+  margin: 0;
+  color: #12273f;
+}
+
+.workspace-device-context p {
+  margin: 0.2rem 0 0;
+  color: #496380;
+  font-size: 0.88rem;
+}
+
+.workspace-context-chips {
+  display: inline-flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.map-kpi-chip.compact.is-loading {
+  color: #3a5b81;
+  border-color: #b7c8dd;
+}
+
+.map-kpi-chip.compact.is-pending {
+  border-color: #d9ba84;
+  color: #855f25;
+  background: linear-gradient(180deg, #fff7e8 0%, #f8ebd2 100%);
+}
+
+.device-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.22rem;
+  font-size: 0.75rem;
+  color: #577194;
 }
 
 .active-alert-row small {
