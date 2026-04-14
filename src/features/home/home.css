@@ -583,6 +583,13 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   width: 100%;
 }
 
+.device-workspace-toolbar {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.1rem;
+}
+
 .device-detail-nav {
   display: inline-flex;
   align-items: center;
