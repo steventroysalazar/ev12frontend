@@ -849,18 +849,18 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   vertical-align: middle;
 }
 
-.devices-list-table th:nth-child(5),
-.devices-list-table td:nth-child(5) {
+.devices-list-table th:nth-child(6),
+.devices-list-table td:nth-child(6) {
   width: 300px;
   min-width: 300px;
 }
 
-.devices-list-table th:nth-child(6),
-.devices-list-table td:nth-child(6),
 .devices-list-table th:nth-child(7),
 .devices-list-table td:nth-child(7),
 .devices-list-table th:nth-child(8),
-.devices-list-table td:nth-child(8) {
+.devices-list-table td:nth-child(8),
+.devices-list-table th:nth-child(9),
+.devices-list-table td:nth-child(9) {
   width: 170px;
   min-width: 170px;
 }

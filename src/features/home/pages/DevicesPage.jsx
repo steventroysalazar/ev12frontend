@@ -88,7 +88,7 @@ export default function DevicesPage({
       </div>
       <div className="table-shell">
         <table className="data-table devices-list-table">
-          <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Last Power ON</th><th>Last Power OFF</th><th>Last Disconnected</th><th>Owner</th><th>Role</th><th>Location</th><th>Settings</th></tr></thead>
+          <thead><tr><th>Settings</th><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Last Power ON</th><th>Last Power OFF</th><th>Last Disconnected</th><th>Owner</th><th>Role</th><th>Location</th></tr></thead>
           <tbody>
             {pagedDevices.rows.map((d) => {
               const deviceMeta = resolveDeviceMeta(d)
@@ -97,6 +97,7 @@ export default function DevicesPage({
               const deviceLocationId = d.locationId || d.location_id || d.location?.id || ''
               return (
                 <tr key={d.id || d.phoneNumber || d.name}>
+                  <td><button className="table-link table-link-compact action-chip action-chip-primary" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
                   <td>{d.name || d.deviceName || '-'}</td>
                   <td>{d.phoneNumber || '-'}</td>
                   <td>{d.eviewVersion || d.version || '-'}</td>
@@ -122,7 +123,6 @@ export default function DevicesPage({
                   <td>{deviceMeta.ownerName}</td>
                   <td>{deviceMeta.ownerRole}</td>
                   <td>{deviceLocationId ? <button className="table-link table-link-compact" type="button" onClick={() => openLocationDetailPage({ id: deviceLocationId })}>{deviceMeta.ownerLocation}</button> : deviceMeta.ownerLocation}</td>
-                  <td><button className="table-link table-link-compact action-chip action-chip-primary" type="button" onClick={() => openDeviceSettings(d)}>Open Settings</button></td>
                 </tr>
               )
             })}
