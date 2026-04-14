@@ -2202,7 +2202,43 @@ export default function HomeView({
 
       <div className="dashboard-content">
         {dataStatus ? <p className="status">{dataStatus}</p> : null}
-        {actionStatus.message ? <p className={actionStatus.type === 'error' ? 'status-error' : 'status-success'}>{actionStatus.message}</p> : null}
+        {isDeviceWorkspaceSection ? (
+          <div className="workspace-status-row">
+            {actionStatus.message
+              ? <p className={actionStatus.type === 'error' ? 'status-error' : 'status-success'}>{actionStatus.message}</p>
+              : <p className="status">Device workspace ready.</p>}
+            <div className="workspace-setting-search">
+              <input
+                value={workspaceSettingQuery}
+                onChange={(event) => setWorkspaceSettingQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && workspaceSettingSuggestions.length) {
+                    event.preventDefault()
+                    openWorkspaceSetting(workspaceSettingSuggestions[0])
+                  }
+                }}
+                placeholder="Find setting or command..."
+                aria-label="Search settings"
+              />
+              {workspaceSettingQuery.trim() && workspaceSettingSuggestions.length ? (
+                <div className="workspace-setting-dropdown">
+                  {workspaceSettingSuggestions.map((entry) => (
+                    <button
+                      key={entry.key}
+                      type="button"
+                      className="workspace-setting-option"
+                      onClick={() => openWorkspaceSetting(entry)}
+                    >
+                      {entry.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          actionStatus.message ? <p className={actionStatus.type === 'error' ? 'status-error' : 'status-success'}>{actionStatus.message}</p> : null
+        )}
         {isDeviceWorkspaceSection ? (
           <div className="device-workspace-head card-like">
             <aside className="device-detail-sidebar">
