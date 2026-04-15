@@ -22,7 +22,7 @@ export default function Navbar({ user, alarmStreamConnected = false }) {
       <div className="profile">
         <div>
           <strong>{firstName} {lastName}</strong>
-          <small>Admin</small>
+          <small>Super Admin</small>
         </div>
         <span className="avatar-dot" aria-hidden="true">{initials}</span>
       </div>

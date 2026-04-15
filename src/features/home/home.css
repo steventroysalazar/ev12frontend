@@ -1628,3 +1628,171 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
     grid-template-columns: 1fr;
   }
 }
+
+/* EV12 dashboard refresh */
+.home-shell {
+  gap: 0;
+  grid-template-columns: 226px minmax(0, 1fr);
+  background: #f1f3f7;
+  border: 1px solid #d9dde6;
+}
+
+.dashboard-content {
+  background: #eff1f5;
+  border: none;
+  border-radius: 0;
+  padding: 1rem 0.95rem;
+  box-shadow: none;
+  height: 100%;
+}
+
+.live-alarm-strip {
+  margin: 0 0 1rem;
+  border: 1px solid #6f83bf;
+  background: linear-gradient(135deg, #5f77b8 0%, #435ea8 100%);
+  border-radius: 10px;
+  padding: 0.78rem 1rem;
+  box-shadow: 0 8px 22px -16px rgba(53, 74, 137, 0.9);
+}
+
+.live-alarm-strip strong {
+  color: #f6fbff;
+  font-size: 1.55rem;
+  font-weight: 600;
+}
+
+.live-alarm-strip p {
+  margin: 0.08rem 0 0;
+  color: #dbe7ff;
+  font-size: 0.74rem;
+}
+
+.live-connection-chip {
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.22rem 0.5rem;
+}
+
+.live-connection-chip.is-connected {
+  color: #b6fff1;
+  background: rgba(85, 212, 186, 0.28);
+  border-color: rgba(126, 238, 216, 0.3);
+}
+
+.dashboard-hero-shell {
+  margin-bottom: 0.75rem;
+}
+
+.dashboard-hero {
+  border: none;
+  padding: 0;
+  min-height: 0;
+  background: transparent;
+}
+
+.dashboard-hero-backdrop {
+  display: none;
+}
+
+.dashboard-hero-top h3 {
+  color: #28314c;
+  font-size: 2.65rem;
+  font-weight: 700;
+}
+
+.dashboard-hero-kicker {
+  color: #6580bf;
+  font-size: 0.66rem;
+}
+
+.dashboard-hero-actions {
+  gap: 0.35rem;
+}
+
+.hero-pill {
+  height: 24px;
+  font-size: 0.58rem;
+  padding: 0 0.56rem;
+  background: #f1f4fe;
+  color: #5775bf;
+  border-color: #b8c8eb;
+}
+
+.metric-grid {
+  gap: 0.7rem;
+}
+
+.metric-card {
+  min-height: 96px;
+  border-radius: 12px;
+  background: #fbfcff;
+  border-color: #d6dce9;
+  box-shadow: none;
+  padding: 0.75rem 0.82rem;
+}
+
+.metric-card-title {
+  color: #6380bf;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.metric-card h3 {
+  font-size: 2.8rem;
+  color: #222a43;
+}
+
+.metric-card-jump {
+  width: 22px;
+  height: 22px;
+  background: #819bcf;
+  border: none;
+  color: transparent;
+}
+
+.dashboard-top-layout,
+.dashboard-main-grid {
+  gap: 0.75rem;
+}
+
+.card-like {
+  border-radius: 14px;
+  background: #f7f8fb;
+  border-color: #d7dce8;
+  box-shadow: none;
+}
+
+.map-panel-head h3,
+.section-head h3,
+.device-overview h3 {
+  color: #2b3551;
+}
+
+.map-panel-head p,
+.dashboard-status-panel p {
+  color: #8a92a5;
+  font-size: 0.74rem;
+}
+
+.map-kpi-chip {
+  border-radius: 8px;
+  border-color: #cfd7ea;
+  background: #f8faff;
+}
+
+.active-alert-row {
+  border-radius: 10px;
+  background: #f5f6f9;
+  border-color: #e2e6f0;
+}
+
+.table-shell {
+  border-radius: 12px;
+  border-color: #dde2ee;
+}
+
+.dashboard-status-items div {
+  border-radius: 10px;
+  background: #f3f5fb;
+}
