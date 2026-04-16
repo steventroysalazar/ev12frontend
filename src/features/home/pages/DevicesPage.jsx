@@ -31,7 +31,6 @@ export default function DevicesPage({
   resolveDeviceMeta,
   getAlarmMeta,
   resolveLiveAlarmCode,
-  formatTimestamp,
   openDeviceSettings,
   devicesPage,
   setDevicesPage
@@ -109,10 +108,11 @@ export default function DevicesPage({
         </div>
         <div className="table-shell">
           <table className="data-table devices-list-table">
-            <thead><tr><th>Settings</th><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Last Power ON</th><th>Last Power OFF</th></tr></thead>
+            <thead><tr><th>Settings</th><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Owner</th><th>Location</th></tr></thead>
             <tbody>
               {pagedDevices.rows.map((d) => {
                 const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(d))
+                const deviceMeta = resolveDeviceMeta(d)
                 return (
                   <tr key={d.id || d.phoneNumber || d.name}>
                     <td><button className="table-link table-link-compact action-chip action-chip-primary device-manage-button" type="button" onClick={() => openDeviceSettings(d)}>Manage</button></td>
@@ -121,8 +121,8 @@ export default function DevicesPage({
                     <td>{d.eviewVersion || d.version || '-'}</td>
                     <td>{d.externalDeviceId || d.external_device_id || d.deviceId || '-'}</td>
                     <td><span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span></td>
-                    <td>{formatTimestamp(d.lastPowerOnAt || d.last_power_on_at)}</td>
-                    <td>{formatTimestamp(d.lastPowerOffAt || d.last_power_off_at)}</td>
+                    <td>{deviceMeta.ownerName || '-'}</td>
+                    <td>{deviceMeta.ownerLocation || '-'}</td>
                   </tr>
                 )
               })}
