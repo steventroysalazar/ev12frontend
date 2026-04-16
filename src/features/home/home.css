@@ -1001,13 +1001,13 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   align-items: center;
   justify-content: flex-start;
   gap: 0.3rem;
-  padding: 0.28rem;
+  padding: 0.18rem 0.24rem;
   border-radius: 12px;
   background: #e8edf4;
   border: 1px solid #d2dae6;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
   justify-self: start;
-  min-height: 44px;
+  min-height: 38px;
   flex-wrap: wrap;
 }
 
@@ -1016,14 +1016,14 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   background: transparent;
   color: #6f7f94;
   border-radius: 999px;
-  padding: 0.38rem 0.62rem;
+  padding: 0.3rem 0.58rem;
   font-size: 0.8rem;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
   gap: 0.38rem;
   transition: background 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease;
-  min-height: 34px;
+  min-height: 30px;
   justify-content: space-between;
   min-width: 0;
 }
@@ -1278,6 +1278,14 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   flex-wrap: wrap;
   gap: 0.45rem;
   margin-top: 0.25rem;
+}
+
+.device-quick-actions .action-chip {
+  min-width: 0;
+  min-height: 36px;
+  padding: 0.35rem 0.72rem;
+  font-size: 0.82rem;
+  border-radius: 10px;
 }
 
 .field-hint {
@@ -1785,22 +1793,33 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   margin: 0.8rem 0;
 }
 .lifecycle-card {
-  border: 1px solid #d8e3ef;
-  border-radius: 10px;
-  background: #f6faff;
-  padding: 0.65rem 0.75rem;
+  border: 1px solid #cfdaea;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
+  box-shadow: 0 8px 20px -18px rgba(22, 41, 73, 0.5);
+  padding: 0.62rem 0.85rem;
   display: grid;
-  gap: 0.25rem;
+  gap: 0.2rem;
+  position: relative;
+  overflow: hidden;
+}
+.lifecycle-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, #6f8fcb 0%, #4f77c9 100%);
 }
 .lifecycle-card strong {
   font-size: 0.74rem;
-  color: #4f6580;
+  color: #5a6f89;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 .lifecycle-card span {
-  color: #1f3b60;
+  color: #1c3f6f;
   font-weight: 700;
+  font-size: 1.05rem;
 }
 .request-btn-inline {
   margin: 0;
