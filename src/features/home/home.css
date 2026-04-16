@@ -2719,3 +2719,41 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
     grid-column: 3;
   }
 }
+
+/* Device detail page button refresh */
+.is-device-detail-page .mini-action,
+.is-device-detail-page .action-chip,
+.is-device-detail-page .advanced-tab-row button,
+.is-device-detail-page .device-detail-nav button {
+  border-radius: 14px;
+  font-weight: 700;
+  min-height: 48px;
+  padding: 0.62rem 1.15rem;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.is-device-detail-page .mini-action,
+.is-device-detail-page .action-chip-primary,
+.is-device-detail-page .advanced-tab-row button.is-active,
+.is-device-detail-page .device-detail-nav button.is-active {
+  background: #4f77c9;
+  border: 2px solid #4f77c9;
+  color: #f5f9ff;
+  box-shadow: none;
+}
+
+.is-device-detail-page .action-chip-neutral,
+.is-device-detail-page .advanced-tab-row button,
+.is-device-detail-page .device-detail-nav button {
+  background: #ffffff;
+  border: 2px solid #4f77c9;
+  color: #4f77c9;
+}
+
+.is-device-detail-page .action-chip-danger {
+  border-width: 2px;
+}
+
+.is-device-detail-page .basic-config-footer-actions {
+  gap: 0.9rem;
+}

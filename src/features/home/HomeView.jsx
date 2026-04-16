@@ -2344,7 +2344,7 @@ export default function HomeView({
   }
 
   return (
-    <div className="home-shell">
+    <div className={`home-shell ${isDeviceWorkspaceSection ? 'is-device-detail-page' : ''}`}>
       <Sidebar
         activeSection={activeSection}
         onChangeSection={handleSectionChange}
@@ -2710,7 +2710,7 @@ export default function HomeView({
         {activeSection === 'device-detail-overview' && (
           <section className="card-like section-panel">
             <h2 className="section-title">Device Info</h2>
-            {selectedDevice ? <p className="status-success">Edit details for {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Open a device workspace from Devices list first.</p>}
+            {!selectedDevice ? <p className="status">Open a device workspace from Devices list first.</p> : null}
             {deviceWorkspaceLoading ? <p className="status">Refreshing latest server values…</p> : null}
             <div className="field-grid two-col device-profile-grid">
               <div>
@@ -2764,7 +2764,7 @@ export default function HomeView({
               <div>
                 <h2 className="section-title basic-config-title">{selectedDevice?.name || selectedDevice?.deviceName || 'Device Profile'}</h2>
                 <p className="status basic-config-meta">
-                  Phone {selectedDevice?.phoneNumber || selectedWorkspaceDevice?.phoneNumber || '-'} · IMEI {configForm.imei || selectedDevice?.imei || '-'} · Owner {workspaceDeviceMeta?.ownerName || '-'}
+                  Phone {selectedDevice?.phoneNumber || selectedWorkspaceDevice?.phoneNumber || '-'} · IMEI {configForm.imei || selectedDevice?.imei || '-'}
                 </p>
               </div>
               <div className="workspace-context-chips">
