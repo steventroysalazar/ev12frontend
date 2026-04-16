@@ -1,3 +1,4 @@
+import React from 'react'
 import AppIcon from '../../../components/icons/AppIcon'
 
 export default function UsersPage({
@@ -18,8 +19,8 @@ export default function UsersPage({
   roleLabel,
   getUserDevices
 }) {
-  const [deviceSearchByUser, setDeviceSearchByUser] = useState({})
-  const [devicePageByUser, setDevicePageByUser] = useState({})
+  const [deviceSearchByUser, setDeviceSearchByUser] = React.useState({})
+  const [devicePageByUser, setDevicePageByUser] = React.useState({})
   const devicePageSize = 20
 
   const getRowUserKey = (user) => String(user.id || user.email || user.name || 'user')
