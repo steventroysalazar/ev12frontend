@@ -2641,8 +2641,14 @@ export default function HomeView({
                 </p>
               </div>
               <div className="workspace-context-chips">
-                <span className={`map-kpi-chip compact ${deviceWorkspaceLoading ? 'is-loading' : ''}`}>{deviceWorkspaceLoading ? 'Refreshing…' : 'Loaded'}</span>
-                <span className="map-kpi-chip compact">{workspaceDeviceMeta?.ownerLocation || 'No location'}</span>
+                <span className={`map-kpi-chip compact status-chip status-chip-loaded ${deviceWorkspaceLoading ? 'is-loading' : ''}`}>
+                  <span className="chip-icon-dot" aria-hidden="true" />
+                  {deviceWorkspaceLoading ? 'Refreshing…' : 'Loaded'}
+                </span>
+                <span className="map-kpi-chip compact status-chip status-chip-location">
+                  <AppIcon name="location" className="chip-inline-icon" />
+                  {workspaceDeviceMeta?.ownerLocation || 'No location'}
+                </span>
                 <span className={`map-kpi-chip compact ${hasPendingWorkspaceChanges ? 'is-pending' : ''}`}>{hasPendingWorkspaceChanges ? 'Unsaved changes' : 'All changes saved'}</span>
               </div>
             </div>
