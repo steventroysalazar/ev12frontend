@@ -17,13 +17,22 @@ export default function DeviceSettingsPage({
   hasPendingWorkspaceChanges,
   children
 }) {
+  const sectionTitleByKey = {
+    'device-detail-overview': 'Device Profile',
+    'device-detail-basic': 'Basic Configuration',
+    'device-detail-advanced': 'Advanced Configuration',
+    'device-detail-location': 'Live Location',
+    'device-detail-commands': 'Send Commands'
+  }
+  const activeWorkspaceTitle = sectionTitleByKey[activeDeviceSettingsSection] || 'Device Profile'
+
   return (
     <>
       <div className="workspace-status-row">
         <div className="workspace-profile-head">
           <button type="button" className="device-profile-back-link" onClick={() => moveToDeviceSection('devices')}>
             <span aria-hidden="true">‹</span>
-            <span>Basic Configuration</span>
+            <span>{activeWorkspaceTitle}</span>
           </button>
           {actionStatus.message
             ? <p className={actionStatus.type === 'error' ? 'status-error' : 'status-success'}>{actionStatus.message}</p>
@@ -73,22 +82,6 @@ export default function DeviceSettingsPage({
           </div>
         </aside>
       </div>
-
-      {selectedWorkspaceDevice ? (
-        <section className="card-like workspace-device-context">
-          <div className="workspace-device-context-head">
-            <div>
-              <h3>{selectedWorkspaceDevice.name || selectedWorkspaceDevice.deviceName || `Device ${selectedWorkspaceDevice.id || selectedWorkspaceDevice.deviceId || ''}`}</h3>
-              <p>Phone {selectedWorkspaceDevice.phoneNumber || '-'} · IMEI {configForm.imei || selectedWorkspaceDevice.imei || '-'} · Owner {workspaceDeviceMeta?.ownerName || '-'}</p>
-            </div>
-            <div className="workspace-context-chips">
-              <span className={`map-kpi-chip compact ${deviceWorkspaceLoading ? 'is-loading' : ''}`}>{deviceWorkspaceLoading ? 'Refreshing…' : 'Loaded'}</span>
-              <span className="map-kpi-chip compact">{workspaceDeviceMeta?.ownerLocation || 'No location'}</span>
-              <span className={`map-kpi-chip compact ${hasPendingWorkspaceChanges ? 'is-pending' : ''}`}>{hasPendingWorkspaceChanges ? 'Unsaved changes' : 'All changes saved'}</span>
-            </div>
-          </div>
-        </section>
-      ) : null}
 
       {children}
     </>

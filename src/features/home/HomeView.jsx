@@ -2646,21 +2646,23 @@ export default function HomeView({
                 <span className={`map-kpi-chip compact ${hasPendingWorkspaceChanges ? 'is-pending' : ''}`}>{hasPendingWorkspaceChanges ? 'Unsaved changes' : 'All changes saved'}</span>
               </div>
             </div>
-            <div className="basic-config-tip-banner">
-              <span className="basic-config-tip-icon" aria-hidden="true" />
-              <div>
-                <strong>Select a device from Devices list to configure.</strong>
-                <p>Tip: Keep contact #1 as the primary emergency contact and validate numbers before sending commands.</p>
+            {!selectedWorkspaceDevice && !selectedDevice ? (
+              <div className="basic-config-tip-banner">
+                <span className="basic-config-tip-icon" aria-hidden="true" />
+                <div>
+                  <strong>Select a device from Devices list to configure.</strong>
+                  <p>Tip: Keep contact #1 as the primary emergency contact and validate numbers before sending commands.</p>
+                </div>
               </div>
-            </div>
+            ) : null}
 
             <article className="settings-group">
               <h3 className="block-title">Basic Configuration</h3>
               <div className="field-grid two-col">
-                <div><label>IMEI</label><input value={configForm.imei} placeholder="Testdevice" readOnly /></div>
-                <div id="setting-prefix-name" tabIndex={-1}><label>Device Name</label><input value={configForm.prefixName} placeholder="Testdevice" onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
-                <div id="setting-sms-password" tabIndex={-1}><label>SMS Password</label><input value={configForm.smsPassword} placeholder="Lorem Ipsum" onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} /><small className="field-hint">Default: 123456 (unless modified on the device)</small></div>
-                <div><label>SMS White List</label><label className="switch-row"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={() => toggle('smsWhitelistEnabled')} /><span>{configForm.smsWhitelistEnabled ? 'On' : 'Off'}</span></label></div>
+                <div><label>IMEI</label><input className="basic-config-input" value={configForm.imei} placeholder="Testdevice" readOnly /></div>
+                <div id="setting-prefix-name" tabIndex={-1}><label>Device Name</label><input className="basic-config-input" value={configForm.prefixName} placeholder="Testdevice" onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
+                <div id="setting-sms-password" tabIndex={-1}><label>SMS Password</label><input className="basic-config-input" value={configForm.smsPassword} placeholder="Lorem Ipsum" onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} /><small className="field-hint">Default: 123456 (unless modified on the device)</small></div>
+                <div><label>SMS White List</label><label className="switch-row"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={() => toggle('smsWhitelistEnabled')} /><span className="switch-pill">{configForm.smsWhitelistEnabled ? 'On' : 'Off'}</span></label></div>
               </div>
             </article>
 
@@ -2681,10 +2683,10 @@ export default function HomeView({
                 {getContacts(configForm).map((contact, index) => (
                   <div className="contact-row" key={`contact-${index + 1}`}>
                     <span className="chip">Contact {index + 1}</span>
-                    <input value={contact.name} onChange={(event) => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, name: event.target.value } : entry))} placeholder="Lorem Ipsum" />
-                    <input value={contact.phone} onChange={(event) => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, phone: event.target.value } : entry))} placeholder="+639184532165" />
-                    <label className="switch-row"><input type="checkbox" checked={contact.smsEnabled !== false} onChange={() => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, smsEnabled: entry.smsEnabled === false } : entry))} /><span>{contact.smsEnabled !== false ? 'On' : 'Off'}</span></label>
-                    <label className="switch-row"><input type="checkbox" checked={contact.callEnabled !== false} onChange={() => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, callEnabled: entry.callEnabled === false } : entry))} /><span>{contact.callEnabled !== false ? 'On' : 'Off'}</span></label>
+                    <input className="basic-config-input" value={contact.name} onChange={(event) => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, name: event.target.value } : entry))} placeholder="Lorem Ipsum" />
+                    <input className="basic-config-input" value={contact.phone} onChange={(event) => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, phone: event.target.value } : entry))} placeholder="+639184532165" />
+                    <label className="switch-row"><input type="checkbox" checked={contact.smsEnabled !== false} onChange={() => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, smsEnabled: entry.smsEnabled === false } : entry))} /><span className="switch-pill">{contact.smsEnabled !== false ? 'On' : 'Off'}</span></label>
+                    <label className="switch-row"><input type="checkbox" checked={contact.callEnabled !== false} onChange={() => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, callEnabled: entry.callEnabled === false } : entry))} /><span className="switch-pill">{contact.callEnabled !== false ? 'On' : 'Off'}</span></label>
                     <button className="table-link remove-contact-btn" type="button" onClick={() => updateContacts((contacts) => contacts.length <= 1 ? contacts : contacts.filter((_, entryIndex) => entryIndex !== index))}>Remove</button>
                   </div>
                 ))}
