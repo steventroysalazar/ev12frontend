@@ -1897,8 +1897,6 @@ export default function HomeView({
       map.setView([selectedAlertLocation.latitude, selectedAlertLocation.longitude], 15)
       dashboardLastFocusedDeviceRef.current = selectedKey
       dashboardHasAutoFramedRef.current = true
-    } else if (!selectedAlertLocation) {
-      dashboardLastFocusedDeviceRef.current = ''
     } else if (!dashboardHasAutoFramedRef.current) {
       if (markerBounds.length > 1) {
         map.fitBounds(markerBounds, { padding: [26, 26] })
@@ -1906,6 +1904,9 @@ export default function HomeView({
         map.setView(markerBounds[0], 13)
       }
       dashboardHasAutoFramedRef.current = true
+      dashboardLastFocusedDeviceRef.current = selectedAlertLocation ? selectedKey : ''
+    } else if (!selectedAlertLocation) {
+      dashboardLastFocusedDeviceRef.current = ''
     }
 
     setTimeout(() => map.invalidateSize(), 120)
