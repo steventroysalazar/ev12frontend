@@ -904,6 +904,60 @@ export default function HomeView({
     }
   }, [formatWebhookLabel])
 
+  const hydrateDeviceWorkspace = useCallback((device, { announceLoaded = false } = {}) => {
+    if (!device || typeof device !== 'object') return
+
+    const protocolSettings = device?.protocolSettings && typeof device.protocolSettings === 'object'
+      ? device.protocolSettings
+      : {}
+
+    setSelectedDevice(device)
+    const seededContacts = Array.isArray(protocolSettings.contacts) && protocolSettings.contacts.length
+      ? protocolSettings.contacts.slice(0, 10)
+      : [...getContacts(configForm)]
+
+    const primaryName = device.ownerName || device.owner?.firstName || protocolSettings.contactName || seededContacts[0]?.name || configForm.contactName
+    const primaryPhone = device.phoneNumber || protocolSettings.contactNumber || seededContacts[0]?.phone || configForm.contactNumber
+
+    seededContacts[0] = {
+      slot: 1,
+      name: primaryName || '',
+      phone: primaryPhone || '',
+      smsEnabled: seededContacts[0]?.smsEnabled !== false,
+      callEnabled: seededContacts[0]?.callEnabled !== false
+    }
+
+    const nextConfigForm = {
+      ...configForm,
+      ...protocolSettings,
+      deviceId: device.id || device.deviceId || configForm.deviceId,
+      imei: device.imei || protocolSettings.imei || configForm.imei,
+      prefixName: device.name || device.deviceName || protocolSettings.prefixName || configForm.prefixName,
+      contacts: seededContacts.slice(0, 10),
+      contactSlot: protocolSettings.contactSlot || 1,
+      contactNumber: primaryPhone || '',
+      contactName: primaryName || ''
+    }
+
+    setConfigForm(nextConfigForm)
+    setConfigBaseline(nextConfigForm)
+    const nextDeviceId = device.id || device.deviceId || null
+    setEditingDeviceId(nextDeviceId)
+    setSelectedDeviceId(nextDeviceId ? String(nextDeviceId) : '')
+    setDeviceForm({
+      name: device.name || device.deviceName || '',
+      phoneNumber: device.phoneNumber || '',
+      eviewVersion: device.eviewVersion || device.version || '',
+      ownerUserId: device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || '',
+      locationId: device.locationId || device.location_id || '',
+      externalDeviceId: device.externalDeviceId || device.external_device_id || device.deviceId || ''
+    })
+
+    if (announceLoaded) {
+      setActionStatus((prev) => (prev.type === 'error' ? prev : { type: 'success', message: 'Device workspace loaded.' }))
+    }
+  }, [configForm, getContacts, setConfigBaseline, setConfigForm])
+
   const openDeviceSettings = async (device) => {
     setDeviceWorkspaceLoading(true)
     try {
@@ -919,52 +973,7 @@ export default function HomeView({
         }
       }
 
-      const protocolSettings = resolvedDevice?.protocolSettings && typeof resolvedDevice.protocolSettings === 'object'
-        ? resolvedDevice.protocolSettings
-        : {}
-
-      setSelectedDevice(resolvedDevice)
-      const seededContacts = Array.isArray(protocolSettings.contacts) && protocolSettings.contacts.length
-        ? protocolSettings.contacts.slice(0, 10)
-        : [...getContacts(configForm)]
-
-      const primaryName = resolvedDevice.ownerName || resolvedDevice.owner?.firstName || protocolSettings.contactName || seededContacts[0]?.name || configForm.contactName
-      const primaryPhone = resolvedDevice.phoneNumber || protocolSettings.contactNumber || seededContacts[0]?.phone || configForm.contactNumber
-
-      seededContacts[0] = {
-        slot: 1,
-        name: primaryName || '',
-        phone: primaryPhone || '',
-        smsEnabled: seededContacts[0]?.smsEnabled !== false,
-        callEnabled: seededContacts[0]?.callEnabled !== false
-      }
-
-      const nextConfigForm = {
-        ...configForm,
-        ...protocolSettings,
-        deviceId: resolvedDevice.id || resolvedDevice.deviceId || configForm.deviceId,
-        imei: resolvedDevice.imei || protocolSettings.imei || configForm.imei,
-        prefixName: resolvedDevice.name || resolvedDevice.deviceName || protocolSettings.prefixName || configForm.prefixName,
-        contacts: seededContacts.slice(0, 10),
-        contactSlot: protocolSettings.contactSlot || 1,
-        contactNumber: primaryPhone || '',
-        contactName: primaryName || ''
-      }
-
-      setConfigForm(nextConfigForm)
-      setConfigBaseline(nextConfigForm)
-      const nextDeviceId = resolvedDevice.id || resolvedDevice.deviceId || null
-      setEditingDeviceId(nextDeviceId)
-      setSelectedDeviceId(nextDeviceId ? String(nextDeviceId) : '')
-      setDeviceForm({
-        name: resolvedDevice.name || resolvedDevice.deviceName || '',
-        phoneNumber: resolvedDevice.phoneNumber || '',
-        eviewVersion: resolvedDevice.eviewVersion || resolvedDevice.version || '',
-        ownerUserId: resolvedDevice.ownerUserId || resolvedDevice.userId || resolvedDevice.user_id || resolvedDevice.owner?.id || resolvedDevice.app_user?.id || '',
-        locationId: resolvedDevice.locationId || resolvedDevice.location_id || '',
-        externalDeviceId: resolvedDevice.externalDeviceId || resolvedDevice.external_device_id || resolvedDevice.deviceId || ''
-      })
-      setActionStatus((prev) => (prev.type === 'error' ? prev : { type: 'success', message: 'Device workspace loaded.' }))
+      hydrateDeviceWorkspace(resolvedDevice, { announceLoaded: true })
       setActiveSection('device-detail-overview')
     } finally {
       setDeviceWorkspaceLoading(false)
@@ -980,9 +989,7 @@ export default function HomeView({
 
     const localMatch = devices.find((device) => String(device.id || device.deviceId || '') === String(selectedDeviceId))
     if (localMatch) {
-      setSelectedDevice(localMatch)
-      setEditingDeviceId(localMatch.id || localMatch.deviceId || null)
-      return
+      hydrateDeviceWorkspace(localMatch)
     }
 
     let cancelled = false
@@ -990,8 +997,7 @@ export default function HomeView({
       try {
         const resolvedDevice = await fetchJson(`/api/devices/${selectedDeviceId}`, { headers: {} })
         if (cancelled) return
-        setSelectedDevice(resolvedDevice)
-        setEditingDeviceId(resolvedDevice?.id || resolvedDevice?.deviceId || null)
+        hydrateDeviceWorkspace(resolvedDevice)
       } catch (error) {
         if (cancelled) return
         setActionStatus({ type: 'error', message: `Could not load selected device from URL: ${error.message}` })
@@ -1002,7 +1008,7 @@ export default function HomeView({
     return () => {
       cancelled = true
     }
-  }, [activeSection, devices, fetchJson, selectedDevice, selectedDeviceId])
+  }, [activeSection, devices, fetchJson, hydrateDeviceWorkspace, selectedDevice, selectedDeviceId])
 
   const handleCreateLocation = async () => {
     try {
@@ -2366,7 +2372,9 @@ export default function HomeView({
             hasPendingWorkspaceChanges={hasPendingWorkspaceChanges}
           />
         ) : (
-          actionStatus.message ? <p className={actionStatus.type === 'error' ? 'status-error' : 'status-success'}>{actionStatus.message}</p> : null
+          actionStatus.message && actionStatus.type === 'error'
+            ? <p className="status-error">{actionStatus.message}</p>
+            : null
         )}
 
         {activeSection === 'dashboard' && (

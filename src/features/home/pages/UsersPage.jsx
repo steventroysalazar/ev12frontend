@@ -1,5 +1,4 @@
 import AppIcon from '../../../components/icons/AppIcon'
-import { useState } from 'react'
 
 export default function UsersPage({
   loadLocations,
@@ -75,39 +74,9 @@ export default function UsersPage({
                 <td>{u.managerName || u.manager?.firstName || '-'}</td>
                 <td>
                   {(() => {
-                    const panel = getDevicePanel(u)
-                    if (!panel.allDevices.length) return <span className="status">No devices</span>
-                    return (
-                      <details className="inline-devices-dropdown">
-                        <summary>{panel.allDevices.length} device{panel.allDevices.length === 1 ? '' : 's'}</summary>
-                        <div className="inline-devices-content">
-                          <input
-                            placeholder="Search devices..."
-                            value={panel.search}
-                            onChange={(event) => {
-                              const value = event.target.value
-                              setDeviceSearchByUser((prev) => ({ ...prev, [panel.userKey]: value }))
-                              setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: 1 }))
-                            }}
-                          />
-                          <ul>
-                            {panel.pageRows.map((entry) => (
-                              <li key={`user-table-device-${u.id || u.email}-${entry.id || entry.deviceId || entry.phoneNumber}`}>
-                                <strong>{entry.name || entry.deviceName || 'Unnamed device'}</strong>
-                                <span>{entry.phoneNumber || '-'}</span>
-                              </li>
-                            ))}
-                          </ul>
-                          {panel.filtered.length > devicePageSize ? (
-                            <div className="inline-devices-pagination">
-                              <button type="button" className="table-link" disabled={panel.currentPage <= 1} onClick={() => setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: Math.max(panel.currentPage - 1, 1) }))}>Prev</button>
-                              <span>{panel.currentPage}/{panel.totalPages}</span>
-                              <button type="button" className="table-link" disabled={panel.currentPage >= panel.totalPages} onClick={() => setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: Math.min(panel.currentPage + 1, panel.totalPages) }))}>Next</button>
-                            </div>
-                          ) : null}
-                        </div>
-                      </details>
-                    )
+                    const devices = getUserDevices(u)
+                    if (!devices.length) return 'No devices'
+                    return `${devices.length} device${devices.length === 1 ? '' : 's'}`
                   })()}
                 </td>
                 <td>
