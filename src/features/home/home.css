@@ -931,16 +931,30 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   margin-bottom: 0.8rem;
 }
 
-.inline-devices-dropdown summary {
-  cursor: pointer;
-  color: #2f4f85;
-  font-weight: 700;
-}
-
 .inline-devices-content {
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
   min-width: 240px;
   max-width: 320px;
+  border: 1px solid #d6ddea;
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.45rem;
+  box-shadow: 0 12px 24px -20px rgba(34, 51, 84, 0.65);
+  position: absolute;
+  z-index: 5;
+}
+
+.inline-devices-dropdown {
+  position: relative;
+}
+
+.users-device-toggle {
+  border: none;
+  background: transparent;
+  color: #2f4f85;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0;
 }
 
 .inline-devices-content ul {
