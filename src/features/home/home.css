@@ -1124,6 +1124,105 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   color: #223a58;
 }
 
+.advanced-settings-panel {
+  background: #f7f9fc;
+}
+
+.advanced-settings-group {
+  margin-top: 0.8rem;
+}
+
+.advanced-block-title {
+  margin-bottom: 0.65rem;
+}
+
+.advanced-callout {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #edf3ff;
+  border: 1px solid #c9dafd;
+  color: #4a678f;
+  border-radius: 10px;
+  padding: 0.52rem 0.72rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.78rem;
+}
+
+.advanced-callout p {
+  margin: 0;
+}
+
+.advanced-callout-icon {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  background: #557dc3;
+  flex: 0 0 auto;
+}
+
+.advanced-form-grid {
+  display: grid;
+  gap: 0.72rem;
+}
+
+.advanced-form-row {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.9fr) minmax(260px, 1fr);
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.advanced-form-row > label {
+  color: #4e6584;
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+
+.advanced-form-row > input,
+.advanced-form-row > select,
+.advanced-form-row > div > input,
+.advanced-form-row > div > select {
+  width: 100%;
+  max-width: 420px;
+}
+
+.advanced-form-row .switch-row {
+  justify-self: start;
+}
+
+.advanced-geofence-tip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #edf3ff;
+  border: 1px solid #c9dafd;
+  border-radius: 8px;
+  padding: 0.46rem 0.62rem;
+  color: #4a678f;
+}
+
+.advanced-geofence-tip code {
+  color: #4f6e9d;
+}
+
+.alarm-card {
+  background: #f8fbff;
+  border: 1px solid #d9e6f6;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.alarm-card h4 {
+  margin: 0 0 0.55rem;
+  color: #5a6f8e;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .active-alert-row small {
   color: #7a8798;
   font-size: 0.8rem;
@@ -1138,6 +1237,11 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 @media (max-width: 1400px) {
+  .advanced-form-row {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
   .active-alert-row-inline {
     grid-template-columns: auto minmax(0, 1fr) auto auto;
   }

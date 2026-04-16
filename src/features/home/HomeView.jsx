@@ -2707,10 +2707,9 @@ export default function HomeView({
         )}
 
         {(activeSection === 'settings-advanced' || activeSection === 'device-detail-advanced') && (
-          <section className="card-like section-panel">
-            <h2 className="section-title">Settings &gt; Advanced Configuration</h2>
-            {selectedDevice ? <p className="status-success">Advanced settings for {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Select a device from Devices list to configure advanced settings.</p>}
-            <p className="status">Use values in seconds for timing fields; avoid blank values to prevent malformed SMS commands.</p>
+          <section className="card-like section-panel advanced-settings-panel">
+            <h2 className="section-title">Advanced Configuration</h2>
+            {selectedDevice ? <p className="status-success">Device workspace loaded.</p> : <p className="status">Select a device from Devices list to configure advanced settings.</p>}
             <div className="advanced-tab-row">
               <button type="button" className={advancedSettingsTab === 'general' ? 'is-active' : ''} onClick={() => setAdvancedSettingsTab('general')}>General</button>
               <button type="button" className={advancedSettingsTab === 'alarm' ? 'is-active' : ''} onClick={() => setAdvancedSettingsTab('alarm')}>Alarm Controls</button>
@@ -2718,18 +2717,22 @@ export default function HomeView({
             </div>
 
             {advancedSettingsTab === 'general' ? (
-              <article className="settings-group" id="setting-wifi-enabled" tabIndex={-1}>
-              <h3 className="block-title">Advanced Configurations</h3>
-              <div className="field-grid two-col">
-                <div>
+              <article className="settings-group advanced-settings-group" id="setting-wifi-enabled" tabIndex={-1}>
+              <h3 className="block-title advanced-block-title">General</h3>
+              <div className="advanced-callout">
+                <span className="advanced-callout-icon" aria-hidden="true" />
+                <p>Use values in seconds for timing fields; avoid blank values to prevent malformed SMS commands.</p>
+              </div>
+              <div className="advanced-form-grid">
+                <div className="advanced-form-row">
                   <label>Wi-Fi Positioning</label>
                   <label className="switch-row">
                     <input type="checkbox" checked={configForm.wifiEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, wifiEnabled: prev.wifiEnabled === '1' ? '0' : '1' }))} />
                     <span>{configForm.wifiEnabled === '1' ? 'On' : 'Off'}</span>
                   </label>
                 </div>
-                <div id="setting-speaker-volume" tabIndex={-1}>
-                  <label>Speaker Volume (0-100)</label>
+                <div className="advanced-form-row" id="setting-speaker-volume" tabIndex={-1}>
+                  <label>Speaker Volume</label>
                   <div className="range-with-value">
                     <input
                       type="range"
@@ -2741,22 +2744,45 @@ export default function HomeView({
                     <span className="range-value">{configForm.speakerVolume}</span>
                   </div>
                 </div>
-                <div><label>Continuous Tracking Interval (seconds)</label><input type="number" min="5" step="1" value={configForm.continuousLocateInterval} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateInterval: event.target.value }))} /><small className="field-hint">Recommended: 30-300s.</small></div>
-                <div><label>Continuous Tracking Duration (seconds)</label><input type="number" min="30" step="1" value={configForm.continuousLocateDuration} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateDuration: event.target.value }))} /><small className="field-hint">Recommended: 60-3600s.</small></div>
-                <div id="setting-timezone" tabIndex={-1}><label>Timezone (UTC offset)</label><input placeholder="e.g. +0 or +8" value={configForm.timeZone} onChange={(event) => setConfigForm((prev) => ({ ...prev, timeZone: event.target.value }))} /><small className="field-hint">Use device-supported offset format.</small></div>
-                <div><label>Include Status Command</label><label className="switch-row"><input type="checkbox" checked={configForm.checkStatus} onChange={() => toggle('checkStatus')} /><span>{configForm.checkStatus ? 'On' : 'Off'}</span></label></div>
+                <div className="advanced-form-row">
+                  <label>Continuous Tracking Interval (seconds)</label>
+                  <div>
+                    <input type="number" min="5" step="1" value={configForm.continuousLocateInterval} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateInterval: event.target.value }))} />
+                    <small className="field-hint">Recommended: 30-300s.</small>
+                  </div>
+                </div>
+                <div className="advanced-form-row">
+                  <label>Continuous Tracking Duration (seconds)</label>
+                  <div>
+                    <input type="number" min="30" step="1" value={configForm.continuousLocateDuration} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateDuration: event.target.value }))} />
+                    <small className="field-hint">Recommended: 60-3600s.</small>
+                  </div>
+                </div>
+                <div className="advanced-form-row" id="setting-timezone" tabIndex={-1}>
+                  <label>Timezone (UTC offset)</label>
+                  <div>
+                    <input placeholder="e.g. +0 or +8" value={configForm.timeZone} onChange={(event) => setConfigForm((prev) => ({ ...prev, timeZone: event.target.value }))} />
+                    <small className="field-hint">Use device-supported offset format.</small>
+                  </div>
+                </div>
+                <div className="advanced-form-row">
+                  <label>Timezone (UTC offset)</label>
+                  <label className="switch-row"><input type="checkbox" checked={configForm.checkStatus} onChange={() => toggle('checkStatus')} /><span>{configForm.checkStatus ? 'On' : 'Off'}</span></label>
+                </div>
               </div>
             </article>
             ) : null}
 
             {advancedSettingsTab === 'alarm' ? (
-            <article className="settings-group" id="setting-sos" tabIndex={-1}>
+            <article className="settings-group advanced-settings-group" id="setting-sos" tabIndex={-1}>
               <h3 className="block-title">Alarm Controls</h3>
               <div className="alarm-card">
-                <h3>SOS Action</h3>
-                <div className="alarm-row">
+                <h4>SOS Action</h4>
+                <div className="advanced-form-row">
                   <label>Mode</label>
                   <select value={configForm.sosMode} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosMode: event.target.value }))}><option value="1">Long Press</option><option value="2">Double Click</option></select>
+                </div>
+                <div className="advanced-form-row">
                   <label>Action Time</label>
                   <div className="range-with-value">
                     <input type="range" min="5" max="60" value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} />
@@ -2765,10 +2791,12 @@ export default function HomeView({
                 </div>
               </div>
               <div className="alarm-card" id="setting-fall" tabIndex={-1}>
-                <h3>Fall Detection</h3>
-                <div className="alarm-row">
+                <h4>Fall Detection</h4>
+                <div className="advanced-form-row">
                   <label>Enable</label>
                   <label className="switch-row"><input type="checkbox" checked={configForm.fallDownEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, fallDownEnabled: prev.fallDownEnabled === '1' ? '0' : '1' }))} /><span>{configForm.fallDownEnabled === '1' ? 'On' : 'Off'}</span></label>
+                </div>
+                <div className="advanced-form-row">
                   <label>Sensitivity</label>
                   <div className="range-with-value">
                     <input type="range" min="1" max="9" value={configForm.fallDownSensitivity} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} />
@@ -2777,8 +2805,8 @@ export default function HomeView({
                 </div>
               </div>
               <div className="alarm-card" id="setting-motion" tabIndex={-1}>
-                <h3>Motion / No Motion</h3>
-                <div className="alarm-row">
+                <h4>Motion / No Motion</h4>
+                <div className="advanced-form-row">
                   <label>Alarm Type</label>
                   <select
                     value={configForm.motionAlarmType || 'motion'}
@@ -2787,13 +2815,19 @@ export default function HomeView({
                     <option value="motion">Motion Alarm (mo)</option>
                     <option value="no-motion">No Motion Alarm (nm0)</option>
                   </select>
+                </div>
+                <div className="advanced-form-row">
                   <label>Enable</label>
                   <label className="switch-row">
                     <input type="checkbox" checked={configForm.motionEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, motionEnabled: prev.motionEnabled === '1' ? '0' : '1' }))} />
                     <span>{configForm.motionEnabled === '1' ? 'On' : 'Off'}</span>
                   </label>
+                </div>
+                <div className="advanced-form-row">
                   <label>Static Time</label>
                   <input type="number" min="1" step="1" value={configForm.motionStaticTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionStaticTime: event.target.value }))} />
+                </div>
+                <div className="advanced-form-row">
                   <label>Duration</label>
                   <input
                     type="number"
@@ -2809,25 +2843,18 @@ export default function HomeView({
             ) : null}
 
             {advancedSettingsTab === 'geofence' ? (
-            <article className="settings-group" id="setting-geofence" tabIndex={-1}>
+            <article className="settings-group advanced-settings-group" id="setting-geofence" tabIndex={-1}>
               <h3 className="block-title">Geo-fencing</h3>
-              <p className="status">Command format: <code>Geo1,n,on/off,distance</code>. Radius range: 100-65535 meters.</p>
-              <div className="field-grid two-col">
-                <div>
-                  <label>Geo-fence 1 (Enable)</label>
+              <p className="status advanced-geofence-tip"><span className="advanced-callout-icon" aria-hidden="true" />Command format: <code>Geo1,n,on/off,distance</code>. Radius range: 100-65535 meters.</p>
+              <div className="advanced-form-grid">
+                <div className="advanced-form-row">
+                  <label>Enable</label>
                   <label className="switch-row">
                     <input type="checkbox" checked={configForm.geoFenceEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, geoFenceEnabled: prev.geoFenceEnabled === '1' ? '0' : '1' }))} />
                     <span>{configForm.geoFenceEnabled === '1' ? 'On' : 'Off'}</span>
                   </label>
                 </div>
-                <div>
-                  <label>Trigger Mode</label>
-                  <select value={configForm.geoFenceMode || '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceMode: event.target.value }))}>
-                    <option value="0">Leave Area (0)</option>
-                    <option value="1">Enter Area (1)</option>
-                  </select>
-                </div>
-                <div>
+                <div className="advanced-form-row">
                   <label>Radius (meters)</label>
                   <div className="range-with-value">
                     <input
@@ -2841,14 +2868,23 @@ export default function HomeView({
                     <span className="range-value">{parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)}</span>
                   </div>
                 </div>
-                <div>
+                <div className="advanced-form-row">
+                  <label>Trigger Mode</label>
+                  <select value={configForm.geoFenceMode || '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceMode: event.target.value }))}>
+                    <option value="0">Leave Area (0)</option>
+                    <option value="1">Enter Area (1)</option>
+                  </select>
+                </div>
+                <div className="advanced-form-row">
                   <label>Radius Manual Override</label>
-                  <input
-                    value={configForm.geoFenceRadius}
-                    onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))}
-                    placeholder="100m"
-                  />
-                  {!isGeoFenceRadiusRawValid ? <small className="status-error">Use numbers with optional unit, e.g. 500m or 1km.</small> : <small className="field-hint">Supported units: m or km.</small>}
+                  <div>
+                    <input
+                      value={configForm.geoFenceRadius}
+                      onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))}
+                      placeholder="100m"
+                    />
+                    {!isGeoFenceRadiusRawValid ? <small className="status-error">Use numbers with optional unit, e.g. 500m or 1km.</small> : <small className="field-hint">Supported units: m or km.</small>}
+                  </div>
                 </div>
               </div>
               <div className="map-placeholder map-square geofence-leaflet-wrap">
