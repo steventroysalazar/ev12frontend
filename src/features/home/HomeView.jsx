@@ -323,6 +323,8 @@ export default function HomeView({
   const dashboardLeafletRef = useRef(null)
   const dashboardLeafletMapRef = useRef(null)
   const dashboardMarkersLayerRef = useRef(null)
+  const dashboardHasAutoFramedRef = useRef(false)
+  const dashboardLastFocusedDeviceRef = useRef('')
   const locationLeafletRef = useRef(null)
   const locationLeafletMapRef = useRef(null)
   const locationLeafletLayerRef = useRef(null)
@@ -1774,6 +1776,8 @@ export default function HomeView({
   useEffect(() => {
     if (!activeAlarmLocations.length) {
       setDashboardMapDeviceId('')
+      dashboardHasAutoFramedRef.current = false
+      dashboardLastFocusedDeviceRef.current = ''
       return
     }
     if (dashboardMapDeviceId && !activeAlarmLocations.some((entry) => entry.deviceKey === String(dashboardMapDeviceId))) {
@@ -1845,6 +1849,12 @@ export default function HomeView({
     markersLayer.clearLayers()
 
     const markerBounds = []
+    const markerToneColor = {
+      critical: '#ef4444',
+      warning: '#f59e0b',
+      active: '#2563eb',
+      idle: '#64748b'
+    }
     activeAlarmLocations.forEach(({ device, alarmCode, latitude, longitude, deviceKey, updatedAt }) => {
       const meta = resolveDeviceMeta(device)
       const alarmMeta = getAlarmMeta(alarmCode)
@@ -1858,7 +1868,13 @@ export default function HomeView({
         `Updated: ${locationUpdatedAt}`,
         `Lat/Lng: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
       ].join('<br/>')
-      const marker = L.marker([latitude, longitude])
+      const marker = L.circleMarker([latitude, longitude], {
+        radius: 8,
+        weight: 2,
+        color: '#ffffff',
+        fillColor: markerToneColor[alarmMeta.tone] || markerToneColor.idle,
+        fillOpacity: 0.98
+      })
         .bindPopup(popupDetails)
         .on('click', () => setDashboardMapDeviceId(deviceKey))
 
@@ -1872,12 +1888,24 @@ export default function HomeView({
       markerBounds.push([latitude, longitude])
     })
 
-    if (selectedAlertLocation) {
+    const selectedKey = selectedAlertLocation?.deviceKey ? String(selectedAlertLocation.deviceKey) : ''
+    const shouldRefocusSelection =
+      Boolean(selectedAlertLocation) &&
+      dashboardLastFocusedDeviceRef.current !== selectedKey
+
+    if (shouldRefocusSelection && selectedAlertLocation) {
       map.setView([selectedAlertLocation.latitude, selectedAlertLocation.longitude], 15)
-    } else if (markerBounds.length > 1) {
-      map.fitBounds(markerBounds, { padding: [26, 26] })
-    } else if (markerBounds.length === 1) {
-      map.setView(markerBounds[0], 13)
+      dashboardLastFocusedDeviceRef.current = selectedKey
+      dashboardHasAutoFramedRef.current = true
+    } else if (!selectedAlertLocation) {
+      dashboardLastFocusedDeviceRef.current = ''
+    } else if (!dashboardHasAutoFramedRef.current) {
+      if (markerBounds.length > 1) {
+        map.fitBounds(markerBounds, { padding: [26, 26] })
+      } else if (markerBounds.length === 1) {
+        map.setView(markerBounds[0], 13)
+      }
+      dashboardHasAutoFramedRef.current = true
     }
 
     setTimeout(() => map.invalidateSize(), 120)
