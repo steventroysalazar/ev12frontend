@@ -996,20 +996,20 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   width: 100%;
 }
 
-.device-detail-nav {
+/* .device-detail-nav {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   gap: 0.3rem;
   padding: 0.18rem 0.24rem;
-  border-radius: 12px;
+  border-radius: 9999px;
   background: #e8edf4;
   border: 1px solid #d2dae6;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
   justify-self: start;
   min-height: 38px;
   flex-wrap: wrap;
-}
+} */
 
 .device-detail-nav button {
   border: 1px solid transparent;
@@ -1023,9 +1023,11 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   align-items: center;
   gap: 0.38rem;
   transition: background 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease;
-  min-height: 30px;
+  min-height: 38px;
   justify-content: space-between;
   min-width: 0;
+  margin-bottom: 15px;
+  margin-left: 5px;
 }
 
 .device-detail-nav button.is-active {
