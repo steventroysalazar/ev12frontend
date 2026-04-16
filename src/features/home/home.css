@@ -523,6 +523,84 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   margin-bottom: 0.7rem;
 }
 
+.device-list-workspace {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.device-list-page-head {
+  display: block;
+}
+
+.device-list-page-title {
+  margin: 0;
+  font-size: 1.65rem;
+  color: #1e2b45;
+}
+
+.device-list-page-subtitle {
+  margin: 0.08rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: #2e5db4;
+}
+
+.device-list-card {
+  border-radius: 18px;
+  padding-top: 0.7rem;
+}
+
+.device-list-card .section-head {
+  position: sticky;
+  top: 0;
+  z-index: 7;
+  background: linear-gradient(180deg, #fcfcfd 0%, #f3f4f5 100%);
+  padding: 0.2rem 0 0.55rem;
+  margin-bottom: 0.2rem;
+}
+
+.device-list-card .section-title {
+  margin-bottom: 0;
+}
+
+.device-list-add-btn {
+  background: linear-gradient(135deg, #4f77c9, #4168b8);
+  border-color: #4168b8;
+}
+
+.device-table-controls select,
+.device-table-controls input {
+  min-height: 42px;
+  border-radius: 14px;
+  background: #f1f3f6;
+  border-color: #cfd6e0;
+}
+
+.device-manage-button {
+  min-width: 84px;
+  text-transform: uppercase;
+  background: #4e73be;
+  border-color: #4e73be;
+  color: #ffffff;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.device-table-pagination {
+  justify-content: center;
+}
+
+.device-list-card .table-shell {
+  overflow: auto;
+  max-width: 100%;
+}
+
+.device-list-card .devices-list-table {
+  min-width: 1280px;
+}
+
 .device-filter-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1042,16 +1120,14 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .devices-list-table th:nth-child(6),
 .devices-list-table td:nth-child(6) {
-  width: 300px;
-  min-width: 300px;
+  width: 180px;
+  min-width: 180px;
 }
 
 .devices-list-table th:nth-child(7),
 .devices-list-table td:nth-child(7),
 .devices-list-table th:nth-child(8),
-.devices-list-table td:nth-child(8),
-.devices-list-table th:nth-child(9),
-.devices-list-table td:nth-child(9) {
+.devices-list-table td:nth-child(8) {
   width: 170px;
   min-width: 170px;
 }

@@ -2542,7 +2542,6 @@ export default function HomeView({
             resolveLiveAlarmCode={resolveLiveAlarmCode}
             getAlarmCancelledAt={getAlarmCancelledAt}
             handleCancelAlarm={handleCancelAlarm}
-            formatTimestamp={formatTimestamp}
             openLocationDetailPage={openLocationDetailPage}
             openDeviceSettings={openDeviceSettings}
             devicesPage={devicesPage}
