@@ -1799,7 +1799,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 /* Dashboard section refinement: map + alerts + device list + pulse */
 .dashboard-top-layout {
-  grid-template-columns: minmax(0, 1fr) 400px;
+  grid-template-columns: minmax(0, 1fr) 420px;
   align-items: stretch;
 }
 
@@ -1815,21 +1815,22 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .map-panel-head h3 {
-  font-size: 2.8rem;
+  font-size: 1.05rem;
   margin: 0;
-  letter-spacing: -0.01em;
-  line-height: 1.04;
+  letter-spacing: 0;
+  line-height: 1.15;
 }
 
 .map-panel-head p {
-  font-size: 0.66rem;
+  font-size: 0.7rem;
   margin-top: 0.14rem;
   color: #747c8e;
 }
 
 .map-kpi-stack {
-  grid-template-columns: repeat(2, minmax(122px, 1fr));
-  gap: 0.2rem;
+  grid-template-columns: repeat(2, minmax(110px, 1fr));
+  gap: 0.45rem;
+  align-items: center;
 }
 
 .map-kpi-chip {
@@ -1837,21 +1838,27 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   border: none;
   padding: 0;
   text-align: right;
+  position: relative;
 }
 
 .map-kpi-chip strong {
-  font-size: 2rem;
+  font-size: 1.1rem;
   line-height: 1;
   color: #303b59;
   font-weight: 700;
 }
 
 .map-kpi-chip small {
-  font-size: 0.62rem;
+  font-size: 0.66rem;
   text-transform: uppercase;
   color: #6e86bd;
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+.map-kpi-chip + .map-kpi-chip {
+  padding-left: 0.55rem;
+  border-left: 1px solid #d0d6e4;
 }
 
 .dashboard-map-layout {
@@ -1860,7 +1867,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .dashboard-map-layout .map-square {
   max-width: 100%;
-  min-height: 468px;
+  min-height: 365px;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid #d7dde8;
@@ -1878,7 +1885,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .active-alerts .section-head h3 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 0.98rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -1893,13 +1900,13 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   background: #8da1d4;
   color: #fff;
   border-radius: 2px;
-  height: 18px;
+  height: 19px;
   padding: 0 0.34rem;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
 }
 
 .active-alerts .table-link {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   padding: 0;
   margin: 0;
   background: transparent;
@@ -1916,8 +1923,8 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .active-alert-row {
   border: none;
-  border-radius: 24px;
-  padding: 0.8rem 0.86rem;
+  border-radius: 18px;
+  padding: 0.75rem 0.9rem;
   background: #f3efeb;
   min-height: 0;
 }
@@ -1928,24 +1935,30 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .active-alert-row-inline {
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: flex-start;
+  align-items: start;
+  row-gap: 0.12rem;
+  column-gap: 0.7rem;
 }
 
 .active-alert-row-copy strong {
-  font-size: 1.8rem;
+  font-size: 0.98rem;
   color: #2d3448;
-  line-height: 1.08;
+  line-height: 1.06;
 }
 
 .active-alert-row span {
-  font-size: 0.9rem;
+  font-size: 0.72rem;
   line-height: 1.15;
+  color: #7b8498;
 }
 
 .active-alert-row small {
-  font-size: 1rem;
+  font-size: 0.72rem;
   color: #7f8798;
   line-height: 1;
+  grid-column: 3;
+  justify-self: end;
+  margin-top: 0.15rem;
 }
 
 .active-alert-chevron {
@@ -1955,14 +1968,16 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 .active-alert-row .alarm-pill {
   min-width: auto;
   padding: 0.22rem 0.62rem;
-  font-size: 0.86rem;
+  font-size: 0.72rem;
   border-radius: 14px;
+  grid-column: 3;
+  justify-self: end;
 }
 
 .active-alert-dot {
   width: 10px;
   height: 10px;
-  margin-top: 0.52rem;
+  margin-top: 0.48rem;
   box-shadow: none;
 }
 
@@ -1970,7 +1985,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   margin-top: 0.5rem;
   justify-content: space-between;
   color: #adb3bf;
-  font-size: 1rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -1980,7 +1995,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .dashboard-main-grid {
-  grid-template-columns: minmax(0, 1fr) 400px;
+  grid-template-columns: minmax(0, 1fr) 420px;
   align-items: stretch;
 }
 
@@ -2060,11 +2075,11 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 @media (max-width: 1400px) {
   .active-alert-row-inline {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .active-alert-row .alarm-pill,
   .active-alert-row small {
-    grid-column: 2;
+    grid-column: 3;
   }
 }
