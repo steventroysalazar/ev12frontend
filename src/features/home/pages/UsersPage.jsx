@@ -1,3 +1,4 @@
+import React from 'react'
 import AppIcon from '../../../components/icons/AppIcon'
 
 export default function UsersPage({
@@ -18,6 +19,28 @@ export default function UsersPage({
   roleLabel,
   getUserDevices
 }) {
+  const [deviceSearchByUser, setDeviceSearchByUser] = React.useState({})
+  const [devicePageByUser, setDevicePageByUser] = React.useState({})
+  const [openDevicesByUser, setOpenDevicesByUser] = React.useState({})
+  const devicePageSize = 20
+
+  const getRowUserKey = (user) => String(user.id || user.email || user.name || 'user')
+  const getDevicePanel = (user) => {
+    const userKey = getRowUserKey(user)
+    const allDevices = getUserDevices(user)
+    const search = (deviceSearchByUser[userKey] || '').trim().toLowerCase()
+    const filtered = allDevices.filter((entry) => {
+      const text = `${entry.name || entry.deviceName || ''} ${entry.phoneNumber || ''} ${entry.externalDeviceId || entry.deviceId || ''}`.toLowerCase()
+      return !search || text.includes(search)
+    })
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / devicePageSize))
+    const currentPage = Math.min(Math.max(devicePageByUser[userKey] || 1, 1), totalPages)
+    const start = (currentPage - 1) * devicePageSize
+    const pageRows = filtered.slice(start, start + devicePageSize)
+    return { allDevices, search, filtered, totalPages, currentPage, pageRows, userKey }
+  }
+
   return (
     <section className="card-like section-panel users-list-panel">
       <div className="section-head">
@@ -53,9 +76,47 @@ export default function UsersPage({
                 <td>{u.managerName || u.manager?.firstName || '-'}</td>
                 <td>
                   {(() => {
-                    const devices = getUserDevices(u)
-                    if (!devices.length) return 'No devices'
-                    return `${devices.length} device${devices.length === 1 ? '' : 's'}`
+                    const panel = getDevicePanel(u)
+                    if (!panel.allDevices.length) return <span className="status">No devices</span>
+                    return (
+                      <div className="inline-devices-dropdown">
+                        <button
+                          type="button"
+                          className="users-device-toggle"
+                          onClick={() => setOpenDevicesByUser((prev) => ({ ...prev, [panel.userKey]: !prev[panel.userKey] }))}
+                        >
+                          {panel.allDevices.length} device{panel.allDevices.length === 1 ? '' : 's'}
+                        </button>
+                        {openDevicesByUser[panel.userKey] ? (
+                          <div className="inline-devices-content">
+                          <input
+                            placeholder="Search devices..."
+                            value={panel.search}
+                            onChange={(event) => {
+                              const value = event.target.value
+                              setDeviceSearchByUser((prev) => ({ ...prev, [panel.userKey]: value }))
+                              setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: 1 }))
+                            }}
+                          />
+                          <ul>
+                            {panel.pageRows.map((entry) => (
+                              <li key={`user-table-device-${u.id || u.email}-${entry.id || entry.deviceId || entry.phoneNumber}`}>
+                                <strong>{entry.name || entry.deviceName || 'Unnamed device'}</strong>
+                                <span>{entry.phoneNumber || '-'}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          {panel.filtered.length > devicePageSize ? (
+                            <div className="inline-devices-pagination">
+                              <button type="button" className="table-link" disabled={panel.currentPage <= 1} onClick={() => setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: Math.max(panel.currentPage - 1, 1) }))}>Prev</button>
+                              <span>{panel.currentPage}/{panel.totalPages}</span>
+                              <button type="button" className="table-link" disabled={panel.currentPage >= panel.totalPages} onClick={() => setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: Math.min(panel.currentPage + 1, panel.totalPages) }))}>Next</button>
+                            </div>
+                          ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    )
                   })()}
                 </td>
                 <td>

@@ -2344,7 +2344,7 @@ export default function HomeView({
   }
 
   return (
-    <div className="home-shell">
+    <div className={`home-shell ${isDeviceWorkspaceSection ? 'is-device-detail-page' : ''}`}>
       <Sidebar
         activeSection={activeSection}
         onChangeSection={handleSectionChange}
