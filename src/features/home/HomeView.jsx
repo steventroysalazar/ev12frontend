@@ -201,6 +201,7 @@ export default function HomeView({
   const [activeSection, setActiveSection] = useState(() => parseHomeRoute().section)
   const [selectedUserId, setSelectedUserId] = useState(() => parseHomeRoute().section === 'user-detail' ? parseHomeRoute().entityId : '')
   const [selectedLocationId, setSelectedLocationId] = useState(() => parseHomeRoute().section === 'location-detail' ? parseHomeRoute().entityId : '')
+  const [selectedDeviceId, setSelectedDeviceId] = useState(() => (isDeviceDetailSection(parseHomeRoute().section) ? parseHomeRoute().entityId : ''))
   const [selectedDevice, setSelectedDevice] = useState(null)
   const [dashboardMapDeviceId, setDashboardMapDeviceId] = useState('')
   const syncingFromPopStateRef = useRef(false)
@@ -216,6 +217,8 @@ export default function HomeView({
       params.set('id', String(selectedUserId))
     } else if (activeSection === 'location-detail' && selectedLocationId) {
       params.set('id', String(selectedLocationId))
+    } else if (isDeviceDetailSection(activeSection) && selectedDeviceId) {
+      params.set('id', String(selectedDeviceId))
     } else {
       params.delete('id')
     }
@@ -232,7 +235,7 @@ export default function HomeView({
         window.history.pushState({}, '', nextUrl)
       }
     }
-  }, [activeSection, selectedLocationId, selectedUserId])
+  }, [activeSection, selectedDeviceId, selectedLocationId, selectedUserId])
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
@@ -242,6 +245,7 @@ export default function HomeView({
       setActiveSection(route.section)
       if (route.section === 'user-detail') setSelectedUserId(route.entityId)
       if (route.section === 'location-detail') setSelectedLocationId(route.entityId)
+      if (isDeviceDetailSection(route.section)) setSelectedDeviceId(route.entityId)
     }
     window.addEventListener('popstate', syncSectionFromUrl)
     return () => window.removeEventListener('popstate', syncSectionFromUrl)
@@ -933,7 +937,9 @@ export default function HomeView({
 
       setConfigForm(nextConfigForm)
       setConfigBaseline(nextConfigForm)
-      setEditingDeviceId(resolvedDevice.id || resolvedDevice.deviceId || null)
+      const nextDeviceId = resolvedDevice.id || resolvedDevice.deviceId || null
+      setEditingDeviceId(nextDeviceId)
+      setSelectedDeviceId(nextDeviceId ? String(nextDeviceId) : '')
       setDeviceForm({
         name: resolvedDevice.name || resolvedDevice.deviceName || '',
         phoneNumber: resolvedDevice.phoneNumber || '',
@@ -948,6 +954,39 @@ export default function HomeView({
       setDeviceWorkspaceLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!isDeviceDetailSection(activeSection)) return
+    if (!selectedDeviceId) return
+
+    const hasSelectedDevice = String(selectedDevice?.id || selectedDevice?.deviceId || '') === String(selectedDeviceId)
+    if (hasSelectedDevice) return
+
+    const localMatch = devices.find((device) => String(device.id || device.deviceId || '') === String(selectedDeviceId))
+    if (localMatch) {
+      setSelectedDevice(localMatch)
+      setEditingDeviceId(localMatch.id || localMatch.deviceId || null)
+      return
+    }
+
+    let cancelled = false
+    const loadDeviceFromRoute = async () => {
+      try {
+        const resolvedDevice = await fetchJson(`/api/devices/${selectedDeviceId}`, { headers: {} })
+        if (cancelled) return
+        setSelectedDevice(resolvedDevice)
+        setEditingDeviceId(resolvedDevice?.id || resolvedDevice?.deviceId || null)
+      } catch (error) {
+        if (cancelled) return
+        setActionStatus({ type: 'error', message: `Could not load selected device from URL: ${error.message}` })
+      }
+    }
+    loadDeviceFromRoute()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeSection, devices, fetchJson, selectedDevice, selectedDeviceId])
 
   const handleCreateLocation = async () => {
     try {
@@ -2234,6 +2273,7 @@ export default function HomeView({
     moveToDeviceSection(section)
     if (section !== 'user-detail') setSelectedUserId('')
     if (section !== 'location-detail') setSelectedLocationId('')
+    if (!isDeviceDetailSection(section)) setSelectedDeviceId('')
   }
 
   return (
