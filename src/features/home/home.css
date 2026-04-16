@@ -2386,8 +2386,8 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 .active-alert-row-inline {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
-  row-gap: 0.12rem;
-  column-gap: 0.7rem;
+  row-gap: 0.24rem;
+  column-gap: 1rem;
 }
 
 .active-alert-row-copy strong {
@@ -2441,9 +2441,9 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .active-alert-dot {
-  width: 10px;
-  height: 10px;
-  margin-top: 0.48rem;
+  width: 15px;
+  height: 15px;
+  margin-top: 0.92rem;
   box-shadow: none;
 }
 
