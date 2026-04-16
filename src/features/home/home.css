@@ -166,7 +166,7 @@
 .dashboard-hero {
   position: relative;
   overflow: hidden;
-  border-radius: 28px;
+  border-radius: 0;
   border: 1px solid #516174;
   padding: 1.1rem;
   min-height: 236px;
