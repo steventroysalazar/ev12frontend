@@ -336,6 +336,25 @@
 .section-panel,.map-panel,.gateway-panel { margin-bottom: 0.9rem; }
 .field-grid { display: grid; gap: 0.7rem; }
 .field-grid.two-col { grid-template-columns: 1fr 1fr; }
+.form-control { display: grid; gap: 0.35rem; }
+.form-control label { font-size: 0.82rem; color: #4e5e73; font-weight: 600; }
+.modal-actions { margin-top: 1rem; display: flex; justify-content: flex-end; gap: 0.55rem; }
+.create-user-btn { min-width: 84px; height: 34px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; border: 1px solid transparent; cursor: pointer; transition: all 150ms ease; }
+.create-user-btn-cancel { background: #fff; border-color: #9ab5e8; color: #4c6eb3; }
+.create-user-btn-cancel:hover { background: #f3f7ff; }
+.create-user-btn-submit { background: #4c73bb; border-color: #4c73bb; color: #fff; }
+.create-user-btn-submit:hover { background: #3f66ae; border-color: #3f66ae; }
+.create-user-modal { width: min(760px, 94vw); border-radius: 18px; padding: 1.45rem; background: #f7f8fa; }
+.create-user-modal h3 { margin: 0; font-size: 1.9rem; color: #1f2b3e; }
+.create-user-modal p { margin: 0.2rem 0 0; color: #6f7d8c; font-size: 0.82rem; }
+.create-user-modal-head { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.95rem; }
+.create-user-modal-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; background: #e6ebf2; color: #4d79bd; }
+.create-user-field-grid input,.create-user-field-grid select { border-radius: 7px; border: 1px solid #d5dde8; background: #eef2f6; color: #667990; }
+.user-typeahead { position: relative; }
+.typeahead-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 4; border: 1px solid #d1d9e4; border-radius: 8px; background: #fff; box-shadow: 0 10px 20px rgba(16, 29, 49, 0.12); max-height: 176px; overflow-y: auto; }
+.typeahead-option { width: 100%; text-align: left; border: 0; border-bottom: 1px solid #edf1f6; background: transparent; padding: 0.5rem 0.65rem; color: #24364d; cursor: pointer; }
+.typeahead-option:last-child { border-bottom: 0; }
+.typeahead-option:hover { background: #eef3fb; }
 
 .basic-config-header {
   display: flex;
