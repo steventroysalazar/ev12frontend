@@ -148,7 +148,7 @@ export default function UserDetailPage({
                         <td>{entry.name || entry.deviceName || '-'}</td>
                         <td>{entry.phoneNumber || '-'}</td>
                         <td>{entry.eviewVersion || entry.version || '-'}</td>
-                        <td><button className="user-manage-btn" type="button" onClick={() => openDeviceSettings(entry)}>Manage</button></td>
+                        <td className="user-devices-action-cell"><button className="user-manage-btn" type="button" onClick={() => openDeviceSettings(entry)}>Manage</button></td>
                       </tr>
                     ))}
                   </tbody>

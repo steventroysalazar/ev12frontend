@@ -119,7 +119,7 @@ export default function UsersPage({
                     )
                   })()}
                 </td>
-                <td>
+                <td className="users-actions-cell">
                   <button className="table-link users-view-btn" type="button" onClick={() => openUserDetailPage(u)}>VIEW</button>
                 </td>
               </tr>

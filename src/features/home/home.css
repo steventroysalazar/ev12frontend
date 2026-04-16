@@ -2957,3 +2957,31 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
     grid-template-columns: 1fr;
   }
 }
+
+.users-data-table td {
+  vertical-align: middle;
+}
+
+.users-actions-cell {
+  text-align: center;
+  width: 110px;
+}
+
+.users-actions-cell .users-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  height: 32px;
+}
+
+.user-devices-action-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.user-devices-action-cell .user-manage-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
