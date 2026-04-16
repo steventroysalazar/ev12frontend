@@ -620,6 +620,26 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   min-height: 340px;
 }
 
+.dashboard-alert-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dashboard-alert-marker-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.25);
+  background: #64748b;
+}
+
+.dashboard-alert-marker.tone-active .dashboard-alert-marker-dot { background: #2563eb; }
+.dashboard-alert-marker.tone-warning .dashboard-alert-marker-dot { background: #f59e0b; }
+.dashboard-alert-marker.tone-critical .dashboard-alert-marker-dot { background: #ef4444; }
+.dashboard-alert-marker.tone-idle .dashboard-alert-marker-dot { background: #64748b; }
+
 .preview-box,.conversation-box { min-height: 170px; background: #f3f6fa; border: 1px solid #d7dfe8; border-radius: 10px; padding: 0.8rem; white-space: pre-wrap; }
 
 .replies.conversation-box {
