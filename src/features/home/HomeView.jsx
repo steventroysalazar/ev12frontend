@@ -109,6 +109,21 @@ const parseGeoFenceRadiusToMeters = (value) => {
   return Math.round(Math.min(65535, Math.max(100, meters)))
 }
 
+const getRangeProgressStyle = (value, min, max) => {
+  const numericValue = Number(value)
+  const numericMin = Number(min)
+  const numericMax = Number(max)
+  const denominator = numericMax - numericMin
+
+  if (!Number.isFinite(numericValue) || !Number.isFinite(numericMin) || !Number.isFinite(numericMax) || denominator <= 0) {
+    return { '--range-progress': '0%' }
+  }
+
+  const progressRatio = (numericValue - numericMin) / denominator
+  const progressPercent = Math.min(100, Math.max(0, progressRatio * 100))
+  return { '--range-progress': `${progressPercent}%` }
+}
+
 const isDeviceDetailSection = (section) => String(section || '').startsWith('device-detail-')
 
 const resolveConfigSectionForField = (fieldKey) => {
@@ -312,6 +327,7 @@ export default function HomeView({
   const geofenceLeafletLayerRef = useRef(null)
   const [leafletReady, setLeafletReady] = useState(false)
   const isDeviceWorkspaceSection = ['device-detail-overview', 'device-detail-basic', 'device-detail-advanced', 'device-detail-location', 'device-detail-commands'].includes(activeSection)
+  const isDeviceDetailAdvancedSection = activeSection === 'device-detail-advanced'
   const isDeviceDetailLocationSection = activeSection === 'device-detail-location'
 
   const roleLabel = useCallback((value) => {
@@ -2714,8 +2730,10 @@ export default function HomeView({
 
         {(activeSection === 'settings-advanced' || activeSection === 'device-detail-advanced') && (
           <section className="card-like section-panel advanced-settings-panel">
-            <h2 className="section-title">Advanced Configuration</h2>
-            {selectedDevice ? <p className="status-success">Device workspace loaded.</p> : <p className="status">Select a device from Devices list to configure advanced settings.</p>}
+            {!isDeviceDetailAdvancedSection ? <h2 className="section-title">Advanced Configuration</h2> : null}
+            {!isDeviceDetailAdvancedSection
+              ? (selectedDevice ? <p className="status-success">Device workspace loaded.</p> : <p className="status">Select a device from Devices list to configure advanced settings.</p>)
+              : null}
             <div className="advanced-tab-row">
               <button type="button" className={advancedSettingsTab === 'general' ? 'is-active' : ''} onClick={() => setAdvancedSettingsTab('general')}>General</button>
               <button type="button" className={advancedSettingsTab === 'alarm' ? 'is-active' : ''} onClick={() => setAdvancedSettingsTab('alarm')}>Alarm Controls</button>
@@ -2745,6 +2763,7 @@ export default function HomeView({
                       min="0"
                       max="100"
                       value={configForm.speakerVolume}
+                      style={getRangeProgressStyle(configForm.speakerVolume, 0, 100)}
                       onChange={(event) => setConfigForm((prev) => ({ ...prev, speakerVolume: event.target.value }))}
                     />
                     <span className="range-value">{configForm.speakerVolume}</span>
@@ -2791,7 +2810,7 @@ export default function HomeView({
                 <div className="advanced-form-row">
                   <label>Action Time</label>
                   <div className="range-with-value">
-                    <input type="range" min="5" max="60" value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} />
+                    <input type="range" min="5" max="60" value={configForm.sosActionTime} style={getRangeProgressStyle(configForm.sosActionTime, 5, 60)} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} />
                     <span className="range-value">{configForm.sosActionTime}</span>
                   </div>
                 </div>
@@ -2805,7 +2824,7 @@ export default function HomeView({
                 <div className="advanced-form-row">
                   <label>Sensitivity</label>
                   <div className="range-with-value">
-                    <input type="range" min="1" max="9" value={configForm.fallDownSensitivity} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} />
+                    <input type="range" min="1" max="9" value={configForm.fallDownSensitivity} style={getRangeProgressStyle(configForm.fallDownSensitivity, 1, 9)} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} />
                     <span className="range-value">{configForm.fallDownSensitivity}</span>
                   </div>
                 </div>
@@ -2869,6 +2888,7 @@ export default function HomeView({
                       max="65535"
                       step="10"
                       value={parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)}
+                      style={getRangeProgressStyle(parseGeoFenceRadiusToMeters(configForm.geoFenceRadius), 100, 65535)}
                       onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: `${event.target.value}m` }))}
                     />
                     <span className="range-value">{parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)}</span>
@@ -2910,11 +2930,10 @@ export default function HomeView({
 
         {(activeSection === 'location' || activeSection === 'device-detail-location') && (
           <section className="section-panel">
-            <h2 className="page-title">Live Location</h2>
+            {!isDeviceDetailLocationSection ? <h2 className="page-title">Live Location</h2> : null}
             <article className="card-like map-panel location-viewer-card">
               <div className="section-head location-viewer-toolbar">
                 <div>
-                  <h3 className="block-title">Device Location Viewer</h3>
                   <p className="status location-note">Live map view for the active device. SMS data falls back to latest webhook coordinates when needed.</p>
                 </div>
                 <button className="mini-action request-btn-inline" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
