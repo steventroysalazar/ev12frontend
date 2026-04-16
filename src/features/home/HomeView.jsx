@@ -320,6 +320,8 @@ export default function HomeView({
   const [alarmLogsStatus, setAlarmLogsStatus] = useState('')
   const [locationBreadcrumbs, setLocationBreadcrumbs] = useState([])
   const [locationBreadcrumbsStatus, setLocationBreadcrumbsStatus] = useState('')
+  const [breadcrumbDateFrom, setBreadcrumbDateFrom] = useState('')
+  const [breadcrumbDateTo, setBreadcrumbDateTo] = useState('')
   const [alarmNowMs, setAlarmNowMs] = useState(() => Date.now())
   const webhookFingerprintRef = useRef('')
   const dashboardLeafletRef = useRef(null)
@@ -1600,6 +1602,34 @@ export default function HomeView({
       .filter(Boolean)
       .sort((a, b) => a.capturedAtMs - b.capturedAtMs)
   }, [locationBreadcrumbs, resolveValidCoordinates])
+  const breadcrumbDateBounds = useMemo(() => {
+    if (!breadcrumbPoints.length) return { earliest: null, latest: null }
+    const datedPoints = breadcrumbPoints.filter((entry) => entry.capturedAtMs > 0)
+    if (!datedPoints.length) return { earliest: null, latest: null }
+    return {
+      earliest: datedPoints[0].capturedAt,
+      latest: datedPoints[datedPoints.length - 1].capturedAt
+    }
+  }, [breadcrumbPoints])
+  const filteredBreadcrumbPoints = useMemo(() => {
+    const fromMs = breadcrumbDateFrom ? new Date(breadcrumbDateFrom).getTime() : null
+    const toMs = breadcrumbDateTo ? new Date(breadcrumbDateTo).getTime() : null
+    const hasFrom = Number.isFinite(fromMs)
+    const hasTo = Number.isFinite(toMs)
+
+    return breadcrumbPoints.filter((point) => {
+      if (!hasFrom && !hasTo) return true
+      if (!point.capturedAtMs) return false
+      if (hasFrom && point.capturedAtMs < fromMs) return false
+      if (hasTo && point.capturedAtMs > toMs) return false
+      return true
+    })
+  }, [breadcrumbDateFrom, breadcrumbDateTo, breadcrumbPoints])
+  const filteredBreadcrumbStatus = useMemo(() => {
+    if (!breadcrumbPoints.length) return locationBreadcrumbsStatus
+    if (!breadcrumbDateFrom && !breadcrumbDateTo) return `Showing ${filteredBreadcrumbPoints.length} breadcrumb point${filteredBreadcrumbPoints.length === 1 ? '' : 's'}.`
+    return `Showing ${filteredBreadcrumbPoints.length} of ${breadcrumbPoints.length} breadcrumb point${breadcrumbPoints.length === 1 ? '' : 's'} in selected date range.`
+  }, [breadcrumbDateFrom, breadcrumbDateTo, breadcrumbPoints.length, filteredBreadcrumbPoints.length, locationBreadcrumbsStatus])
 
   useEffect(() => {
     if ((activeSection !== 'location' && activeSection !== 'device-detail-location') || !locationViewerDevice) return
@@ -1607,6 +1637,13 @@ export default function HomeView({
     if (!deviceId) return
     loadLocationBreadcrumbs(deviceId)
   }, [activeSection, locationViewerDevice, loadLocationBreadcrumbs])
+
+  useEffect(() => {
+    const deviceId = String(locationViewerDevice?.id || locationViewerDevice?.deviceId || '')
+    if (!deviceId) return
+    setBreadcrumbDateFrom('')
+    setBreadcrumbDateTo('')
+  }, [locationViewerDevice])
   const dashboardPageSize = 8
   const activeAlertPageSize = 6
   const listPageSize = 10
@@ -2068,7 +2105,7 @@ export default function HomeView({
     const layer = locationLeafletLayerRef.current || L.layerGroup().addTo(map)
     layer.clearLayers()
 
-    const trail = breadcrumbPoints.length ? breadcrumbPoints : [displayedLocation]
+    const trail = filteredBreadcrumbPoints.length ? filteredBreadcrumbPoints : [displayedLocation]
     const latLngs = trail.map((point) => [point.latitude, point.longitude])
 
     if (latLngs.length > 1) {
@@ -2097,7 +2134,7 @@ export default function HomeView({
     }
 
     setTimeout(() => map.invalidateSize(), 120)
-  }, [activeSection, breadcrumbPoints, displayedLocation, leafletReady])
+  }, [activeSection, displayedLocation, filteredBreadcrumbPoints, leafletReady])
 
   useEffect(() => {
     return () => {
@@ -3145,17 +3182,59 @@ export default function HomeView({
                     </div>
                     <aside className="location-meta-panel">
                       <h4>Location details</h4>
-                      <span className="map-chip map-chip-inline">Lat: {displayedLocation.latitude} Lon: {displayedLocation.longitude}</span>
+                      <div className="location-coordinates">
+                        <span className="location-coordinate-pill">
+                          <strong>Latitude</strong>
+                          <span>{Number(displayedLocation.latitude).toFixed(6)}</span>
+                        </span>
+                        <span className="location-coordinate-pill">
+                          <strong>Longitude</strong>
+                          <span>{Number(displayedLocation.longitude).toFixed(6)}</span>
+                        </span>
+                      </div>
                       <a className="table-link action-chip action-chip-neutral" href={displayedLocation.mapUrl} target="_blank" rel="noreferrer">Open in Google Maps</a>
                       {usingWebhookFallback ? <span className="status location-source-chip">Source: Webhook fallback</span> : <span className="status location-source-chip">Source: SMS reply</span>}
-                      <span className="status location-source-chip">Breadcrumbs: {breadcrumbPoints.length}</span>
+                      <span className="status location-source-chip">Breadcrumbs: {filteredBreadcrumbPoints.length} / {breadcrumbPoints.length}</span>
+                      {breadcrumbDateBounds.earliest && breadcrumbDateBounds.latest ? (
+                        <div className="breadcrumb-filter-grid">
+                          <label htmlFor="breadcrumb-date-from">
+                            From date
+                            <input
+                              id="breadcrumb-date-from"
+                              type="datetime-local"
+                              value={breadcrumbDateFrom}
+                              max={breadcrumbDateTo || undefined}
+                              onChange={(event) => setBreadcrumbDateFrom(event.target.value)}
+                            />
+                          </label>
+                          <label htmlFor="breadcrumb-date-to">
+                            Latest date
+                            <input
+                              id="breadcrumb-date-to"
+                              type="datetime-local"
+                              value={breadcrumbDateTo}
+                              min={breadcrumbDateFrom || undefined}
+                              onChange={(event) => setBreadcrumbDateTo(event.target.value)}
+                            />
+                          </label>
+                          {(breadcrumbDateFrom || breadcrumbDateTo) ? (
+                            <button type="button" className="mini-action" onClick={() => {
+                              setBreadcrumbDateFrom('')
+                              setBreadcrumbDateTo('')
+                            }}
+                            >
+                              Clear range
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                       {selectedDeviceWebhookLocation?.updatedAt ? (
                         <span className="status">Last device update: {new Date(selectedDeviceWebhookLocation.updatedAt).toLocaleString()}</span>
                       ) : null}
-                      <span className="status">{locationBreadcrumbsStatus}</span>
+                      <span className="status">{filteredBreadcrumbStatus}</span>
                     </aside>
                   </div>
-                  {breadcrumbPoints.length ? (
+                  {filteredBreadcrumbPoints.length ? (
                     <div className="table-wrap breadcrumb-table-wrap">
                       <table className="data-table">
                         <thead>
@@ -3167,12 +3246,12 @@ export default function HomeView({
                           </tr>
                         </thead>
                         <tbody>
-                          {[...breadcrumbPoints].reverse().slice(0, 20).map((crumb) => (
+                          {[...filteredBreadcrumbPoints].reverse().slice(0, 20).map((crumb) => (
                             <tr key={crumb.id || `${crumb.latitude}-${crumb.longitude}-${crumb.capturedAt || ''}`}>
                               <td>{crumb.capturedAt ? new Date(crumb.capturedAt).toLocaleString() : '-'}</td>
-                              <td>{crumb.latitude}</td>
-                              <td>{crumb.longitude}</td>
-                              <td>{crumb.source || '-'}</td>
+                              <td>{Number(crumb.latitude).toFixed(6)}</td>
+                              <td>{Number(crumb.longitude).toFixed(6)}</td>
+                              <td><span className="crumb-source-pill">{String(crumb.source || '-').replace(/_/g, ' ')}</span></td>
                             </tr>
                           ))}
                         </tbody>
