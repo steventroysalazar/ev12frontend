@@ -327,6 +327,7 @@ export default function HomeView({
   const geofenceLeafletLayerRef = useRef(null)
   const [leafletReady, setLeafletReady] = useState(false)
   const isDeviceWorkspaceSection = ['device-detail-overview', 'device-detail-basic', 'device-detail-advanced', 'device-detail-location', 'device-detail-commands'].includes(activeSection)
+  const isDeviceDetailAdvancedSection = activeSection === 'device-detail-advanced'
   const isDeviceDetailLocationSection = activeSection === 'device-detail-location'
 
   const roleLabel = useCallback((value) => {
@@ -2729,8 +2730,10 @@ export default function HomeView({
 
         {(activeSection === 'settings-advanced' || activeSection === 'device-detail-advanced') && (
           <section className="card-like section-panel advanced-settings-panel">
-            <h2 className="section-title">Advanced Configuration</h2>
-            {selectedDevice ? <p className="status-success">Device workspace loaded.</p> : <p className="status">Select a device from Devices list to configure advanced settings.</p>}
+            {!isDeviceDetailAdvancedSection ? <h2 className="section-title">Advanced Configuration</h2> : null}
+            {!isDeviceDetailAdvancedSection
+              ? (selectedDevice ? <p className="status-success">Device workspace loaded.</p> : <p className="status">Select a device from Devices list to configure advanced settings.</p>)
+              : null}
             <div className="advanced-tab-row">
               <button type="button" className={advancedSettingsTab === 'general' ? 'is-active' : ''} onClick={() => setAdvancedSettingsTab('general')}>General</button>
               <button type="button" className={advancedSettingsTab === 'alarm' ? 'is-active' : ''} onClick={() => setAdvancedSettingsTab('alarm')}>Alarm Controls</button>
@@ -2927,11 +2930,10 @@ export default function HomeView({
 
         {(activeSection === 'location' || activeSection === 'device-detail-location') && (
           <section className="section-panel">
-            <h2 className="page-title">Live Location</h2>
+            {!isDeviceDetailLocationSection ? <h2 className="page-title">Live Location</h2> : null}
             <article className="card-like map-panel location-viewer-card">
               <div className="section-head location-viewer-toolbar">
                 <div>
-                  <h3 className="block-title">Device Location Viewer</h3>
                   <p className="status location-note">Live map view for the active device. SMS data falls back to latest webhook coordinates when needed.</p>
                 </div>
                 <button className="mini-action request-btn-inline" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
