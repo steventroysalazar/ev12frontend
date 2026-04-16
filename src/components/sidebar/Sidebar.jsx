@@ -11,7 +11,7 @@ const operationsGroup = {
     { id: 'devices', label: 'Devices', icon: 'devices' },
     { id: 'alarm-logs', label: 'Alarm Logs', icon: 'clock' },
     { id: 'replies', label: 'Replies', icon: 'replies' },
-    { id: 'webhooks', label: 'Webhook Events', icon: 'refresh' }
+    { id: 'webhooks', label: 'Webhook Events', icon: 'webhook' }
   ]
 }
 

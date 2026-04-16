@@ -1,31 +1,31 @@
 const iconPaths = {
   dashboard: (
     <>
-      <rect x="3.5" y="3.5" width="7" height="7" rx="1.4" />
-      <rect x="13.5" y="3.5" width="7" height="7" rx="1.4" />
-      <rect x="3.5" y="13.5" width="7" height="7" rx="1.4" />
-      <rect x="13.5" y="13.5" width="7" height="7" rx="1.4" />
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1.2" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2" />
     </>
   ),
   users: (
     <>
-      <circle cx="9" cy="8.2" r="2.8" />
-      <path d="M3.8 18a5.3 5.3 0 0 1 10.4 0" />
-      <circle cx="17.2" cy="9.1" r="2.3" />
-      <path d="M14.2 17.3a4.6 4.6 0 0 1 5.6-2.1 4.6 4.6 0 0 1 .9.4" />
+      <circle cx="9" cy="9" r="2.6" />
+      <path d="M3.9 17.6a5.1 5.1 0 0 1 10.2 0" />
+      <circle cx="16.6" cy="8.1" r="2.1" />
+      <path d="M14.4 14.9a4.3 4.3 0 0 1 5.7 2.7" />
     </>
   ),
   location: (
     <>
-      <path d="M12 21s6.6-5.9 6.6-10.7a6.6 6.6 0 0 0-13.2 0C5.4 15.1 12 21 12 21z" />
-      <circle cx="12" cy="10.2" r="2.3" />
+      <path d="M12 20.6s6.2-5.4 6.2-10a6.2 6.2 0 0 0-12.4 0c0 4.6 6.2 10 6.2 10z" />
+      <circle cx="12" cy="10.2" r="1.9" />
     </>
   ),
   devices: (
     <>
-      <rect x="7.3" y="2.7" width="9.4" height="18.6" rx="2.1" />
-      <path d="M10 5.7h4" />
-      <circle cx="12" cy="17.9" r="1" />
+      <rect x="7.4" y="2.8" width="9.2" height="18.4" rx="2.2" />
+      <path d="M10.3 5.6h3.4" />
+      <circle cx="12" cy="17.8" r="0.95" />
     </>
   ),
   replies: (
@@ -37,8 +37,8 @@ const iconPaths = {
   command: <path d="M4 12h11m0 0-3-3m3 3-3 3M4 6h16M4 18h16" />,
   refresh: (
     <>
-      <path d="M21 12a9 9 0 1 1-2.6-6.4" />
-      <path d="M21 3v6h-6" />
+      <path d="M20.7 8.3v-4.1h-4.1" />
+      <path d="M20.3 12a8.3 8.3 0 1 1-3.1-6.4" />
     </>
   ),
   plusUser: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></>,
@@ -47,9 +47,19 @@ const iconPaths = {
   battery: <><rect x="2" y="7" width="18" height="10" rx="2" /><path d="M22 10v4" /></>,
   clock: (
     <>
-      <path d="M21 12a9 9 0 1 1-2.6-6.4" />
-      <path d="M21 3v6h-6" />
-      <path d="M12 8v4.2l2.8 1.8" />
+      <path d="M20.7 8.3v-4.1h-4.1" />
+      <path d="M20.3 12a8.3 8.3 0 1 1-3.1-6.4" />
+      <path d="M12 8.3v3.9l2.5 1.8" />
+    </>
+  ),
+  webhook: (
+    <>
+      <circle cx="12" cy="5.5" r="2.1" />
+      <circle cx="6.1" cy="15.7" r="2.1" />
+      <circle cx="17.9" cy="15.7" r="2.1" />
+      <path d="M10.8 7.2 7.4 13.3" />
+      <path d="M13.2 7.2l3.4 6.1" />
+      <path d="M8.6 15.7h6.8" />
     </>
   ),
   message: <path d="M4 5h16v11H7l-3 3z" />
