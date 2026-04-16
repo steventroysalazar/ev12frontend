@@ -434,6 +434,20 @@ export default function HomeView({
     return Number.isNaN(parsed.getTime()) ? '-' : parsed.toLocaleString()
   }, [])
 
+  const formatAlertTimestamp = useCallback((value) => {
+    if (!value) return 'Timestamp unavailable'
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return 'Timestamp unavailable'
+    return parsed.toLocaleString([], {
+      month: 'numeric',
+      day: 'numeric',
+      year: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  }, [])
+
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
   const isAdminDashboard = normalizedRole === 'qview admin' || normalizedRole === 'manager'
   const locationDeviceOptions = useMemo(() => {
@@ -2441,7 +2455,7 @@ export default function HomeView({
                                 <span>{meta.ownerName}</span>
                               </div>
                               <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
-                              <small>{updatedAt ? new Date(updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : 'Timestamp unavailable'}</small>
+                              <small>{formatAlertTimestamp(updatedAt)}</small>
                               <span className="active-alert-chevron" aria-hidden="true">›</span>
                             </div>
                           </button>
