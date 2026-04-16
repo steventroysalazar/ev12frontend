@@ -21,7 +21,6 @@ export default function UsersPage({
 }) {
   const [deviceSearchByUser, setDeviceSearchByUser] = useState({})
   const [devicePageByUser, setDevicePageByUser] = useState({})
-  const [locationFilterInput, setLocationFilterInput] = useState('')
   const devicePageSize = 20
 
   const getRowUserKey = (user) => String(user.id || user.email || user.name || 'user')
@@ -41,52 +40,29 @@ export default function UsersPage({
     return { allDevices, search, filtered, totalPages, currentPage, pageRows, userKey }
   }
 
-  const selectedLocationOption = userLocationFilter === 'all'
-    ? null
-    : userLocationOptions.find((entry) => entry.id === userLocationFilter) || null
-  const selectedLocationLabel = selectedLocationOption?.name || ''
-
   return (
-    <section className="card-like section-panel">
+    <section className="card-like section-panel users-list-panel">
       <div className="section-head">
-        <h2 className="section-title">Users</h2>
-        <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Add User</button>
+        <h2 className="section-title">All Users</h2>
+        <button className="mini-action users-create-btn" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
       </div>
-      <div className="table-controls">
-        <input placeholder="Search user, email, contact, location..." value={userSearch} onChange={(event) => setUserSearch(event.target.value)} />
+      <div className="table-controls users-table-controls">
+        <input placeholder="Search by user, email, contact, location..." value={userSearch} onChange={(event) => setUserSearch(event.target.value)} />
+        <select value={userLocationFilter} onChange={(event) => setUserLocationFilter(event.target.value)}>
+          <option value="all">All locations</option>
+          {userLocationOptions.map((entry) => (
+            <option key={`users-location-filter-${entry.id}`} value={entry.id}>{entry.name}</option>
+          ))}
+        </select>
         <select value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
           <option value="all">All roles</option>
           <option value="qview admin">QView Admin</option>
           <option value="manager">Manager</option>
           <option value="user">User</option>
         </select>
-        <input
-          list="users-location-filter-options"
-          placeholder="All locations"
-          value={locationFilterInput || selectedLocationLabel}
-          onChange={(event) => {
-            const value = event.target.value
-            setLocationFilterInput(value)
-            if (!value.trim()) {
-              setUserLocationFilter('all')
-              return
-            }
-            const match = userLocationOptions.find((entry) => entry.name.toLowerCase() === value.trim().toLowerCase())
-            if (match) {
-              setUserLocationFilter(match.id)
-              setLocationFilterInput(match.name)
-            }
-          }}
-          onBlur={() => setLocationFilterInput(selectedLocationLabel)}
-        />
-        <datalist id="users-location-filter-options">
-          {userLocationOptions.map((entry) => (
-            <option key={`users-location-filter-${entry.id}`} value={entry.name} />
-          ))}
-        </datalist>
       </div>
-      <div className="table-shell">
-        <table className="data-table">
+      <div className="table-shell users-table-shell">
+        <table className="data-table users-data-table">
           <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th><th>Devices</th><th>Actions</th></tr></thead>
           <tbody>
             {pagedUsers.rows.map((u) => (
@@ -135,17 +111,17 @@ export default function UsersPage({
                   })()}
                 </td>
                 <td>
-                  <button className="table-link" type="button" onClick={() => openUserDetailPage(u)}>View Page</button>
+                  <button className="table-link users-view-btn" type="button" onClick={() => openUserDetailPage(u)}>VIEW</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="table-pagination">
-        <button type="button" className="table-link action-chip action-chip-neutral" disabled={usersPage <= 1} onClick={() => setUsersPage((prev) => Math.max(prev - 1, 1))}>Prev</button>
-        <span>Page {usersPage} of {pagedUsers.totalPages}</span>
-        <button type="button" className="table-link action-chip action-chip-neutral" disabled={usersPage >= pagedUsers.totalPages} onClick={() => setUsersPage((prev) => Math.min(prev + 1, pagedUsers.totalPages))}>Next</button>
+      <div className="table-pagination users-table-pagination">
+        <button type="button" className="table-link action-chip action-chip-neutral" disabled={usersPage <= 1} onClick={() => setUsersPage((prev) => Math.max(prev - 1, 1))}>PREV</button>
+        <span>PAGE {usersPage} of {pagedUsers.totalPages}</span>
+        <button type="button" className="table-link action-chip action-chip-neutral" disabled={usersPage >= pagedUsers.totalPages} onClick={() => setUsersPage((prev) => Math.min(prev + 1, pagedUsers.totalPages))}>NEXT</button>
       </div>
     </section>
   )
