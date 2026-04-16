@@ -109,6 +109,21 @@ const parseGeoFenceRadiusToMeters = (value) => {
   return Math.round(Math.min(65535, Math.max(100, meters)))
 }
 
+const getRangeProgressStyle = (value, min, max) => {
+  const numericValue = Number(value)
+  const numericMin = Number(min)
+  const numericMax = Number(max)
+  const denominator = numericMax - numericMin
+
+  if (!Number.isFinite(numericValue) || !Number.isFinite(numericMin) || !Number.isFinite(numericMax) || denominator <= 0) {
+    return { '--range-progress': '0%' }
+  }
+
+  const progressRatio = (numericValue - numericMin) / denominator
+  const progressPercent = Math.min(100, Math.max(0, progressRatio * 100))
+  return { '--range-progress': `${progressPercent}%` }
+}
+
 const isDeviceDetailSection = (section) => String(section || '').startsWith('device-detail-')
 
 const resolveConfigSectionForField = (fieldKey) => {
@@ -2745,6 +2760,7 @@ export default function HomeView({
                       min="0"
                       max="100"
                       value={configForm.speakerVolume}
+                      style={getRangeProgressStyle(configForm.speakerVolume, 0, 100)}
                       onChange={(event) => setConfigForm((prev) => ({ ...prev, speakerVolume: event.target.value }))}
                     />
                     <span className="range-value">{configForm.speakerVolume}</span>
@@ -2791,7 +2807,7 @@ export default function HomeView({
                 <div className="advanced-form-row">
                   <label>Action Time</label>
                   <div className="range-with-value">
-                    <input type="range" min="5" max="60" value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} />
+                    <input type="range" min="5" max="60" value={configForm.sosActionTime} style={getRangeProgressStyle(configForm.sosActionTime, 5, 60)} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} />
                     <span className="range-value">{configForm.sosActionTime}</span>
                   </div>
                 </div>
@@ -2805,7 +2821,7 @@ export default function HomeView({
                 <div className="advanced-form-row">
                   <label>Sensitivity</label>
                   <div className="range-with-value">
-                    <input type="range" min="1" max="9" value={configForm.fallDownSensitivity} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} />
+                    <input type="range" min="1" max="9" value={configForm.fallDownSensitivity} style={getRangeProgressStyle(configForm.fallDownSensitivity, 1, 9)} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} />
                     <span className="range-value">{configForm.fallDownSensitivity}</span>
                   </div>
                 </div>
@@ -2869,6 +2885,7 @@ export default function HomeView({
                       max="65535"
                       step="10"
                       value={parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)}
+                      style={getRangeProgressStyle(parseGeoFenceRadiusToMeters(configForm.geoFenceRadius), 100, 65535)}
                       onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: `${event.target.value}m` }))}
                     />
                     <span className="range-value">{parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)}</span>
