@@ -50,7 +50,7 @@ export default function UsersPage({
     <section className="card-like section-panel">
       <div className="section-head">
         <h2 className="section-title">Users</h2>
-        <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
+        <button className="mini-action" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Add User</button>
       </div>
       <div className="table-controls">
         <input placeholder="Search user, email, contact, location..." value={userSearch} onChange={(event) => setUserSearch(event.target.value)} />
