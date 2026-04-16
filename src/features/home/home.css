@@ -838,6 +838,88 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   min-width: 1280px;
 }
 
+.users-list-panel {
+  border-radius: 18px;
+  padding: 0.95rem 1.05rem 0.8rem;
+}
+
+.users-list-panel .section-head {
+  margin-bottom: 0.65rem;
+}
+
+.users-list-panel .section-title {
+  font-size: 2.15rem;
+  line-height: 1;
+  color: #1f2d48;
+}
+
+.users-create-btn {
+  background: #4d74bf;
+  border-color: #4d74bf;
+  text-transform: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  padding: 0.52rem 0.9rem;
+}
+
+.users-table-controls {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.7rem;
+  margin-bottom: 0.85rem;
+  width: 100%;
+}
+
+.users-table-controls input,
+.users-table-controls select {
+  min-height: 42px;
+  border-radius: 14px;
+  background: #f3f5f9;
+  border: 1px solid #c9d2e0;
+  color: #4f5b6f;
+}
+
+.users-table-controls input {
+  flex: 1.4;
+  min-width: 0;
+}
+
+.users-table-controls select {
+  flex: 1;
+  min-width: 180px;
+}
+
+.users-table-shell {
+  border-radius: 16px;
+  border: 1px solid #d3d9e5;
+  background: #f8f9fb;
+}
+
+.users-data-table th {
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.users-view-btn {
+  min-width: 56px;
+  text-align: center;
+  justify-content: center;
+  font-size: 0.73rem;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: #4d74bf;
+  border: 1px solid #4d74bf;
+}
+
+.users-table-pagination {
+  justify-content: center;
+  text-transform: uppercase;
+  color: #9aa4b3;
+  letter-spacing: 0.02em;
+  margin-top: 0.8rem;
+}
+
 .device-filter-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -849,16 +931,30 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   margin-bottom: 0.8rem;
 }
 
-.inline-devices-dropdown summary {
-  cursor: pointer;
-  color: #2f4f85;
-  font-weight: 700;
-}
-
 .inline-devices-content {
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
   min-width: 240px;
   max-width: 320px;
+  border: 1px solid #d6ddea;
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.45rem;
+  box-shadow: 0 12px 24px -20px rgba(34, 51, 84, 0.65);
+  position: absolute;
+  z-index: 5;
+}
+
+.inline-devices-dropdown {
+  position: relative;
+}
+
+.users-device-toggle {
+  border: none;
+  background: transparent;
+  color: #2f4f85;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0;
 }
 
 .inline-devices-content ul {
