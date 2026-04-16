@@ -1951,6 +1951,77 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   gap: 0.65rem;
 }
 
+.commands-section .page-title {
+  margin-bottom: 0.75rem;
+}
+
+.commands-card {
+  border-radius: 14px;
+  border: 1px solid #d4dceb;
+  background: #f8fbff;
+  box-shadow: none;
+}
+
+.commands-card-title,
+.commands-card h3 {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 1.02rem;
+  color: #24314a;
+}
+
+.commands-info-banner {
+  margin: 0;
+  border: 1px solid #bac9e6;
+  background: #dce6f6;
+  color: #3e5f9f;
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.commands-field-grid label {
+  color: #263450;
+  font-size: 0.9rem;
+}
+
+.commands-field-grid input {
+  border-radius: 6px;
+  border: 1px solid #cfd8ea;
+  background: #eef3fb;
+  color: #3c4c6a;
+}
+
+.commands-input-card {
+  align-content: start;
+}
+
+.commands-btn {
+  border-radius: 6px;
+  padding: 0.52rem 1.1rem;
+  min-height: 37px;
+  font-size: 0.8rem;
+  border: 1px solid #4d76c6;
+  background: #4d76c6;
+  color: #fff;
+}
+
+.commands-btn.commands-btn-secondary {
+  background: #f5f8ff;
+  color: #4d76c6;
+  border-color: #9bb2df;
+}
+
+.commands-btn:disabled {
+  opacity: 0.65;
+}
+
+.commands-btn-send {
+  justify-self: end;
+  margin-top: auto;
+}
+
 .queue-grid {
   display: grid;
   gap: 0.25rem;
