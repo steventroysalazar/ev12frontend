@@ -2747,13 +2747,13 @@ export default function HomeView({
             ) : null}
             <div className="device-quick-actions">
               <button className="table-link action-chip action-chip-neutral" type="button" onClick={() => moveToDeviceSection('device-detail-location', { force: true })}>Go to Live Location</button>
-              <button className="table-link action-chip action-chip-neutral" type="button" onClick={requestLocationUpdate} disabled={loading}>Request Location Now</button>
+              <button className="table-link action-chip action-chip-primary device-detail-btn-primary" type="button" onClick={requestLocationUpdate} disabled={loading}>Request Location Now</button>
               <button className="table-link action-chip action-chip-danger" type="button" onClick={() => selectedWorkspaceDevice && handleCancelAlarm(selectedWorkspaceDevice)} disabled={!selectedWorkspaceDevice || !resolveLiveAlarmCode(selectedWorkspaceDevice)}>Cancel Active Alarm</button>
               <button className="table-link action-chip action-chip-neutral" type="button" onClick={() => moveToDeviceSection('device-detail-commands', { force: true })}>Open Command Center</button>
             </div>
             <div className="device-profile-actions">
-              <button className="mini-action" disabled={!editingDeviceId || !workspaceDeviceProfileChanged} onClick={handleUpdateDevice}>Save Device Info</button>
-              <button className="mini-action" type="button" onClick={openConfigReview} disabled={!configForm.deviceId || !configChangeRows.length}>Review &amp; Send</button>
+              <button className="mini-action device-detail-btn-primary" disabled={!editingDeviceId || !workspaceDeviceProfileChanged} onClick={handleUpdateDevice}>Save Device Info</button>
+              <button className="mini-action device-detail-btn-primary" type="button" onClick={openConfigReview} disabled={!configForm.deviceId || !configChangeRows.length}>Review &amp; Send</button>
             </div>
           </section>
         )}
@@ -2803,7 +2803,7 @@ export default function HomeView({
               <div className="section-head">
                 <h3 className="block-title">Contact Information</h3>
                 <button
-                  className="mini-action add-contact-btn"
+                  className="mini-action add-contact-btn device-detail-btn-primary"
                   type="button"
                   onClick={() => updateContacts((contacts) => [...contacts, { name: '', phone: '', smsEnabled: true, callEnabled: true }])}
                   disabled={(configForm.contacts?.length || 1) >= 10}
@@ -2827,14 +2827,14 @@ export default function HomeView({
             </article>
             <div className="basic-config-footer-actions">
               <button
-                className="table-link action-chip action-chip-neutral"
+                className="table-link action-chip action-chip-neutral device-detail-btn-secondary"
                 type="button"
                 onClick={() => setConfigForm({ ...(configBaseline && typeof configBaseline === 'object' ? configBaseline : {}) })}
                 disabled={!configChangeRows.length}
               >
                 Discard Changes
               </button>
-              <button className="mini-action" type="button" onClick={openConfigReview} disabled={!configForm.deviceId || !configChangeRows.length}>Apply Changes</button>
+              <button className="mini-action device-detail-btn-primary" type="button" onClick={openConfigReview} disabled={!configForm.deviceId || !configChangeRows.length}>Apply Changes</button>
             </div>
           </section>
         )}
@@ -3047,7 +3047,7 @@ export default function HomeView({
                 <div>
                   <p className="status location-note">Live map view for the active device. SMS data falls back to latest webhook coordinates when needed.</p>
                 </div>
-                <button className="mini-action request-btn-inline" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
+                <button className="mini-action request-btn-inline device-detail-btn-primary" disabled={loading} onClick={requestLocationUpdate}>Request Location (Loc)</button>
               </div>
               {isDeviceDetailLocationSection ? (
                 <p className="location-context-label">
@@ -3390,7 +3390,7 @@ export default function HomeView({
                 </div>
               </article>
             </div>
-            <article className="card-like gateway-panel"><h3>SMS Gateway + Test Message</h3><div className="field-grid two-col"><div><label>Gateway Base URL</label><input placeholder="https://gateway-url" value={gatewayBaseUrl} onChange={(event) => setGatewayBaseUrl(event.target.value)} /></div><div><label>Gateway Token</label><input placeholder="Authorization token" value={gatewayToken} onChange={(event) => setGatewayToken(event.target.value)} /></div><div><label>Test Phone Number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} /></div><div><label>Custom Message</label><input value={message} onChange={(event) => setMessage(event.target.value)} /></div></div><button className="mini-action" disabled={loading} onClick={sendMessage}>Send Test Message</button><div className="status">{status}</div><div className="status">{configStatus}</div>{configResult ? <pre className="replies conversation-box">{JSON.stringify(configResult, null, 2)}</pre> : null}</article>
+            <article className="card-like gateway-panel"><h3>SMS Gateway + Test Message</h3><div className="field-grid two-col"><div><label>Gateway Base URL</label><input placeholder="https://gateway-url" value={gatewayBaseUrl} onChange={(event) => setGatewayBaseUrl(event.target.value)} /></div><div><label>Gateway Token</label><input placeholder="Authorization token" value={gatewayToken} onChange={(event) => setGatewayToken(event.target.value)} /></div><div><label>Test Phone Number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} /></div><div><label>Custom Message</label><input value={message} onChange={(event) => setMessage(event.target.value)} /></div></div><button className="mini-action device-detail-btn-primary" disabled={loading} onClick={sendMessage}>Send Test Message</button><div className="status">{status}</div><div className="status">{configStatus}</div>{configResult ? <pre className="replies conversation-box">{JSON.stringify(configResult, null, 2)}</pre> : null}</article>
           </section>
         )}
 
