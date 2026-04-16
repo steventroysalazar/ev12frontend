@@ -18,6 +18,27 @@ export default function UsersPage({
   roleLabel,
   getUserDevices
 }) {
+  const [deviceSearchByUser, setDeviceSearchByUser] = useState({})
+  const [devicePageByUser, setDevicePageByUser] = useState({})
+  const devicePageSize = 20
+
+  const getRowUserKey = (user) => String(user.id || user.email || user.name || 'user')
+  const getDevicePanel = (user) => {
+    const userKey = getRowUserKey(user)
+    const allDevices = getUserDevices(user)
+    const search = (deviceSearchByUser[userKey] || '').trim().toLowerCase()
+    const filtered = allDevices.filter((entry) => {
+      const text = `${entry.name || entry.deviceName || ''} ${entry.phoneNumber || ''} ${entry.externalDeviceId || entry.deviceId || ''}`.toLowerCase()
+      return !search || text.includes(search)
+    })
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / devicePageSize))
+    const currentPage = Math.min(Math.max(devicePageByUser[userKey] || 1, 1), totalPages)
+    const start = (currentPage - 1) * devicePageSize
+    const pageRows = filtered.slice(start, start + devicePageSize)
+    return { allDevices, search, filtered, totalPages, currentPage, pageRows, userKey }
+  }
+
   return (
     <section className="card-like section-panel users-list-panel">
       <div className="section-head">
