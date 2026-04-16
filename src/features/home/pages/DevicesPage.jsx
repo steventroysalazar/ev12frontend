@@ -61,7 +61,6 @@ export default function DevicesPage({
           <h2 className="page-title device-list-page-title">Devices</h2>
           <p className="device-list-page-subtitle">Device workspace loaded.</p>
         </div>
-        <input className="device-list-page-search" type="search" placeholder="Find settings or command..." aria-label="Find settings or command" />
       </header>
 
       <div className="card-like section-panel device-list-card">

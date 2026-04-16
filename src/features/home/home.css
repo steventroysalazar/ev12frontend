@@ -529,37 +529,36 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .device-list-page-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 340px);
-  align-items: center;
-  gap: 0.8rem;
+  display: block;
 }
 
 .device-list-page-title {
   margin: 0;
+  font-size: 1.65rem;
   color: #1e2b45;
 }
 
 .device-list-page-subtitle {
   margin: 0.08rem 0 0;
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
   color: #2e5db4;
-}
-
-.device-list-page-search {
-  width: 100%;
-  min-height: 42px;
-  border-radius: 14px;
-  border-color: #cfd6e0;
-  background: #f2f4f7;
-  padding: 0.55rem 0.8rem;
 }
 
 .device-list-card {
   border-radius: 18px;
+  padding-top: 0.7rem;
+}
+
+.device-list-card .section-head {
+  position: sticky;
+  top: 0;
+  z-index: 7;
+  background: linear-gradient(180deg, #fcfcfd 0%, #f3f4f5 100%);
+  padding: 0.2rem 0 0.55rem;
+  margin-bottom: 0.2rem;
 }
 
 .device-list-card .section-title {
@@ -591,6 +590,15 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .device-table-pagination {
   justify-content: center;
+}
+
+.device-list-card .table-shell {
+  overflow: auto;
+  max-width: 100%;
+}
+
+.device-list-card .devices-list-table {
+  min-width: 1280px;
 }
 
 .device-filter-grid {
