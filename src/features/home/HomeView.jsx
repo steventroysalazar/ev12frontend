@@ -1849,6 +1849,12 @@ export default function HomeView({
     markersLayer.clearLayers()
 
     const markerBounds = []
+    const markerToneColor = {
+      critical: '#ef4444',
+      warning: '#f59e0b',
+      active: '#2563eb',
+      idle: '#64748b'
+    }
     activeAlarmLocations.forEach(({ device, alarmCode, latitude, longitude, deviceKey, updatedAt }) => {
       const meta = resolveDeviceMeta(device)
       const alarmMeta = getAlarmMeta(alarmCode)
@@ -1862,14 +1868,12 @@ export default function HomeView({
         `Updated: ${locationUpdatedAt}`,
         `Lat/Lng: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
       ].join('<br/>')
-      const marker = L.marker([latitude, longitude], {
-        icon: L.divIcon({
-          className: `dashboard-alert-marker tone-${alarmMeta.tone}`,
-          html: '<span class="dashboard-alert-marker-dot" aria-hidden="true"></span>',
-          iconSize: [20, 20],
-          iconAnchor: [10, 10],
-          popupAnchor: [0, -10]
-        })
+      const marker = L.circleMarker([latitude, longitude], {
+        radius: 8,
+        weight: 2,
+        color: '#ffffff',
+        fillColor: markerToneColor[alarmMeta.tone] || markerToneColor.idle,
+        fillOpacity: 0.98
       })
         .bindPopup(popupDetails)
         .on('click', () => setDashboardMapDeviceId(deviceKey))
