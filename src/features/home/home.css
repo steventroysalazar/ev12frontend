@@ -337,6 +337,55 @@
 .field-grid { display: grid; gap: 0.7rem; }
 .field-grid.two-col { grid-template-columns: 1fr 1fr; }
 
+.basic-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.basic-config-title {
+  margin-bottom: 0.25rem;
+  font-size: 2rem;
+  color: #24324f;
+}
+
+.basic-config-meta {
+  margin-top: 0;
+}
+
+.basic-config-tip-banner {
+  margin-top: 0.7rem;
+  border: 1px solid #bccbe6;
+  background: #d7e0ef;
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  color: #3f5f9e;
+}
+
+.basic-config-tip-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #4f78ca, #3f66bc);
+  flex-shrink: 0;
+}
+
+.basic-config-tip-banner strong {
+  color: #3f5f9e;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.basic-config-tip-banner p {
+  margin: 0.12rem 0 0;
+  color: #647797;
+  font-size: 0.76rem;
+}
+
 input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-radius: 14px; font-size: 0.9rem; font-weight: 500; }
 
 .device-profile-grid > div {

@@ -2633,15 +2633,32 @@ export default function HomeView({
 
         {(activeSection === 'settings-basic' || activeSection === 'device-detail-basic') && (
           <section className="card-like section-panel">
-            <h2 className="section-title">Settings &gt; Basic Configuration</h2>
-            {selectedDevice ? <p className="status-success">Editing {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Select a device from Devices list to configure.</p>}
-            <p className="status">Tip: Keep contact #1 as the primary emergency contact and validate numbers before sending commands.</p>
+            <div className="basic-config-header">
+              <div>
+                <h2 className="section-title basic-config-title">{selectedDevice?.name || selectedDevice?.deviceName || 'Device Profile'}</h2>
+                <p className="status basic-config-meta">
+                  Phone {selectedDevice?.phoneNumber || selectedWorkspaceDevice?.phoneNumber || '-'} · IMEI {configForm.imei || selectedDevice?.imei || '-'} · Owner {workspaceDeviceMeta?.ownerName || '-'}
+                </p>
+              </div>
+              <div className="workspace-context-chips">
+                <span className={`map-kpi-chip compact ${deviceWorkspaceLoading ? 'is-loading' : ''}`}>{deviceWorkspaceLoading ? 'Refreshing…' : 'Loaded'}</span>
+                <span className="map-kpi-chip compact">{workspaceDeviceMeta?.ownerLocation || 'No location'}</span>
+                <span className={`map-kpi-chip compact ${hasPendingWorkspaceChanges ? 'is-pending' : ''}`}>{hasPendingWorkspaceChanges ? 'Unsaved changes' : 'All changes saved'}</span>
+              </div>
+            </div>
+            <div className="basic-config-tip-banner">
+              <span className="basic-config-tip-icon" aria-hidden="true" />
+              <div>
+                <strong>Select a device from Devices list to configure.</strong>
+                <p>Tip: Keep contact #1 as the primary emergency contact and validate numbers before sending commands.</p>
+              </div>
+            </div>
 
             <article className="settings-group">
-              <h3 className="block-title">Basic Configurations</h3>
+              <h3 className="block-title">Basic Configuration</h3>
               <div className="field-grid two-col">
-                <div><label>IMEI</label><input value={configForm.imei} readOnly /></div>
-                <div id="setting-prefix-name" tabIndex={-1}><label>Device Name / Identity</label><input value={configForm.prefixName} onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
+                <div><label>IMEI</label><input value={configForm.imei} placeholder="Testdevice" readOnly /></div>
+                <div id="setting-prefix-name" tabIndex={-1}><label>Device Name</label><input value={configForm.prefixName} placeholder="Testdevice" onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
                 <div id="setting-sms-password" tabIndex={-1}><label>SMS Password</label><input value={configForm.smsPassword} onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} /><small className="field-hint">Default is usually 123456 unless changed on the device.</small></div>
                 <div><label>SMS White List</label><label className="switch-row"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={() => toggle('smsWhitelistEnabled')} /><span>{configForm.smsWhitelistEnabled ? 'On' : 'Off'}</span></label></div>
               </div>

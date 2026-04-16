@@ -36,6 +36,7 @@ const deviceCenterGroup = {
 
 export default function Sidebar({ activeSection, onChangeSection, onLogout, showDeviceCenter = false }) {
   const isSettingsActive = activeSection.startsWith('device-detail-') || activeSection.startsWith('settings')
+  const isDevicesActive = activeSection === 'devices' || activeSection === 'device-detail-overview'
   const sidebarGroups = showDeviceCenter ? [operationsGroup, deviceCenterGroup] : [operationsGroup]
 
   return (
@@ -48,7 +49,7 @@ export default function Sidebar({ activeSection, onChangeSection, onLogout, show
               {group.items.map((item) => (
                 <li key={item.id}>
                   <a
-                    className={activeSection === item.id || (item.id === 'device-detail-settings' && isSettingsActive) ? 'active' : ''}
+                    className={(activeSection === item.id || (item.id === 'device-detail-settings' && isSettingsActive) || (item.id === 'devices' && isDevicesActive)) ? 'active' : ''}
                     href="#"
                     onClick={(event) => {
                       event.preventDefault()
