@@ -133,8 +133,7 @@ export default function UserDetailPage({
             )}
           </article>
 
-          {!isEditing && (
-            <article className="user-profile-card user-devices-card">
+          <article className="user-profile-card user-devices-card">
               <div className="user-profile-card-header">
                 <h3>Assigned Devices</h3>
               </div>
@@ -161,7 +160,6 @@ export default function UserDetailPage({
                 <button type="button" className="table-link" disabled={currentPage >= totalPages} onClick={() => setUserDevicePage((prev) => Math.min(prev + 1, totalPages))}>Next</button>
               </div>
             </article>
-          )}
         </>
       )}
     </section>
