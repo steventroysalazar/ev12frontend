@@ -1295,7 +1295,10 @@ export default function HomeView({
     if (!Number.isFinite(id) || id <= 0) return false
     return all.findIndex((nextEntry) => Number(nextEntry?.id) === id) === index
   })
-  const selectedLocationId = Number(userForm.locationId)
+  const selectedUserLocationId = useMemo(() => {
+    const normalized = Number(userForm.locationId)
+    return Number.isFinite(normalized) && normalized > 0 ? normalized : null
+  }, [userForm.locationId])
   const managerTypeaheadRows = useMemo(() => {
     return managers
       .map((manager) => {
@@ -1317,11 +1320,12 @@ export default function HomeView({
   }, [managers])
   const managerQueryNormalized = userManagerQuery.trim().toLowerCase()
   const filteredManagerSuggestions = useMemo(() => {
+    if (!selectedUserLocationId) return []
     return managerTypeaheadRows
-      .filter((entry) => (selectedLocationId ? entry.locationId === selectedLocationId : true))
+      .filter((entry) => entry.locationId === selectedUserLocationId)
       .filter((entry) => (managerQueryNormalized ? entry.label.toLowerCase().includes(managerQueryNormalized) : true))
       .slice(0, 8)
-  }, [managerQueryNormalized, managerTypeaheadRows, selectedLocationId])
+  }, [managerQueryNormalized, managerTypeaheadRows, selectedUserLocationId])
 
   useEffect(() => {
     if (!(showUserModal || showEditUserModal)) return
@@ -3684,7 +3688,7 @@ export default function HomeView({
                   setUserManagerQuery(nextValue)
                   const exactMatch = filteredManagerSuggestions.find((entry) => entry.label.toLowerCase() === nextValue.trim().toLowerCase())
                   setUserForm((prev) => ({ ...prev, managerId: exactMatch?.id || '' }))
-                }} />
+                }} disabled={!selectedUserLocationId} />
                 {userManagerQuery.trim() && filteredManagerSuggestions.length ? (
                   <div className="typeahead-list">
                     {filteredManagerSuggestions.map((manager) => (
