@@ -1815,6 +1815,41 @@ export default function HomeView({
   }, [activeAlarmLocations, activeSection, dashboardMapDeviceId, getAlarmMeta, leafletReady, resolveDeviceMeta, selectedAlertLocation])
 
   useEffect(() => {
+    if (activeSection !== 'dashboard') return undefined
+    if (typeof window === 'undefined') return undefined
+    const map = dashboardLeafletMapRef.current
+    if (!map) return undefined
+
+    const container = map.getContainer?.()
+    if (!container) return undefined
+    const resizeTarget = container.parentElement || container
+
+    const triggerMapResize = () => {
+      window.requestAnimationFrame(() => {
+        map.invalidateSize()
+      })
+    }
+
+    triggerMapResize()
+    window.addEventListener('resize', triggerMapResize)
+
+    if (!window.ResizeObserver) {
+      return () => window.removeEventListener('resize', triggerMapResize)
+    }
+
+    const resizeObserver = new window.ResizeObserver(() => {
+      triggerMapResize()
+    })
+
+    resizeObserver.observe(resizeTarget)
+
+    return () => {
+      window.removeEventListener('resize', triggerMapResize)
+      resizeObserver.disconnect()
+    }
+  }, [activeAlarmLocations.length, activeSection, leafletReady])
+
+  useEffect(() => {
     return () => {
       if (dashboardLeafletMapRef.current) {
         dashboardLeafletMapRef.current.remove()
