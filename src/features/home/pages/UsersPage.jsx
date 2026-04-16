@@ -80,13 +80,23 @@ export default function UsersPage({
                     if (!panel.allDevices.length) return <span className="status">No devices</span>
                     return (
                       <div className="inline-devices-dropdown">
-                        <button
-                          type="button"
-                          className="users-device-toggle"
-                          onClick={() => setOpenDevicesByUser((prev) => ({ ...prev, [panel.userKey]: !prev[panel.userKey] }))}
-                        >
-                          {panel.allDevices.length} device{panel.allDevices.length === 1 ? '' : 's'}
-                        </button>
+                        <div className="users-device-summary">
+                          <button
+                            type="button"
+                            className="users-device-toggle"
+                            onClick={() => setOpenDevicesByUser((prev) => ({ ...prev, [panel.userKey]: !prev[panel.userKey] }))}
+                          >
+                            {panel.allDevices.length} device{panel.allDevices.length === 1 ? '' : 's'}
+                          </button>
+                          <button
+                            type="button"
+                            className="users-device-chevron"
+                            aria-label={openDevicesByUser[panel.userKey] ? 'Collapse devices' : 'Expand devices'}
+                            onClick={() => setOpenDevicesByUser((prev) => ({ ...prev, [panel.userKey]: !prev[panel.userKey] }))}
+                          >
+                            {openDevicesByUser[panel.userKey] ? '⌃' : '⌄'}
+                          </button>
+                        </div>
                         {openDevicesByUser[panel.userKey] ? (
                           <div className="inline-devices-content">
                           <input
@@ -98,14 +108,21 @@ export default function UsersPage({
                               setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: 1 }))
                             }}
                           />
-                          <ul>
-                            {panel.pageRows.map((entry) => (
-                              <li key={`user-table-device-${u.id || u.email}-${entry.id || entry.deviceId || entry.phoneNumber}`}>
-                                <strong>{entry.name || entry.deviceName || 'Unnamed device'}</strong>
-                                <span>{entry.phoneNumber || '-'}</span>
-                              </li>
-                            ))}
-                          </ul>
+                          <div className="inline-devices-table-wrap">
+                            <table className="inline-devices-table">
+                              <thead>
+                                <tr><th>Device</th><th>Phone</th></tr>
+                              </thead>
+                              <tbody>
+                                {panel.pageRows.map((entry) => (
+                                  <tr key={`user-table-device-${u.id || u.email}-${entry.id || entry.deviceId || entry.phoneNumber}`}>
+                                    <td>{entry.name || entry.deviceName || 'Unnamed device'}</td>
+                                    <td>{entry.phoneNumber || '-'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                           {panel.filtered.length > devicePageSize ? (
                             <div className="inline-devices-pagination">
                               <button type="button" className="table-link" disabled={panel.currentPage <= 1} onClick={() => setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: Math.max(panel.currentPage - 1, 1) }))}>Prev</button>
