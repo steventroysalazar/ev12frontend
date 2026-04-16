@@ -946,44 +946,94 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .inline-devices-content {
-  margin-top: 0.35rem;
-  min-width: 240px;
-  max-width: 320px;
-  border: 1px solid #d6ddea;
+  margin-top: 0.28rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 230px;
+  border: 1px solid #ccd5e4;
   background: #fff;
-  border-radius: 10px;
-  padding: 0.45rem;
-  box-shadow: 0 12px 24px -20px rgba(34, 51, 84, 0.65);
-  position: absolute;
-  z-index: 5;
+  border-radius: 4px;
+  padding: 0.2rem;
+  box-shadow: none;
+  position: static;
 }
 
 .inline-devices-dropdown {
-  position: relative;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.users-device-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
 }
 
 .users-device-toggle {
   border: none;
   background: transparent;
-  color: #2f4f85;
+  color: #263d68;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0;
+  font-size: 0.98rem;
 }
 
-.inline-devices-content ul {
-  margin: 0.45rem 0;
-  padding: 0;
-  list-style: none;
+.users-device-chevron {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 999px;
+  background: #d8e1f0;
+  color: #415980;
   display: grid;
-  gap: 0.35rem;
+  place-items: center;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  font-size: 0.75rem;
 }
 
-.inline-devices-content li {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.4rem;
-  font-size: 0.8rem;
+.inline-devices-content input {
+  min-height: 22px;
+  width: 100%;
+  border: 1px solid #cfd8e5;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  padding: 0.14rem 0.32rem;
+  color: #4f5b6f;
+  margin-bottom: 0.22rem;
+}
+
+.inline-devices-table-wrap {
+  border: 1px solid #ccd5e4;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.inline-devices-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.inline-devices-table th,
+.inline-devices-table td {
+  padding: 0.24rem 0.35rem;
+  text-align: left;
+  border-bottom: 1px solid #dbe2ee;
+}
+
+.inline-devices-table thead th {
+  font-weight: 700;
+  font-size: 0.71rem;
+  color: #1f2d48;
+  background: #f4f7fb;
+}
+
+.inline-devices-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .inline-devices-pagination {
@@ -991,6 +1041,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   align-items: center;
   gap: 0.35rem;
   font-size: 0.75rem;
+  margin-top: 0.2rem;
 }
 
 .device-workspace-head {
