@@ -447,13 +447,13 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  width: 84px;
-  height: 30px;
+  width: 64px;
+  height: 28px;
   border-radius: 999px;
   background: #c4cad4;
   border: 1px solid #bcc4cf;
-  padding: 0 10px 0 34px;
-  font-size: 0.82rem;
+  padding: 0 7px 0 26px;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #76859b;
   line-height: 1;
@@ -464,8 +464,8 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 .switch-row > span::before {
   content: '';
   position: absolute;
-  left: 4px;
-  top: 4px;
+  left: 3px;
+  top: 3px;
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -478,11 +478,11 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   background: #4c74c6;
   color: #ffffff;
   border-color: #4367ae;
-  padding: 0 34px 0 12px;
+  padding: 0 25px 0 8px;
 }
 .switch-row input:checked + .switch-pill::before,
 .switch-row input:checked + span::before {
-  transform: translateX(56px);
+  transform: translateX(36px);
 }
 .switch-row input:focus-visible + .switch-pill,
 .switch-row input:focus-visible + span {
@@ -493,7 +493,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 .range-with-value { display: flex; align-items: center; gap: 0.6rem; }
 .range-with-value input[type="range"] {
   --range-progress: 0%;
-  --range-active: #a66666;
+  --range-active: #4c74c6;
   --range-inactive: #cfd4dc;
   flex: 1;
   width: 100%;
