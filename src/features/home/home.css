@@ -2391,14 +2391,14 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .active-alert-row-copy strong {
-  font-size: 2rem;
+  font-size: 1.45rem;
   color: #2d3448;
-  line-height: 1.06;
+  line-height: 1.12;
   font-weight: 700;
 }
 
 .active-alert-row span {
-  font-size: 1.75rem;
+  font-size: 0.82rem;
   line-height: 1.15;
   color: #858586;
   font-weight: 500;
@@ -2420,8 +2420,8 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .active-alert-row .alarm-pill {
   min-width: auto;
-  padding: 0.24rem 0.9rem;
-  font-size: 1.35rem;
+  padding: 0.24rem 0.68rem;
+  font-size: 0.7rem;
   border-radius: 12px;
   grid-column: 3;
   justify-self: end;
