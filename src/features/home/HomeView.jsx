@@ -1868,12 +1868,22 @@ export default function HomeView({
         `Updated: ${locationUpdatedAt}`,
         `Lat/Lng: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
       ].join('<br/>')
-      const marker = L.circleMarker([latitude, longitude], {
-        radius: 8,
-        weight: 2,
-        color: '#ffffff',
-        fillColor: markerToneColor[alarmMeta.tone] || markerToneColor.idle,
-        fillOpacity: 0.98
+      const toneColor = markerToneColor[alarmMeta.tone] || markerToneColor.idle
+      const marker = L.marker([latitude, longitude], {
+        icon: L.divIcon({
+          className: 'dashboard-pin-marker',
+          html: `
+            <svg width="24" height="36" viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" fill="${toneColor}" stroke="#ffffff" stroke-width="2"/>
+              <polygon points="12,33 6.5,17 17.5,17" fill="${toneColor}" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+              <circle cx="12" cy="12" r="3.75" fill="#ffffff" />
+            </svg>
+          `,
+          iconSize: [24, 36],
+          iconAnchor: [12, 34],
+          popupAnchor: [0, -30],
+          tooltipAnchor: [0, -30]
+        })
       })
         .bindPopup(popupDetails)
         .on('click', () => setDashboardMapDeviceId(deviceKey))
