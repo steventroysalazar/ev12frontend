@@ -1640,7 +1640,9 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 .dashboard-content {
   background: #eff1f5;
   border: none;
-  border-radius: 0;
+  border-radius: 0 0 14px 14px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
   padding: 1rem 0.95rem;
   box-shadow: none;
   height: 100%;
@@ -1697,7 +1699,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .dashboard-hero-top h3 {
   color: #28314c;
-  font-size: 2.65rem;
+  font-size: clamp(1.9rem, 2.2vw, 2.2rem);
   font-weight: 700;
 }
 
@@ -1739,7 +1741,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .metric-card h3 {
-  font-size: 2.8rem;
+  font-size: clamp(1.9rem, 2.15vw, 2.2rem);
   color: #222a43;
 }
 
@@ -1881,6 +1883,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 100%;
+  margin-bottom: 0.8rem;
 }
 
 .active-alerts .section-head h3 {
@@ -2007,7 +2010,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .device-overview h3 {
-  font-size: 2.9rem;
+  font-size: clamp(2rem, 2.5vw, 2.35rem);
   margin-bottom: 0.65rem;
 }
 
