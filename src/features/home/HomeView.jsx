@@ -2407,9 +2407,11 @@ export default function HomeView({
 
                   <aside className="active-alerts card-like">
                     <div className="section-head">
-                      <h3>Active Alerts</h3>
+                      <div className="active-alerts-title">
+                        <h3>Active Alerts</h3>
+                        <span className="active-alert-count" aria-label={`${activeAlarmDevices.length} active alerts`}>{activeAlarmDevices.length}</span>
+                      </div>
                       <div className="alert-head-actions">
-                        <span className="map-kpi-chip compact"><strong>{activeAlarmDevices.length}</strong></span>
                         <button
                           type="button"
                           className="table-link action-chip action-chip-neutral"
@@ -2439,7 +2441,7 @@ export default function HomeView({
                                 <span>{meta.ownerName}</span>
                               </div>
                               <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
-                              <small>{updatedAt ? new Date(updatedAt).toLocaleString() : 'Timestamp unavailable'}</small>
+                              <small>{updatedAt ? new Date(updatedAt).toLocaleString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }) : 'Timestamp unavailable'}</small>
                               <span className="active-alert-chevron" aria-hidden="true">›</span>
                             </div>
                           </button>
