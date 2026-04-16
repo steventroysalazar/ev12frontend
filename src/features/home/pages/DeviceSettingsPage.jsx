@@ -78,7 +78,7 @@ export default function DeviceSettingsPage({
             <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-commands', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="command" className="btn-icon" /></span>Send Commands</button>
           </div>
           <div className="device-workspace-actions">
-            <button type="button" className="mini-action" onClick={openConfigReview} disabled={!configForm.deviceId || !configChangeRows.length}>Review &amp; Send</button>
+            <button type="button" className="mini-action device-detail-btn-primary" onClick={openConfigReview} disabled={!configForm.deviceId || !configChangeRows.length}>Review &amp; Send</button>
           </div>
         </aside>
       </div>

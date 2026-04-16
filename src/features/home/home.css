@@ -2706,3 +2706,31 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
     grid-column: 3;
   }
 }
+
+/* Device detail: apply requested style only to selected action buttons */
+.device-detail-btn-primary {
+  background: #4f77c9;
+  border: 2px solid #4f77c9;
+  color: #f5f9ff;
+  border-radius: 14px;
+  min-height: 46px;
+  padding: 0.58rem 1.1rem;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.device-detail-btn-secondary {
+  background: #eef3fa;
+  border: 2px solid #cdd9ea;
+  color: #76879d;
+  border-radius: 10px;
+  min-height: 46px;
+  padding: 0.58rem 1.1rem;
+  font-weight: 700;
+}
+
+.device-detail-btn-primary:disabled,
+.device-detail-btn-secondary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
