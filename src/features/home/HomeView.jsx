@@ -3683,7 +3683,7 @@ export default function HomeView({
               </div>
               <div className="form-control user-typeahead">
                 <label>Manager</label>
-                <input placeholder="Manager's full name" value={userManagerQuery} onChange={(event) => {
+                <input placeholder="Manager" value={userManagerQuery} onChange={(event) => {
                   const nextValue = event.target.value
                   setUserManagerQuery(nextValue)
                   const exactMatch = filteredManagerSuggestions.find((entry) => entry.label.toLowerCase() === nextValue.trim().toLowerCase())
@@ -3704,8 +3704,8 @@ export default function HomeView({
               </div>
             </div>
             <div className="modal-actions">
-              <button className="table-link action-chip action-chip-neutral" type="button" onClick={() => setShowUserModal(false)}>Cancel</button>
-              <button className="mini-action" onClick={handleCreateUser}>Create</button>
+              <button className="create-user-btn create-user-btn-cancel" type="button" onClick={() => setShowUserModal(false)}>Cancel</button>
+              <button className="create-user-btn create-user-btn-submit" onClick={handleCreateUser}>Create</button>
             </div>
           </div>
         </div>
