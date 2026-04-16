@@ -15,7 +15,7 @@ export default function LocationsPage({
     <section className="card-like section-panel">
       <div className="section-head">
         <h2 className="section-title">Locations</h2>
-        <button className="mini-action" onClick={() => setShowLocationModal(true)}><AppIcon name="plus" className="btn-icon" />Create Location</button>
+        <button className="mini-action" onClick={() => setShowLocationModal(true)}><AppIcon name="plus" className="btn-icon" />Add Location</button>
       </div>
       <div className="table-controls">
         <input placeholder="Search location or details..." value={locationSearch} onChange={(event) => setLocationSearch(event.target.value)} />
