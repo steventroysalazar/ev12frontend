@@ -2593,13 +2593,31 @@ export default function HomeView({
             <h2 className="section-title">Device Info</h2>
             {selectedDevice ? <p className="status-success">Edit details for {selectedDevice.name || selectedDevice.deviceName}.</p> : <p className="status">Open a device workspace from Devices list first.</p>}
             {deviceWorkspaceLoading ? <p className="status">Refreshing latest server values…</p> : null}
-            <div className="field-grid two-col">
-              <input id="setting-device-name" placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
-              <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
-              <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
-              <input placeholder="Webhook Device ID" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
-              <select id="setting-device-owner" value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((entry) => <option key={entry.id || entry.email} value={entry.id || ''}>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.email}</option>)}</select>
-              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((entry) => <option key={entry.id || entry.name} value={entry.id || ''}>{entry.name || 'Unknown location'}</option>)}</select>
+            <div className="field-grid two-col device-profile-grid">
+              <div>
+                <label htmlFor="setting-device-name">Device Name</label>
+                <input id="setting-device-name" placeholder="Testdevice" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
+              </div>
+              <div>
+                <label htmlFor="setting-device-phone">Phone Number</label>
+                <input id="setting-device-phone" placeholder="12345" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
+              </div>
+              <div>
+                <label htmlFor="setting-device-version">Device Version</label>
+                <input id="setting-device-version" placeholder="Lorem Ipsum" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
+              </div>
+              <div>
+                <label htmlFor="setting-device-external-id">Webhook Device ID</label>
+                <input id="setting-device-external-id" placeholder="Lorem Ipsum" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
+              </div>
+              <div>
+                <label htmlFor="setting-device-owner">Owner</label>
+                <select id="setting-device-owner" value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((entry) => <option key={entry.id || entry.email} value={entry.id || ''}>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.email}</option>)}</select>
+              </div>
+              <div>
+                <label htmlFor="setting-device-location">Location (Optional)</label>
+                <select id="setting-device-location" value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((entry) => <option key={entry.id || entry.name} value={entry.id || ''}>{entry.name || 'Unknown location'}</option>)}</select>
+              </div>
             </div>
             {selectedWorkspaceDevice ? (
               <div className="lifecycle-grid">

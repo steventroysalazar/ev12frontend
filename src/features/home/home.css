@@ -339,6 +339,33 @@
 
 input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-radius: 14px; font-size: 0.9rem; font-weight: 500; }
 
+.device-profile-grid > div {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.device-profile-grid label {
+  color: #5f7190;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.device-profile-grid input,
+.device-profile-grid select {
+  height: 44px;
+  padding: 0.62rem 0.88rem;
+  border-radius: 10px;
+  border-color: #cdd8e6;
+  background: #f1f4f8;
+  color: #617591;
+  font-size: 0.92rem;
+}
+
+.device-profile-grid input::placeholder {
+  color: #97a8be;
+}
+
 .switch-row { display: inline-flex; gap: 0.4rem; align-items: center; font-weight: 600; }
 .switch-row input { width: 18px; height: 18px; }
 
