@@ -1786,6 +1786,12 @@ export default function HomeView({
   }, [activeAlarmLocations, dashboardMapDeviceId])
 
   useEffect(() => {
+    if (activeSection === 'dashboard') return
+    dashboardHasAutoFramedRef.current = false
+    dashboardLastFocusedDeviceRef.current = ''
+  }, [activeSection])
+
+  useEffect(() => {
     if (typeof window === 'undefined') return
     if (window.L) {
       setLeafletReady(true)
@@ -1832,6 +1838,8 @@ export default function HomeView({
       dashboardLeafletMapRef.current.remove()
       dashboardLeafletMapRef.current = null
       dashboardMarkersLayerRef.current = null
+      dashboardHasAutoFramedRef.current = false
+      dashboardLastFocusedDeviceRef.current = ''
     }
 
     if (!dashboardLeafletMapRef.current) {
