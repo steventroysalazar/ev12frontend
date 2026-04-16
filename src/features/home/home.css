@@ -523,6 +523,76 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   margin-bottom: 0.7rem;
 }
 
+.device-list-workspace {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.device-list-page-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 340px);
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.device-list-page-title {
+  margin: 0;
+  color: #1e2b45;
+}
+
+.device-list-page-subtitle {
+  margin: 0.08rem 0 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: #2e5db4;
+}
+
+.device-list-page-search {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 14px;
+  border-color: #cfd6e0;
+  background: #f2f4f7;
+  padding: 0.55rem 0.8rem;
+}
+
+.device-list-card {
+  border-radius: 18px;
+}
+
+.device-list-card .section-title {
+  margin-bottom: 0;
+}
+
+.device-list-add-btn {
+  background: linear-gradient(135deg, #4f77c9, #4168b8);
+  border-color: #4168b8;
+}
+
+.device-table-controls select,
+.device-table-controls input {
+  min-height: 42px;
+  border-radius: 14px;
+  background: #f1f3f6;
+  border-color: #cfd6e0;
+}
+
+.device-manage-button {
+  min-width: 84px;
+  text-transform: uppercase;
+  background: linear-gradient(145deg, #4f77c9, #3f66b8);
+  border-color: #3f66b8;
+  color: #ffffff;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.device-table-pagination {
+  justify-content: center;
+}
+
 .device-filter-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1042,16 +1112,14 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .devices-list-table th:nth-child(6),
 .devices-list-table td:nth-child(6) {
-  width: 300px;
-  min-width: 300px;
+  width: 180px;
+  min-width: 180px;
 }
 
 .devices-list-table th:nth-child(7),
 .devices-list-table td:nth-child(7),
 .devices-list-table th:nth-child(8),
-.devices-list-table td:nth-child(8),
-.devices-list-table th:nth-child(9),
-.devices-list-table td:nth-child(9) {
+.devices-list-table td:nth-child(8) {
   width: 170px;
   min-width: 170px;
 }
