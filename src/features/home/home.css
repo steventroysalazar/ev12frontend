@@ -838,6 +838,75 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   min-width: 1280px;
 }
 
+.users-list-panel {
+  border-radius: 18px;
+  padding: 0.95rem 1.05rem 0.8rem;
+}
+
+.users-list-panel .section-head {
+  margin-bottom: 0.65rem;
+}
+
+.users-list-panel .section-title {
+  font-size: 2.15rem;
+  line-height: 1;
+  color: #1f2d48;
+}
+
+.users-create-btn {
+  background: #4d74bf;
+  border-color: #4d74bf;
+  text-transform: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  padding: 0.52rem 0.9rem;
+}
+
+.users-table-controls {
+  grid-template-columns: minmax(260px, 1fr) 260px 180px;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.users-table-controls input,
+.users-table-controls select {
+  min-height: 42px;
+  border-radius: 14px;
+  background: #f2f4f8;
+  border: 1px solid #cfd7e3;
+}
+
+.users-table-shell {
+  border-radius: 16px;
+  border: 1px solid #d3d9e5;
+  background: #f8f9fb;
+}
+
+.users-data-table th {
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.users-view-btn {
+  min-width: 56px;
+  text-align: center;
+  justify-content: center;
+  font-size: 0.73rem;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: #4d74bf;
+  border: 1px solid #4d74bf;
+}
+
+.users-table-pagination {
+  justify-content: center;
+  text-transform: uppercase;
+  color: #9aa4b3;
+  letter-spacing: 0.02em;
+  margin-top: 0.8rem;
+}
+
 .device-filter-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
