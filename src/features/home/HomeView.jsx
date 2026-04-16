@@ -298,6 +298,8 @@ export default function HomeView({
   const [locationForm, setLocationForm] = useState(initialLocationForm)
   const [userForm, setUserForm] = useState(initialUserForm)
   const [deviceForm, setDeviceForm] = useState(initialDeviceForm)
+  const [userLocationQuery, setUserLocationQuery] = useState('')
+  const [userManagerQuery, setUserManagerQuery] = useState('')
 
   const [dataStatus, setDataStatus] = useState('')
   const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
@@ -1266,6 +1268,23 @@ export default function HomeView({
     ? managerLookupUsers
     : users.filter((nextUser) => Number(nextUser.userRole) === 2)
   const selectableLocations = locationLookupRows.length ? locationLookupRows : locations
+  const locationTypeaheadRows = useMemo(
+    () =>
+      selectableLocations
+        .map((location) => ({
+          id: String(location?.id || '').trim(),
+          label: String(location?.name || 'Unknown location').trim()
+        }))
+        .filter((entry) => entry.id && entry.label),
+    [selectableLocations]
+  )
+  const locationQueryNormalized = userLocationQuery.trim().toLowerCase()
+  const filteredLocationSuggestions = useMemo(() => {
+    if (!locationQueryNormalized) return locationTypeaheadRows.slice(0, 8)
+    return locationTypeaheadRows
+      .filter((entry) => entry.label.toLowerCase().includes(locationQueryNormalized))
+      .slice(0, 8)
+  }, [locationQueryNormalized, locationTypeaheadRows])
   const selectableUsers = roleUserLookupUsers.length
     ? roleUserLookupUsers
     : users.filter((nextUser) => Number(nextUser.userRole) === 3)
@@ -1276,6 +1295,41 @@ export default function HomeView({
     if (!Number.isFinite(id) || id <= 0) return false
     return all.findIndex((nextEntry) => Number(nextEntry?.id) === id) === index
   })
+  const selectedLocationId = Number(userForm.locationId)
+  const managerTypeaheadRows = useMemo(() => {
+    return managers
+      .map((manager) => {
+        const managerId = String(manager?.id || '').trim()
+        const managerName =
+          `${manager?.firstName || manager?.first_name || ''} ${manager?.lastName || manager?.last_name || ''}`.trim() ||
+          manager?.name ||
+          manager?.email ||
+          'Unknown manager'
+        const managerLocationRaw = manager?.locationId || manager?.location_id || manager?.location?.id || ''
+        const managerLocationId = Number(managerLocationRaw)
+        return {
+          id: managerId,
+          label: managerName,
+          locationId: Number.isFinite(managerLocationId) && managerLocationId > 0 ? managerLocationId : null
+        }
+      })
+      .filter((entry) => entry.id)
+  }, [managers])
+  const managerQueryNormalized = userManagerQuery.trim().toLowerCase()
+  const filteredManagerSuggestions = useMemo(() => {
+    return managerTypeaheadRows
+      .filter((entry) => (selectedLocationId ? entry.locationId === selectedLocationId : true))
+      .filter((entry) => (managerQueryNormalized ? entry.label.toLowerCase().includes(managerQueryNormalized) : true))
+      .slice(0, 8)
+  }, [managerQueryNormalized, managerTypeaheadRows, selectedLocationId])
+
+  useEffect(() => {
+    if (!(showUserModal || showEditUserModal)) return
+    const selectedLocation = locationTypeaheadRows.find((entry) => entry.id === String(userForm.locationId || ''))
+    setUserLocationQuery(selectedLocation?.label || '')
+    const selectedManager = managerTypeaheadRows.find((entry) => entry.id === String(userForm.managerId || ''))
+    setUserManagerQuery(selectedManager?.label || '')
+  }, [locationTypeaheadRows, managerTypeaheadRows, showEditUserModal, showUserModal, userForm.locationId, userForm.managerId])
 
   const resolveDeviceMeta = (device) => {
     const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
@@ -3563,19 +3617,92 @@ export default function HomeView({
 
       {showUserModal ? (
         <div className="overlay" onClick={() => setShowUserModal(false)}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <h3>Create User</h3>
-            <div className="field-grid two-col">
-              <input placeholder="First Name" value={userForm.firstName} onChange={(event) => setUserForm((prev) => ({ ...prev, firstName: event.target.value }))} />
-              <input placeholder="Last Name" value={userForm.lastName} onChange={(event) => setUserForm((prev) => ({ ...prev, lastName: event.target.value }))} />
-              <input placeholder="Email" value={userForm.email} onChange={(event) => setUserForm((prev) => ({ ...prev, email: event.target.value }))} />
-              <input placeholder="Password" type="password" value={userForm.password} onChange={(event) => setUserForm((prev) => ({ ...prev, password: event.target.value }))} />
-              <input placeholder="Contact Number" value={userForm.contactNumber} onChange={(event) => setUserForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
-              <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>User</option><option value={2}>Manager</option><option value={1}>Super Admin</option></select>
-              <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
-              <select value={userForm.managerId} onChange={(event) => setUserForm((prev) => ({ ...prev, managerId: event.target.value }))}><option value="">Manager (Optional)</option>{managers.map((manager) => <option key={manager.id || manager.email} value={manager.id || ''}>{`${manager.firstName || ''} ${manager.lastName || ''}`.trim() || manager.email}</option>)}</select>
+          <div className="modal create-user-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="create-user-modal-head">
+              <div className="create-user-modal-icon"><AppIcon name="plusUser" className="btn-icon" /></div>
+              <div>
+                <h3>Create User</h3>
+                <p>Enter details to register a new account</p>
+              </div>
             </div>
-            <button className="mini-action" onClick={handleCreateUser}>Create</button>
+            <div className="field-grid two-col create-user-field-grid">
+              <div className="form-control">
+                <label>Full name</label>
+                <input placeholder="e.g., John Doe" value={`${userForm.firstName || ''} ${userForm.lastName || ''}`.trim()} onChange={(event) => {
+                  const trimmed = event.target.value.trim()
+                  const [firstName = '', ...rest] = trimmed.split(/\s+/)
+                  setUserForm((prev) => ({ ...prev, firstName, lastName: rest.join(' ') }))
+                }} />
+              </div>
+              <div className="form-control">
+                <label>Account</label>
+                <input placeholder="Lorem Ipsum" value={userForm.address} onChange={(event) => setUserForm((prev) => ({ ...prev, address: event.target.value }))} />
+              </div>
+              <div className="form-control">
+                <label>Email</label>
+                <input placeholder="name@email.com" value={userForm.email} onChange={(event) => setUserForm((prev) => ({ ...prev, email: event.target.value }))} />
+              </div>
+              <div className="form-control">
+                <label>Password</label>
+                <input placeholder="Lorem Ipsum" type="password" value={userForm.password} onChange={(event) => setUserForm((prev) => ({ ...prev, password: event.target.value }))} />
+              </div>
+              <div className="form-control">
+                <label>Phone</label>
+                <input placeholder="e.g., 0412 345 678" value={userForm.contactNumber} onChange={(event) => setUserForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
+              </div>
+              <div className="form-control">
+                <label>Role</label>
+                <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>User</option><option value={2}>Manager</option><option value={1}>Super Admin</option></select>
+              </div>
+              <div className="form-control user-typeahead">
+                <label>Location (Optional)</label>
+                <input placeholder="Lorem Ipsum" value={userLocationQuery} onChange={(event) => {
+                  const nextValue = event.target.value
+                  setUserLocationQuery(nextValue)
+                  const exactMatch = locationTypeaheadRows.find((entry) => entry.label.toLowerCase() === nextValue.trim().toLowerCase())
+                  setUserForm((prev) => ({ ...prev, locationId: exactMatch?.id || '', managerId: exactMatch?.id === prev.locationId ? prev.managerId : '' }))
+                  if (!exactMatch) setUserManagerQuery('')
+                }} />
+                {userLocationQuery.trim() && filteredLocationSuggestions.length ? (
+                  <div className="typeahead-list">
+                    {filteredLocationSuggestions.map((location) => (
+                      <button key={`location-suggestion-${location.id}`} type="button" className="typeahead-option" onClick={() => {
+                        setUserLocationQuery(location.label)
+                        setUserManagerQuery('')
+                        setUserForm((prev) => ({ ...prev, locationId: location.id, managerId: '' }))
+                      }}>
+                        {location.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="form-control user-typeahead">
+                <label>Manager</label>
+                <input placeholder="Manager's full name" value={userManagerQuery} onChange={(event) => {
+                  const nextValue = event.target.value
+                  setUserManagerQuery(nextValue)
+                  const exactMatch = filteredManagerSuggestions.find((entry) => entry.label.toLowerCase() === nextValue.trim().toLowerCase())
+                  setUserForm((prev) => ({ ...prev, managerId: exactMatch?.id || '' }))
+                }} />
+                {userManagerQuery.trim() && filteredManagerSuggestions.length ? (
+                  <div className="typeahead-list">
+                    {filteredManagerSuggestions.map((manager) => (
+                      <button key={`manager-suggestion-${manager.id}`} type="button" className="typeahead-option" onClick={() => {
+                        setUserManagerQuery(manager.label)
+                        setUserForm((prev) => ({ ...prev, managerId: manager.id }))
+                      }}>
+                        {manager.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="table-link action-chip action-chip-neutral" type="button" onClick={() => setShowUserModal(false)}>Cancel</button>
+              <button className="mini-action" onClick={handleCreateUser}>Create</button>
+            </div>
           </div>
         </div>
       ) : null}
