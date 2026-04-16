@@ -23,7 +23,7 @@ export default function DeviceSettingsPage({
         <div className="workspace-profile-head">
           <button type="button" className="device-profile-back-link" onClick={() => moveToDeviceSection('devices')}>
             <span aria-hidden="true">‹</span>
-            <span>Device Profile</span>
+            <span>Basic Configuration</span>
           </button>
           {actionStatus.message
             ? <p className={actionStatus.type === 'error' ? 'status-error' : 'status-success'}>{actionStatus.message}</p>

@@ -346,8 +346,8 @@
 
 .basic-config-title {
   margin-bottom: 0.25rem;
-  font-size: 2rem;
-  color: #24324f;
+  font-size: 2.15rem;
+  color: #1c2945;
 }
 
 .basic-config-meta {
@@ -376,7 +376,7 @@
 
 .basic-config-tip-banner strong {
   color: #3f5f9e;
-  font-size: 1.35rem;
+  font-size: 1rem;
   line-height: 1.2;
 }
 
@@ -415,20 +415,47 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   color: #97a8be;
 }
 
-.switch-row { display: inline-flex; gap: 0.4rem; align-items: center; font-weight: 600; }
-.switch-row input { width: 18px; height: 18px; }
+.switch-row { display: inline-flex; gap: 0.35rem; align-items: center; font-weight: 600; color: #8292a9; }
+.switch-row input { width: 16px; height: 16px; }
 
 .range-with-value { display: flex; align-items: center; gap: 0.6rem; }
 .range-with-value input[type="range"] { flex: 1; }
 .range-value { min-width: 36px; text-align: center; font-weight: 700; color: #363a43; background: #e9ecef; border-radius: 999px; padding: 0.2rem 0.5rem; }
 
-.contact-table { border-top: 1px solid #dfe4ea; border-bottom: 1px solid #dfe4ea; padding: 0.55rem 0; }
+.contact-table { border: 1px solid #d8dde5; border-radius: 12px; padding: 0.55rem 0.35rem; background: #f8fafc; }
 
 .settings-group { margin-top: 1rem; }
 .settings-group:first-of-type { margin-top: 0.2rem; }
 .contact-row input { width: 100%; }
-.contact-head,.contact-row { display: grid; grid-template-columns: 1fr 1fr 1.5fr 0.8fr 0.8fr 0.6fr; gap: 0.5rem; padding: 0.4rem 0.3rem; align-items: center; }
-.chip { background: #eceef1; padding: 0.3rem 0.4rem; border-radius: 8px; }
+.contact-head,.contact-row { display: grid; grid-template-columns: 1fr 1fr 1.5fr 0.8fr 0.8fr 0.7fr; gap: 0.5rem; padding: 0.35rem 0.3rem; align-items: center; }
+.contact-head {
+  color: #6a7788;
+  font-size: 0.79rem;
+  font-weight: 700;
+}
+.chip { background: #ecf0f5; border: 1px solid #d6dde7; padding: 0.42rem 0.55rem; border-radius: 8px; color: #7a8798; text-align: center; }
+.add-contact-btn {
+  background: #1c2a4a;
+}
+.remove-contact-btn {
+  background: #fbe1e4;
+  color: #cc5966;
+  border: 1px solid #f3c4cb;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.28rem 0.42rem;
+}
+.remove-contact-btn:hover {
+  background: #f8d1d7;
+}
+.basic-config-footer-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
 .footer-config { margin-top: 0.75rem; }
 
 .alarm-card { background: #eceff1; border-radius: 12px; padding: 0.8rem; margin-bottom: 0.6rem; }
@@ -876,7 +903,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   gap: 0.42rem;
   color: #1e2c4d;
   font-weight: 800;
-  font-size: 2.02rem;
+  font-size: 2.1rem;
   line-height: 1.1;
 }
 
@@ -900,8 +927,8 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 .workspace-status-row .status-success,
 .workspace-status-row .status-error {
   margin: 0;
-  color: #4f6da1;
-  font-size: 1.05rem;
+  color: #5171a7;
+  font-size: 1rem;
   font-weight: 600;
 }
 
