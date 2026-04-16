@@ -813,8 +813,8 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 .device-manage-button {
   min-width: 84px;
   text-transform: uppercase;
-  background: #4e73be;
-  border-color: #4e73be;
+  background: #4f77c9;
+  border-color: #4f77c9;
   color: #ffffff;
   font-size: 0.72rem;
   letter-spacing: 0.02em;
@@ -1512,9 +1512,9 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .action-chip-primary {
-  background: #e6f8f5;
-  border-color: #a9e8de;
-  color: #0b6b61;
+  background: #4f77c9;
+  border-color: #4f77c9;
+  color: #f6f9ff;
 }
 
 .action-chip-danger {
