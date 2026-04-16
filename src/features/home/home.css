@@ -2386,19 +2386,19 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 .active-alert-row-inline {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
-  row-gap: 0.12rem;
-  column-gap: 0.7rem;
+  row-gap: 0.24rem;
+  column-gap: 1rem;
 }
 
 .active-alert-row-copy strong {
-  font-size: 0.98rem;
+  font-size: 2rem;
   color: #2d3448;
   line-height: 1.06;
   font-weight: 700;
 }
 
 .active-alert-row span {
-  font-size: 0.72rem;
+  font-size: 1.75rem;
   line-height: 1.15;
   color: #858586;
   font-weight: 500;
@@ -2420,9 +2420,9 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .active-alert-row .alarm-pill {
   min-width: auto;
-  padding: 0.22rem 0.62rem;
-  font-size: 0.72rem;
-  border-radius: 14px;
+  padding: 0.24rem 0.9rem;
+  font-size: 1.35rem;
+  border-radius: 12px;
   grid-column: 3;
   justify-self: end;
   font-weight: 700;
@@ -2441,9 +2441,9 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .active-alert-dot {
-  width: 10px;
-  height: 10px;
-  margin-top: 0.48rem;
+  width: 15px;
+  height: 15px;
+  margin-top: 0.92rem;
   box-shadow: none;
 }
 
