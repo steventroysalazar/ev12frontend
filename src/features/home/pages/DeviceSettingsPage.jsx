@@ -9,7 +9,6 @@ export default function DeviceSettingsPage({
   activeDeviceSettingsSection,
   moveToDeviceSection,
   deviceWorkspaceLoading,
-  sectionBadges,
   openConfigReview,
   configForm,
   configChangeRows,
@@ -63,11 +62,11 @@ export default function DeviceSettingsPage({
       <div className="device-workspace-head card-like">
         <aside className="device-detail-sidebar">
           <div className="device-detail-nav">
-            <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-overview', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="devices" className="btn-icon" /></span>Device Profile <small>{sectionBadges['device-detail-overview']}</small></button>
-            <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-basic', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="settings" className="btn-icon" /></span>Basic Configuration <small>{sectionBadges['device-detail-basic']}</small></button>
-            <button type="button" className={activeDeviceSettingsSection === 'device-detail-advanced' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-advanced', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="settings" className="btn-icon" /></span>Advanced Configuration <small>{sectionBadges['device-detail-advanced']}</small></button>
-            <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-location', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="location" className="btn-icon" /></span>Live Location <small>{sectionBadges['device-detail-location']}</small></button>
-            <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-commands', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="command" className="btn-icon" /></span>Send Commands <small>{sectionBadges['device-detail-commands']}</small></button>
+            <button type="button" className={activeDeviceSettingsSection === 'device-detail-overview' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-overview', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="devices" className="btn-icon" /></span>Device Profile</button>
+            <button type="button" className={activeDeviceSettingsSection === 'device-detail-basic' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-basic', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="settings" className="btn-icon" /></span>Basic Configuration</button>
+            <button type="button" className={activeDeviceSettingsSection === 'device-detail-advanced' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-advanced', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="settings" className="btn-icon" /></span>Advanced Configuration</button>
+            <button type="button" className={activeDeviceSettingsSection === 'device-detail-location' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-location', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="location" className="btn-icon" /></span>Live Location</button>
+            <button type="button" className={activeDeviceSettingsSection === 'device-detail-commands' ? 'is-active' : ''} onClick={() => moveToDeviceSection('device-detail-commands', { force: true })} disabled={deviceWorkspaceLoading}><span className="device-nav-dot"><AppIcon name="command" className="btn-icon" /></span>Send Commands</button>
           </div>
           <div className="device-workspace-actions">
             <button type="button" className="mini-action" onClick={openConfigReview} disabled={!configForm.deviceId || !configChangeRows.length}>Review &amp; Send</button>

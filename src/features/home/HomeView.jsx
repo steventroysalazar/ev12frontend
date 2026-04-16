@@ -2141,13 +2141,6 @@ export default function HomeView({
     )
   }, [deviceForm, selectedWorkspaceDevice])
   const hasPendingWorkspaceChanges = workspaceDeviceProfileChanged || configChangeRows.length > 0
-  const sectionBadges = useMemo(() => ({
-    'device-detail-overview': workspaceDeviceProfileChanged ? 'Edited' : 'Clean',
-    'device-detail-basic': workspaceConfigChangesBySection['device-detail-basic'] ? `${workspaceConfigChangesBySection['device-detail-basic']} changed` : 'No changes',
-    'device-detail-advanced': workspaceConfigChangesBySection['device-detail-advanced'] ? `${workspaceConfigChangesBySection['device-detail-advanced']} changed` : 'No changes',
-    'device-detail-location': displayedLocation ? 'Location ready' : 'Waiting data',
-    'device-detail-commands': configForm.deviceId ? 'Ready to send' : 'Select device'
-  }), [configForm.deviceId, displayedLocation, workspaceConfigChangesBySection, workspaceDeviceProfileChanged])
   const geoFenceRawRadius = String(configForm.geoFenceRadius || '').trim().toLowerCase()
   const isGeoFenceRadiusRawValid = !geoFenceRawRadius || /^(\d+(?:\.\d+)?)(m|meter|meters|km|kilometer|kilometers)?$/.test(geoFenceRawRadius)
   const workspaceSettingSuggestions = useMemo(() => {
@@ -2233,7 +2226,7 @@ export default function HomeView({
         activeSection={activeSection}
         onChangeSection={handleSectionChange}
         onLogout={onLogout}
-        showDeviceCenter={isDeviceWorkspaceSection && Boolean(selectedDevice)}
+        showDeviceCenter={false}
       />
 
       <div className="dashboard-content">
@@ -2248,7 +2241,6 @@ export default function HomeView({
             activeDeviceSettingsSection={activeDeviceSettingsSection}
             moveToDeviceSection={moveToDeviceSection}
             deviceWorkspaceLoading={deviceWorkspaceLoading}
-            sectionBadges={sectionBadges}
             openConfigReview={openConfigReview}
             configForm={configForm}
             configChangeRows={configChangeRows}
