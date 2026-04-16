@@ -3317,11 +3317,29 @@ export default function HomeView({
         )}
 
         {(activeSection === 'commands' || activeSection === 'device-detail-commands') && (
-          <section>
+          <section className="commands-section">
             <h2 className="page-title">Send Commands</h2>
             <div className="commands-layout">
-              <article className="card-like" id="setting-command-input" tabIndex={-1}><h3>Command Input</h3><p className="status">Review values below before sending. Commands use the selected device in this workspace.</p><div className="field-grid"><div><label>Contact Number</label><input title="Phone number used for command payloads." value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} /></div><div><label>SOS Action</label><input title="Sets SOS action time in seconds for generated commands." value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} /></div><div><label>Geo-fence</label><input title="Geo-fence radius command value (e.g. 500m)." value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} /></div></div><button className="mini-action" title="Send the currently prepared command set to the selected device." disabled={loading} onClick={sendConfig}>Send Command</button></article>
-              <article className="card-like queue-card" id="setting-command-queue" tabIndex={-1}>
+              <article className="card-like commands-card commands-input-card" id="setting-command-input" tabIndex={-1}>
+                <h3 className="commands-card-title">Command Input</h3>
+                <p className="status commands-info-banner">Review values below before sending. Commands use the selected device in this workspace.</p>
+                <div className="field-grid commands-field-grid">
+                  <div>
+                    <label>Contact Number</label>
+                    <input title="Phone number used for command payloads." value={configForm.contactNumber} onChange={(event) => setConfigForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
+                  </div>
+                  <div>
+                    <label>SOS Action</label>
+                    <input title="Sets SOS action time in seconds for generated commands." value={configForm.sosActionTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} />
+                  </div>
+                  <div>
+                    <label>Geo-fence</label>
+                    <input title="Geo-fence radius command value (e.g. 500m)." value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} />
+                  </div>
+                </div>
+                <button className="mini-action commands-btn commands-btn-primary commands-btn-send" title="Send the currently prepared command set to the selected device." disabled={loading} onClick={sendConfig}>Send Command</button>
+              </article>
+              <article className="card-like queue-card commands-card" id="setting-command-queue" tabIndex={-1}>
                 <h3>Command Queue</h3>
                 <div className="queue-grid">
                   <p><strong>Status:</strong> <span className={`queue-chip queue-${queueStatusLabel.toLowerCase()}`}>{queueStatusLabel}</span></p>
@@ -3331,14 +3349,14 @@ export default function HomeView({
                   <p><strong>Cooldown:</strong> {resendRemainingText}</p>
                 </div>
                 <div className="queue-actions">
-                  <button className="mini-action" title="Fetch the latest queue status from the backend." disabled={loading || !configForm.deviceId} onClick={() => refreshConfigQueueStatus(configForm.deviceId)}>Refresh Queue</button>
+                  <button className="mini-action commands-btn commands-btn-secondary" title="Fetch the latest queue status from the backend." disabled={loading || !configForm.deviceId} onClick={() => refreshConfigQueueStatus(configForm.deviceId)}>Refresh</button>
                   <button
-                    className="mini-action"
+                    className="mini-action commands-btn commands-btn-primary"
                     title="Retry the pending SMS command if cooldown allows."
                     disabled={loading || !isQueuePending || resendCooldownActive}
                     onClick={resendPendingConfig}
                   >
-                    {resendCooldownActive ? `Resend in ${resendRemainingText}` : 'Resend SMS Command'}
+                    {resendCooldownActive ? `Resend in ${resendRemainingText}` : 'Resend'}
                   </button>
                 </div>
                 <div className="queue-previews-grid">
