@@ -620,6 +620,11 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   min-height: 340px;
 }
 
+.dashboard-pin-marker {
+  background: transparent;
+  border: 0;
+}
+
 .preview-box,.conversation-box { min-height: 170px; background: #f3f6fa; border: 1px solid #d7dfe8; border-radius: 10px; padding: 0.8rem; white-space: pre-wrap; }
 
 .replies.conversation-box {
