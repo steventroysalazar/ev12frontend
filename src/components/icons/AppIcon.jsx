@@ -15,6 +15,12 @@ const iconPaths = {
       <path d="M14.4 14.9a4.3 4.3 0 0 1 5.7 2.7" />
     </>
   ),
+  company: (
+    <>
+      <rect x="4" y="5" width="16" height="15" rx="1.5" />
+      <path d="M9 5v15M15 5v15M4 10h16M4 15h16" />
+    </>
+  ),
   location: (
     <>
       <path d="M12 20.6s6.2-5.4 6.2-10a6.2 6.2 0 0 0-12.4 0c0 4.6 6.2 10 6.2 10z" />

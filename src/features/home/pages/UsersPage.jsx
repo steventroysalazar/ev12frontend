@@ -4,6 +4,7 @@ import AppIcon from '../../../components/icons/AppIcon'
 export default function UsersPage({
   loadLocations,
   loadUsers,
+  loadCompanies,
   setShowUserModal,
   userSearch,
   setUserSearch,
@@ -45,7 +46,7 @@ export default function UsersPage({
     <section className="card-like section-panel users-list-panel">
       <div className="section-head">
         <h2 className="section-title">All Users</h2>
-        <button className="mini-action users-create-btn" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
+        <button className="mini-action users-create-btn" onClick={async () => { await Promise.all([loadLocations(), loadUsers(), loadCompanies()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
       </div>
       <div className="table-controls users-table-controls">
         <input placeholder="Search by user, email, contact, location..." value={userSearch} onChange={(event) => setUserSearch(event.target.value)} />

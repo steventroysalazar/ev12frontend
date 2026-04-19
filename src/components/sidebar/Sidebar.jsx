@@ -6,6 +6,7 @@ const operationsGroup = {
   label: 'Operations',
   items: [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { id: 'companies', label: 'Companies', icon: 'company' },
     { id: 'users', label: 'Users', icon: 'users' },
     { id: 'locations', label: 'Locations', icon: 'location' },
     { id: 'devices', label: 'Devices', icon: 'devices' },
