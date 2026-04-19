@@ -27,11 +27,12 @@ export default function LocationsPage({
       </div>
       <div className="table-shell">
         <table className="data-table">
-          <thead><tr><th>Name</th><th>Details</th><th>User Count</th><th>Device Count</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Name</th><th>Company</th><th>Details</th><th>User Count</th><th>Device Count</th><th>Actions</th></tr></thead>
           <tbody>
             {pagedLocations.rows.map((l) => (
               <tr key={l.id || l.name}>
                 <td>{l.name || '-'}</td>
+                <td>{l.companyName || l.company?.name || l.companyId || '-'}</td>
                 <td>{l.details || '-'}</td>
                 <td>{l.userCount || l.users?.length || 0}</td>
                 <td>{l.deviceCount || l.devices?.length || 0}</td>
