@@ -4,6 +4,7 @@ import AppIcon from '../../../components/icons/AppIcon'
 export default function UsersPage({
   loadLocations,
   loadUsers,
+  loadCompanies,
   setShowUserModal,
   userSearch,
   setUserSearch,
@@ -45,7 +46,7 @@ export default function UsersPage({
     <section className="card-like section-panel users-list-panel">
       <div className="section-head">
         <h2 className="section-title">All Users</h2>
-        <button className="mini-action users-create-btn" onClick={async () => { await Promise.all([loadLocations(), loadUsers()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
+        <button className="mini-action users-create-btn" onClick={async () => { await Promise.all([loadLocations(), loadUsers(), loadCompanies()]); setShowUserModal(true) }}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
       </div>
       <div className="table-controls users-table-controls">
         <input placeholder="Search by user, email, contact, location..." value={userSearch} onChange={(event) => setUserSearch(event.target.value)} />
@@ -58,13 +59,14 @@ export default function UsersPage({
         <select value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
           <option value="all">All roles</option>
           <option value="qview admin">QView Admin</option>
-          <option value="manager">Manager</option>
-          <option value="user">User</option>
+          <option value="company admin">Company Admin</option>
+          <option value="portal user">Portal User</option>
+          <option value="mobile app user">Mobile App User</option>
         </select>
       </div>
       <div className="table-shell users-table-shell">
         <table className="data-table users-data-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th><th>Devices</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Devices</th><th>Actions</th></tr></thead>
           <tbody>
             {pagedUsers.rows.map((u) => (
               <tr key={u.id || u.email}>
@@ -73,7 +75,6 @@ export default function UsersPage({
                 <td>{roleLabel(u.userRole || u.role || u.user_role || '-')}</td>
                 <td>{u.contactNumber || '-'}</td>
                 <td>{u.locationName || u.location?.name || '-'}</td>
-                <td>{u.managerName || u.manager?.firstName || '-'}</td>
                 <td>
                   {(() => {
                     const panel = getDevicePanel(u)

@@ -38,8 +38,7 @@ export default function UserDetailPage({
       contactNumber: selectedUser.contactNumber || selectedUser.contact_number || '',
       address: selectedUser.address || '',
       userRole: Number(selectedUser.userRole || selectedUser.role || selectedUser.user_role || 3),
-      locationId: selectedUser.locationId || selectedUser.location_id || selectedUser.location?.id || '',
-      managerId: selectedUser.managerId || selectedUser.manager_id || selectedUser.manager?.id || ''
+      locationId: selectedUser.locationId || selectedUser.location_id || selectedUser.location?.id || ''
     }))
   }
 
