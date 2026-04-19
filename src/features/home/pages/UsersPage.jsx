@@ -66,7 +66,7 @@ export default function UsersPage({
       </div>
       <div className="table-shell users-table-shell">
         <table className="data-table users-data-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Manager</th><th>Devices</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Devices</th><th>Actions</th></tr></thead>
           <tbody>
             {pagedUsers.rows.map((u) => (
               <tr key={u.id || u.email}>
@@ -75,7 +75,6 @@ export default function UsersPage({
                 <td>{roleLabel(u.userRole || u.role || u.user_role || '-')}</td>
                 <td>{u.contactNumber || '-'}</td>
                 <td>{u.locationName || u.location?.name || '-'}</td>
-                <td>{u.managerName || u.manager?.firstName || '-'}</td>
                 <td>
                   {(() => {
                     const panel = getDevicePanel(u)

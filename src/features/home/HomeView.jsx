@@ -37,7 +37,6 @@ const initialUserForm = {
   userRole: 3,
   companyId: '',
   locationId: '',
-  managerId: '',
   allCompanyLocations: false
 }
 const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '', externalDeviceId: '' }
@@ -344,7 +343,6 @@ export default function HomeView({
   const [userForm, setUserForm] = useState(initialUserForm)
   const [deviceForm, setDeviceForm] = useState(initialDeviceForm)
   const [userLocationQuery, setUserLocationQuery] = useState('')
-  const [userManagerQuery, setUserManagerQuery] = useState('')
 
   const [dataStatus, setDataStatus] = useState('')
   const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
@@ -1130,13 +1128,11 @@ export default function HomeView({
     try {
       if (!userForm.email.trim() || !userForm.password.trim()) throw new Error('Email and password are required')
       if ([2, 3, 4].includes(Number(userForm.userRole)) && !userForm.companyId) throw new Error('Company is required for this role')
-      if ([3, 4].includes(Number(userForm.userRole)) && !userForm.managerId) throw new Error('Manager is required for portal/mobile users')
       const payload = {
         ...userForm,
         userRole: Number(userForm.userRole),
         companyId: userForm.companyId ? Number(userForm.companyId) : null,
-        locationId: userForm.locationId ? Number(userForm.locationId) : null,
-        managerId: userForm.managerId ? Number(userForm.managerId) : null
+        locationId: userForm.locationId ? Number(userForm.locationId) : null
       }
 
       try {
@@ -1272,8 +1268,7 @@ export default function HomeView({
       address: user.address || '',
       userRole: Number(user.userRole || user.role || user.user_role || 3),
       locationId: user.locationId || user.location_id || user.location?.id || '',
-      companyId: user.companyId || user.company_id || user.company?.id || '',
-      managerId: user.managerId || user.manager_id || user.manager?.id || ''
+      companyId: user.companyId || user.company_id || user.company?.id || ''
     })
   }, [])
 
@@ -1345,14 +1340,12 @@ export default function HomeView({
       if (!editingUserId) throw new Error('User id is missing')
       if (!userForm.email.trim()) throw new Error('Email is required')
       if ([2, 3, 4].includes(Number(userForm.userRole)) && !userForm.companyId) throw new Error('Company is required for this role')
-      if ([3, 4].includes(Number(userForm.userRole)) && !userForm.managerId) throw new Error('Manager is required for portal/mobile users')
 
       const payload = {
         ...userForm,
         userRole: Number(userForm.userRole),
         companyId: userForm.companyId ? Number(userForm.companyId) : null,
-        locationId: userForm.locationId ? Number(userForm.locationId) : null,
-        managerId: userForm.managerId ? Number(userForm.managerId) : null
+        locationId: userForm.locationId ? Number(userForm.locationId) : null
       }
 
       try {
@@ -1477,49 +1470,11 @@ export default function HomeView({
     if (!Number.isFinite(id) || id <= 0) return false
     return all.findIndex((nextEntry) => Number(nextEntry?.id) === id) === index
   })
-  const selectedUserLocationId = useMemo(() => {
-    const normalized = Number(userForm.locationId)
-    return Number.isFinite(normalized) && normalized > 0 ? normalized : null
-  }, [userForm.locationId])
-  const managerTypeaheadRows = useMemo(() => {
-    return managers
-      .map((manager) => {
-        const managerId = String(manager?.id || '').trim()
-        const managerName =
-          `${manager?.firstName || manager?.first_name || ''} ${manager?.lastName || manager?.last_name || ''}`.trim() ||
-          manager?.name ||
-          manager?.email ||
-          'Unknown manager'
-        const managerLocationRaw = manager?.locationId || manager?.location_id || manager?.location?.id || ''
-        const managerLocationId = Number(managerLocationRaw)
-        const managerCompanyIdRaw = manager?.companyId || manager?.company_id || manager?.company?.id || ''
-        const managerCompanyId = Number(managerCompanyIdRaw)
-        return {
-          id: managerId,
-          label: managerName,
-          locationId: Number.isFinite(managerLocationId) && managerLocationId > 0 ? managerLocationId : null,
-          companyId: Number.isFinite(managerCompanyId) && managerCompanyId > 0 ? managerCompanyId : null
-        }
-      })
-      .filter((entry) => entry.id)
-  }, [managers])
-  const managerQueryNormalized = userManagerQuery.trim().toLowerCase()
-  const filteredManagerSuggestions = useMemo(() => {
-    if (!selectedCompanyId && !selectedUserLocationId) return []
-    return managerTypeaheadRows
-      .filter((entry) => (selectedCompanyId ? entry.companyId === selectedCompanyId : true))
-      .filter((entry) => (selectedUserLocationId ? entry.locationId === selectedUserLocationId : true))
-      .filter((entry) => (managerQueryNormalized ? entry.label.toLowerCase().includes(managerQueryNormalized) : true))
-      .slice(0, 8)
-  }, [managerQueryNormalized, managerTypeaheadRows, selectedCompanyId, selectedUserLocationId])
-
   useEffect(() => {
     if (!(showUserModal || showEditUserModal)) return
     const selectedLocation = locationTypeaheadRows.find((entry) => entry.id === String(userForm.locationId || ''))
     setUserLocationQuery(selectedLocation?.label || '')
-    const selectedManager = managerTypeaheadRows.find((entry) => entry.id === String(userForm.managerId || ''))
-    setUserManagerQuery(selectedManager?.label || '')
-  }, [locationTypeaheadRows, managerTypeaheadRows, showEditUserModal, showUserModal, userForm.locationId, userForm.managerId])
+  }, [locationTypeaheadRows, showEditUserModal, showUserModal, userForm.locationId])
 
   const resolveDeviceMeta = (device) => {
     const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
@@ -3971,7 +3926,7 @@ export default function HomeView({
               </div>
               <div className="form-control">
                 <label>Company</label>
-                <select value={userForm.companyId} onChange={(event) => setUserForm((prev) => ({ ...prev, companyId: event.target.value, locationId: '', managerId: '' }))}>
+                <select value={userForm.companyId} onChange={(event) => setUserForm((prev) => ({ ...prev, companyId: event.target.value, locationId: '' }))}>
                   <option value="">Select Company</option>
                   {selectableCompanies.map((company) => <option key={company.id || company.name || company.companyName} value={company.id || ''}>{company.companyName || company.company_name || company.name || 'Unknown company'}</option>)}
                 </select>
@@ -3982,39 +3937,16 @@ export default function HomeView({
                   const nextValue = event.target.value
                   setUserLocationQuery(nextValue)
                   const exactMatch = locationTypeaheadRows.find((entry) => entry.label.toLowerCase() === nextValue.trim().toLowerCase())
-                  setUserForm((prev) => ({ ...prev, locationId: exactMatch?.id || '', managerId: exactMatch?.id === prev.locationId ? prev.managerId : '' }))
-                  if (!exactMatch) setUserManagerQuery('')
+                  setUserForm((prev) => ({ ...prev, locationId: exactMatch?.id || '' }))
                 }} />
                 {userLocationQuery.trim() && filteredLocationSuggestions.length ? (
                   <div className="typeahead-list">
                     {filteredLocationSuggestions.map((location) => (
                       <button key={`location-suggestion-${location.id}`} type="button" className="typeahead-option" onClick={() => {
                         setUserLocationQuery(location.label)
-                        setUserManagerQuery('')
-                        setUserForm((prev) => ({ ...prev, locationId: location.id, managerId: '' }))
+                        setUserForm((prev) => ({ ...prev, locationId: location.id }))
                       }}>
                         {location.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              <div className="form-control user-typeahead">
-                <label>Manager</label>
-                <input placeholder="Manager" value={userManagerQuery} onChange={(event) => {
-                  const nextValue = event.target.value
-                  setUserManagerQuery(nextValue)
-                  const exactMatch = filteredManagerSuggestions.find((entry) => entry.label.toLowerCase() === nextValue.trim().toLowerCase())
-                  setUserForm((prev) => ({ ...prev, managerId: exactMatch?.id || '' }))
-                }} disabled={!selectedCompanyId && !selectedUserLocationId} />
-                {userManagerQuery.trim() && filteredManagerSuggestions.length ? (
-                  <div className="typeahead-list">
-                    {filteredManagerSuggestions.map((manager) => (
-                      <button key={`manager-suggestion-${manager.id}`} type="button" className="typeahead-option" onClick={() => {
-                        setUserManagerQuery(manager.label)
-                        setUserForm((prev) => ({ ...prev, managerId: manager.id }))
-                      }}>
-                        {manager.label}
                       </button>
                     ))}
                   </div>
@@ -4089,9 +4021,8 @@ export default function HomeView({
               <input placeholder="Contact Number" value={userForm.contactNumber} onChange={(event) => setUserForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
               <input placeholder="Address" value={userForm.address} onChange={(event) => setUserForm((prev) => ({ ...prev, address: event.target.value }))} />
               <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>Portal User</option><option value={4}>Mobile App User</option><option value={2}>Company Admin</option><option value={1}>Super Admin</option></select>
-              <select value={userForm.companyId} onChange={(event) => setUserForm((prev) => ({ ...prev, companyId: event.target.value, locationId: '', managerId: '' }))}><option value="">Company</option>{selectableCompanies.map((company) => <option key={company.id || company.name || company.companyName} value={company.id || ''}>{company.companyName || company.company_name || company.name || 'Unknown company'}</option>)}</select>
+              <select value={userForm.companyId} onChange={(event) => setUserForm((prev) => ({ ...prev, companyId: event.target.value, locationId: '' }))}><option value="">Company</option>{selectableCompanies.map((company) => <option key={company.id || company.name || company.companyName} value={company.id || ''}>{company.companyName || company.company_name || company.name || 'Unknown company'}</option>)}</select>
               <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
-              <select value={userForm.managerId} onChange={(event) => setUserForm((prev) => ({ ...prev, managerId: event.target.value }))}><option value="">Manager (Optional)</option>{managers.map((manager) => <option key={manager.id || manager.email} value={manager.id || ''}>{`${manager.firstName || ''} ${manager.lastName || ''}`.trim() || manager.email}</option>)}</select>
             </div>
             <button className="mini-action" onClick={handleUpdateUser}>Save User</button>
           </div>
