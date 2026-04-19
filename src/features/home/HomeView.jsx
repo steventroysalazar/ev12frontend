@@ -10,7 +10,7 @@ import UserDetailPage from './pages/UserDetailPage'
 import LocationDetailPage from './pages/LocationDetailPage'
 import './home.css'
 
-const initialLocationForm = { name: '', details: '' }
+const initialLocationForm = { name: '', details: '', companyId: '' }
 const initialUserForm = {
   email: '',
   password: '',
@@ -19,8 +19,10 @@ const initialUserForm = {
   contactNumber: '',
   address: '',
   userRole: 3,
+  companyId: '',
   locationId: '',
-  managerId: ''
+  managerId: '',
+  allCompanyLocations: false
 }
 const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '', externalDeviceId: '' }
 const WEBHOOK_STORAGE_KEY = 'ev12:webhook-events'
@@ -270,7 +272,9 @@ export default function HomeView({
   const [devices, setDevices] = useState([])
   const [managerLookupUsers, setManagerLookupUsers] = useState([])
   const [roleUserLookupUsers, setRoleUserLookupUsers] = useState([])
+  const [mobileUserLookupUsers, setMobileUserLookupUsers] = useState([])
   const [superAdminLookupUsers, setSuperAdminLookupUsers] = useState([])
+  const [companyLookupRows, setCompanyLookupRows] = useState([])
   const [locationLookupRows, setLocationLookupRows] = useState([])
   const [alertLookupCodes, setAlertLookupCodes] = useState([])
   const [alertLogLookupFilters, setAlertLogLookupFilters] = useState({ alarmCodes: [], actions: [], sources: [] })
@@ -343,13 +347,17 @@ export default function HomeView({
   const roleLabel = useCallback((value) => {
     const normalized = String(value || '').trim().toUpperCase()
     if (normalized === 'SUPER_ADMIN' || normalized === 'SUPER ADMIN') return 'QView Admin'
-    if (normalized === 'MANAGER') return 'Manager'
-    if (normalized === 'USER') return 'User'
+    if (normalized === 'COMPANY_ADMIN' || normalized === 'COMPANY ADMIN') return 'Company Admin'
+    if (normalized === 'PORTAL_USER' || normalized === 'PORTAL USER') return 'Portal User'
+    if (normalized === 'MOBILE_APP_USER' || normalized === 'MOBILE APP USER') return 'Mobile App User'
+    if (normalized === 'MANAGER') return 'Company Admin'
+    if (normalized === 'USER') return 'Portal User'
 
     const role = Number(value)
     if (role === 1) return 'QView Admin'
-    if (role === 2) return 'Manager'
-    if (role === 3) return 'User'
+    if (role === 2) return 'Company Admin'
+    if (role === 3) return 'Portal User'
+    if (role === 4) return 'Mobile App User'
     return value || '-'
   }, [])
 
@@ -455,7 +463,7 @@ export default function HomeView({
   }, [])
 
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
-  const isAdminDashboard = normalizedRole === 'qview admin' || normalizedRole === 'manager'
+  const isAdminDashboard = normalizedRole === 'qview admin' || normalizedRole === 'company admin'
   const locationDeviceOptions = useMemo(() => {
     if (isAdminDashboard) return devices
 
@@ -584,10 +592,12 @@ export default function HomeView({
   }, [asCollection, fetchJson])
 
   const loadLookups = useCallback(async () => {
-    const [managersResult, roleUsersResult, superAdminsResult, locationsResult, alertsResult, alertLogsResult] = await Promise.allSettled([
-      fetchJson('/api/lookups/managers', { headers: {} }),
-      fetchJson('/api/lookups/users', { headers: {} }),
+    const [managersResult, roleUsersResult, mobileUsersResult, superAdminsResult, companiesResult, locationsResult, alertsResult, alertLogsResult] = await Promise.allSettled([
+      fetchJson('/api/lookups/company-admins', { headers: {} }),
+      fetchJson('/api/lookups/portal-users', { headers: {} }),
+      fetchJson('/api/lookups/mobile-users', { headers: {} }),
       fetchJson('/api/lookups/super-admins', { headers: {} }),
+      fetchJson('/api/lookups/companies', { headers: {} }),
       fetchJson('/api/lookups/locations', { headers: {} }),
       fetchJson('/api/lookups/alerts', { headers: {} }),
       fetchJson('/api/lookups/alert-logs', { headers: {} })
@@ -599,8 +609,14 @@ export default function HomeView({
     setRoleUserLookupUsers(
       roleUsersResult.status === 'fulfilled' ? asCollection(roleUsersResult.value, ['users']) : []
     )
+    setMobileUserLookupUsers(
+      mobileUsersResult.status === 'fulfilled' ? asCollection(mobileUsersResult.value, ['users']) : []
+    )
     setSuperAdminLookupUsers(
       superAdminsResult.status === 'fulfilled' ? asCollection(superAdminsResult.value, ['users']) : []
+    )
+    setCompanyLookupRows(
+      companiesResult.status === 'fulfilled' ? asCollection(companiesResult.value, ['companies']) : []
     )
     setLocationLookupRows(
       locationsResult.status === 'fulfilled' ? asCollection(locationsResult.value, ['locations']) : []
@@ -1017,9 +1033,14 @@ export default function HomeView({
   const handleCreateLocation = async () => {
     try {
       if (!locationForm.name.trim()) throw new Error('Location name is required')
+      if (!locationForm.companyId) throw new Error('Company is required')
       await fetchJson('/api/locations', {
         method: 'POST',
-        body: JSON.stringify({ name: locationForm.name.trim(), details: locationForm.details.trim() })
+        body: JSON.stringify({
+          name: locationForm.name.trim(),
+          details: locationForm.details.trim(),
+          companyId: Number(locationForm.companyId)
+        })
       })
       setActionStatus({ type: 'success', message: 'Location created successfully.' })
       setLocationForm(initialLocationForm)
@@ -1033,9 +1054,12 @@ export default function HomeView({
   const handleCreateUser = async () => {
     try {
       if (!userForm.email.trim() || !userForm.password.trim()) throw new Error('Email and password are required')
+      if ([2, 3, 4].includes(Number(userForm.userRole)) && !userForm.companyId) throw new Error('Company is required for this role')
+      if ([3, 4].includes(Number(userForm.userRole)) && !userForm.managerId) throw new Error('Manager is required for portal/mobile users')
       const payload = {
         ...userForm,
         userRole: Number(userForm.userRole),
+        companyId: userForm.companyId ? Number(userForm.companyId) : null,
         locationId: userForm.locationId ? Number(userForm.locationId) : null,
         managerId: userForm.managerId ? Number(userForm.managerId) : null
       }
@@ -1173,6 +1197,7 @@ export default function HomeView({
       address: user.address || '',
       userRole: Number(user.userRole || user.role || user.user_role || 3),
       locationId: user.locationId || user.location_id || user.location?.id || '',
+      companyId: user.companyId || user.company_id || user.company?.id || '',
       managerId: user.managerId || user.manager_id || user.manager?.id || ''
     })
   }, [])
@@ -1188,7 +1213,8 @@ export default function HomeView({
     setEditingLocationId(location.id)
     setLocationForm({
       name: location.name || '',
-      details: location.details || ''
+      details: location.details || '',
+      companyId: location.companyId || location.company_id || location.company?.id || ''
     })
     setShowEditLocationModal(true)
   }
@@ -1219,10 +1245,13 @@ export default function HomeView({
     try {
       if (!editingUserId) throw new Error('User id is missing')
       if (!userForm.email.trim()) throw new Error('Email is required')
+      if ([2, 3, 4].includes(Number(userForm.userRole)) && !userForm.companyId) throw new Error('Company is required for this role')
+      if ([3, 4].includes(Number(userForm.userRole)) && !userForm.managerId) throw new Error('Manager is required for portal/mobile users')
 
       const payload = {
         ...userForm,
         userRole: Number(userForm.userRole),
+        companyId: userForm.companyId ? Number(userForm.companyId) : null,
         locationId: userForm.locationId ? Number(userForm.locationId) : null,
         managerId: userForm.managerId ? Number(userForm.managerId) : null
       }
@@ -1247,8 +1276,13 @@ export default function HomeView({
     try {
       if (!editingLocationId) throw new Error('Location id is missing')
       if (!locationForm.name.trim()) throw new Error('Location name is required')
+      if (!locationForm.companyId) throw new Error('Company is required')
 
-      const payload = { name: locationForm.name.trim(), details: locationForm.details.trim() }
+      const payload = {
+        name: locationForm.name.trim(),
+        details: locationForm.details.trim(),
+        companyId: Number(locationForm.companyId)
+      }
 
       try {
         await fetchJson(`/api/locations/${editingLocationId}`, { method: 'PUT', body: JSON.stringify(payload) })
@@ -1269,7 +1303,12 @@ export default function HomeView({
   const managers = managerLookupUsers.length
     ? managerLookupUsers
     : users.filter((nextUser) => Number(nextUser.userRole) === 2)
-  const selectableLocations = locationLookupRows.length ? locationLookupRows : locations
+  const allSelectableLocations = locationLookupRows.length ? locationLookupRows : locations
+  const selectedCompanyId = Number(userForm.companyId)
+  const selectableLocations = Number.isFinite(selectedCompanyId) && selectedCompanyId > 0
+    ? allSelectableLocations.filter((entry) => Number(entry.companyId || entry.company_id || entry.company?.id || 0) === selectedCompanyId)
+    : allSelectableLocations
+  const selectableCompanies = companyLookupRows
   const locationTypeaheadRows = useMemo(
     () =>
       selectableLocations
@@ -1290,9 +1329,12 @@ export default function HomeView({
   const selectableUsers = roleUserLookupUsers.length
     ? roleUserLookupUsers
     : users.filter((nextUser) => Number(nextUser.userRole) === 3)
+  const selectableMobileUsers = mobileUserLookupUsers.length
+    ? mobileUserLookupUsers
+    : users.filter((nextUser) => Number(nextUser.userRole) === 4)
   const fallbackAdminUsers = users.filter((nextUser) => Number(nextUser.userRole) === 1)
   const selectableSuperAdmins = superAdminLookupUsers.length ? superAdminLookupUsers : fallbackAdminUsers
-  const assignableUsers = [...selectableUsers, ...managers, ...selectableSuperAdmins].filter((entry, index, all) => {
+  const assignableUsers = [...selectableUsers, ...selectableMobileUsers, ...managers, ...selectableSuperAdmins].filter((entry, index, all) => {
     const id = Number(entry?.id)
     if (!Number.isFinite(id) || id <= 0) return false
     return all.findIndex((nextEntry) => Number(nextEntry?.id) === id) === index
@@ -1312,22 +1354,26 @@ export default function HomeView({
           'Unknown manager'
         const managerLocationRaw = manager?.locationId || manager?.location_id || manager?.location?.id || ''
         const managerLocationId = Number(managerLocationRaw)
+        const managerCompanyIdRaw = manager?.companyId || manager?.company_id || manager?.company?.id || ''
+        const managerCompanyId = Number(managerCompanyIdRaw)
         return {
           id: managerId,
           label: managerName,
-          locationId: Number.isFinite(managerLocationId) && managerLocationId > 0 ? managerLocationId : null
+          locationId: Number.isFinite(managerLocationId) && managerLocationId > 0 ? managerLocationId : null,
+          companyId: Number.isFinite(managerCompanyId) && managerCompanyId > 0 ? managerCompanyId : null
         }
       })
       .filter((entry) => entry.id)
   }, [managers])
   const managerQueryNormalized = userManagerQuery.trim().toLowerCase()
   const filteredManagerSuggestions = useMemo(() => {
-    if (!selectedUserLocationId) return []
+    if (!selectedCompanyId && !selectedUserLocationId) return []
     return managerTypeaheadRows
-      .filter((entry) => entry.locationId === selectedUserLocationId)
+      .filter((entry) => (selectedCompanyId ? entry.companyId === selectedCompanyId : true))
+      .filter((entry) => (selectedUserLocationId ? entry.locationId === selectedUserLocationId : true))
       .filter((entry) => (managerQueryNormalized ? entry.label.toLowerCase().includes(managerQueryNormalized) : true))
       .slice(0, 8)
-  }, [managerQueryNormalized, managerTypeaheadRows, selectedUserLocationId])
+  }, [managerQueryNormalized, managerTypeaheadRows, selectedCompanyId, selectedUserLocationId])
 
   useEffect(() => {
     if (!(showUserModal || showEditUserModal)) return
@@ -3735,7 +3781,14 @@ export default function HomeView({
               </div>
               <div className="form-control">
                 <label>Role</label>
-                <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>User</option><option value={2}>Manager</option><option value={1}>Super Admin</option></select>
+                <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>Portal User</option><option value={4}>Mobile App User</option><option value={2}>Company Admin</option><option value={1}>Super Admin</option></select>
+              </div>
+              <div className="form-control">
+                <label>Company</label>
+                <select value={userForm.companyId} onChange={(event) => setUserForm((prev) => ({ ...prev, companyId: event.target.value, locationId: '', managerId: '' }))}>
+                  <option value="">Select Company</option>
+                  {selectableCompanies.map((company) => <option key={company.id || company.name} value={company.id || ''}>{company.name || 'Unknown company'}</option>)}
+                </select>
               </div>
               <div className="form-control user-typeahead">
                 <label>Location (Optional)</label>
@@ -3767,7 +3820,7 @@ export default function HomeView({
                   setUserManagerQuery(nextValue)
                   const exactMatch = filteredManagerSuggestions.find((entry) => entry.label.toLowerCase() === nextValue.trim().toLowerCase())
                   setUserForm((prev) => ({ ...prev, managerId: exactMatch?.id || '' }))
-                }} disabled={!selectedUserLocationId} />
+                }} disabled={!selectedCompanyId && !selectedUserLocationId} />
                 {userManagerQuery.trim() && filteredManagerSuggestions.length ? (
                   <div className="typeahead-list">
                     {filteredManagerSuggestions.map((manager) => (
@@ -3795,6 +3848,10 @@ export default function HomeView({
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <h3>Create Location</h3>
             <div className="field-grid">
+              <select value={locationForm.companyId} onChange={(event) => setLocationForm((prev) => ({ ...prev, companyId: event.target.value }))}>
+                <option value="">Select Company</option>
+                {selectableCompanies.map((company) => <option key={company.id || company.name} value={company.id || ''}>{company.name || 'Unknown company'}</option>)}
+              </select>
               <input placeholder="Location Name" value={locationForm.name} onChange={(event) => setLocationForm((prev) => ({ ...prev, name: event.target.value }))} />
               <textarea rows={3} placeholder="Details" value={locationForm.details} onChange={(event) => setLocationForm((prev) => ({ ...prev, details: event.target.value }))} />
             </div>
@@ -3815,7 +3872,8 @@ export default function HomeView({
               <input placeholder="Email" value={userForm.email} onChange={(event) => setUserForm((prev) => ({ ...prev, email: event.target.value }))} />
               <input placeholder="Contact Number" value={userForm.contactNumber} onChange={(event) => setUserForm((prev) => ({ ...prev, contactNumber: event.target.value }))} />
               <input placeholder="Address" value={userForm.address} onChange={(event) => setUserForm((prev) => ({ ...prev, address: event.target.value }))} />
-              <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>User</option><option value={2}>Manager</option><option value={1}>Super Admin</option></select>
+              <select value={userForm.userRole} onChange={(event) => setUserForm((prev) => ({ ...prev, userRole: Number(event.target.value) }))}><option value={3}>Portal User</option><option value={4}>Mobile App User</option><option value={2}>Company Admin</option><option value={1}>Super Admin</option></select>
+              <select value={userForm.companyId} onChange={(event) => setUserForm((prev) => ({ ...prev, companyId: event.target.value, locationId: '', managerId: '' }))}><option value="">Company</option>{selectableCompanies.map((company) => <option key={company.id || company.name} value={company.id || ''}>{company.name || 'Unknown company'}</option>)}</select>
               <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
               <select value={userForm.managerId} onChange={(event) => setUserForm((prev) => ({ ...prev, managerId: event.target.value }))}><option value="">Manager (Optional)</option>{managers.map((manager) => <option key={manager.id || manager.email} value={manager.id || ''}>{`${manager.firstName || ''} ${manager.lastName || ''}`.trim() || manager.email}</option>)}</select>
             </div>
@@ -3829,6 +3887,10 @@ export default function HomeView({
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <h3>Edit Location</h3>
             <div className="field-grid">
+              <select value={locationForm.companyId} onChange={(event) => setLocationForm((prev) => ({ ...prev, companyId: event.target.value }))}>
+                <option value="">Select Company</option>
+                {selectableCompanies.map((company) => <option key={company.id || company.name} value={company.id || ''}>{company.name || 'Unknown company'}</option>)}
+              </select>
               <input placeholder="Location Name" value={locationForm.name} onChange={(event) => setLocationForm((prev) => ({ ...prev, name: event.target.value }))} />
               <textarea rows={3} placeholder="Details" value={locationForm.details} onChange={(event) => setLocationForm((prev) => ({ ...prev, details: event.target.value }))} />
             </div>

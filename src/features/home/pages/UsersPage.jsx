@@ -58,8 +58,9 @@ export default function UsersPage({
         <select value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
           <option value="all">All roles</option>
           <option value="qview admin">QView Admin</option>
-          <option value="manager">Manager</option>
-          <option value="user">User</option>
+          <option value="company admin">Company Admin</option>
+          <option value="portal user">Portal User</option>
+          <option value="mobile app user">Mobile App User</option>
         </select>
       </div>
       <div className="table-shell users-table-shell">
