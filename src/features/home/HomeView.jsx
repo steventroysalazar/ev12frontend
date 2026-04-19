@@ -11,7 +11,15 @@ import UserDetailPage from './pages/UserDetailPage'
 import LocationDetailPage from './pages/LocationDetailPage'
 import './home.css'
 
-const initialLocationForm = { name: '', details: '', companyId: '' }
+const initialLocationForm = {
+  name: '',
+  details: '',
+  companyId: '',
+  alarmReceiverAccountNumber: '',
+  alarmReceiverEnabled: false,
+  alarmReceiverUsers: '',
+  toggleCompanyAlarmReceiver: false
+}
 const initialCompanyForm = {
   companyName: '',
   details: '',
@@ -1382,6 +1390,18 @@ export default function HomeView({
         await fetchJson(`/api/locations/${editingLocationId}`, { method: 'PATCH', body: JSON.stringify(payload) })
       }
 
+      const alarmReceiverPayload = {
+        accountNumber: locationForm.alarmReceiverAccountNumber.trim(),
+        en: Boolean(locationForm.alarmReceiverEnabled),
+        users: locationForm.alarmReceiverUsers.trim(),
+        toggleCompanyAlarmReceiver: Boolean(locationForm.toggleCompanyAlarmReceiver)
+      }
+
+      await fetchJson(`/api/locations/${editingLocationId}/alarm-receiver`, {
+        method: 'PUT',
+        body: JSON.stringify(alarmReceiverPayload)
+      })
+
       setActionStatus({ type: 'success', message: 'Location updated successfully.' })
       setShowEditLocationModal(false)
       setEditingLocationId(null)
@@ -2007,11 +2027,16 @@ export default function HomeView({
   }, [prepareUserEditor, selectedUser])
   useEffect(() => {
     if (!selectedLocation) return
+    const alarmReceiverConfig = selectedLocation.alarmReceiverConfig || selectedLocation.alarm_receiver_config || {}
     setEditingLocationId(selectedLocation.id)
     setLocationForm({
       name: selectedLocation.name || '',
       details: selectedLocation.details || '',
-      companyId: selectedLocation.companyId || selectedLocation.company_id || selectedLocation.company?.id || ''
+      companyId: selectedLocation.companyId || selectedLocation.company_id || selectedLocation.company?.id || '',
+      alarmReceiverAccountNumber: alarmReceiverConfig.account_number || alarmReceiverConfig.accountNumber || '',
+      alarmReceiverEnabled: Boolean(alarmReceiverConfig.en),
+      alarmReceiverUsers: alarmReceiverConfig.users || '',
+      toggleCompanyAlarmReceiver: false
     })
   }, [selectedLocation])
   useEffect(() => {

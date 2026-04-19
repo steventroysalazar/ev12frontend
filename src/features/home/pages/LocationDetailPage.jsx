@@ -69,6 +69,37 @@ export default function LocationDetailPage({
               <input placeholder="Location name" value={locationForm.name} onChange={(event) => setLocationForm((prev) => ({ ...prev, name: event.target.value }))} />
               <input placeholder="Details" value={locationForm.details} onChange={(event) => setLocationForm((prev) => ({ ...prev, details: event.target.value }))} />
             </div>
+            <div className="section-head">
+              <h3 className="block-title">Alarm Receiver Configuration</h3>
+            </div>
+            <div className="field-grid two-col">
+              <input
+                placeholder="Account number"
+                value={locationForm.alarmReceiverAccountNumber || ''}
+                onChange={(event) => setLocationForm((prev) => ({ ...prev, alarmReceiverAccountNumber: event.target.value }))}
+              />
+              <input
+                placeholder="Users (comma-separated)"
+                value={locationForm.alarmReceiverUsers || ''}
+                onChange={(event) => setLocationForm((prev) => ({ ...prev, alarmReceiverUsers: event.target.value }))}
+              />
+              <label className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={Boolean(locationForm.alarmReceiverEnabled)}
+                  onChange={(event) => setLocationForm((prev) => ({ ...prev, alarmReceiverEnabled: event.target.checked }))}
+                />
+                <span>Enable location alarm receiver</span>
+              </label>
+              <label className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={Boolean(locationForm.toggleCompanyAlarmReceiver)}
+                  onChange={(event) => setLocationForm((prev) => ({ ...prev, toggleCompanyAlarmReceiver: event.target.checked }))}
+                />
+                <span>Toggle company alarm receiver after save</span>
+              </label>
+            </div>
           </article>
 
           <div className="section-head">
