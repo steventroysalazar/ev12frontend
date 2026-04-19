@@ -2389,12 +2389,16 @@ export default function HomeView({
 
     const currentDevice = ownedDevices[0] || devices[0]
     if (!currentDevice) return []
+    const alarmTriggeredAt = currentDevice.alarmTriggeredAt || currentDevice.alarm_triggered_at || null
+    const alarmCancelledAt = currentDevice.alarmCancelledAt || currentDevice.alarm_cancelled_at || null
 
     const deviceMeta = resolveDeviceMeta(currentDevice)
     return [
       ['Device Name', currentDevice.name || currentDevice.deviceName || '-'],
       ['Device Phone Number', currentDevice.phoneNumber || '-'],
       ['Alarm Status', resolveLiveAlarmCode(currentDevice) || 'No active alarm'],
+      ['Alarm Triggered', formatTimestamp(alarmTriggeredAt)],
+      ['Alarm Cancelled', formatTimestamp(alarmCancelledAt)],
       ['Last Power ON', formatTimestamp(currentDevice.lastPowerOnAt || currentDevice.last_power_on_at)],
       ['Last Power OFF', formatTimestamp(currentDevice.lastPowerOffAt || currentDevice.last_power_off_at)],
       ['Last Disconnected', formatTimestamp(currentDevice.lastDisconnectedAt || currentDevice.last_disconnected_at)],
@@ -2408,13 +2412,37 @@ export default function HomeView({
   const getAlarmCancelledAt = useCallback((device) => {
     const internalId = Number(device?.id || device?.deviceId || 0)
     const externalId = String(device?.externalDeviceId || device?.external_device_id || '').trim()
+    const liveEntry =
+      (internalId ? alarmStateByDevice?.[`id:${internalId}`] : null) ||
+      (externalId ? alarmStateByDevice?.[`ext:${externalId}`] : null)
 
     return (
+      liveEntry?.alarmCancelledAt ||
+      liveEntry?.alarm_cancelled_at ||
+      device?.alarmCancelledAt ||
+      device?.alarm_cancelled_at ||
       (internalId ? alarmCancelledAtByDevice?.[`id:${internalId}`] : null) ||
       (externalId ? alarmCancelledAtByDevice?.[`ext:${externalId}`] : null) ||
       null
     )
-  }, [alarmCancelledAtByDevice])
+  }, [alarmCancelledAtByDevice, alarmStateByDevice])
+
+  const getAlarmTriggeredAt = useCallback((device) => {
+    const internalId = Number(device?.id || device?.deviceId || 0)
+    const externalId = String(device?.externalDeviceId || device?.external_device_id || '').trim()
+    const liveEntry =
+      (internalId ? alarmStateByDevice?.[`id:${internalId}`] : null) ||
+      (externalId ? alarmStateByDevice?.[`ext:${externalId}`] : null)
+
+    return (
+      liveEntry?.alarmTriggeredAt ||
+      liveEntry?.alarm_triggered_at ||
+      (liveEntry?.alarmCode === null ? null : undefined) ||
+      device?.alarmTriggeredAt ||
+      device?.alarm_triggered_at ||
+      null
+    )
+  }, [alarmStateByDevice])
 
   const handleCancelAlarm = useCallback(async (device) => {
     try {
@@ -3024,6 +3052,8 @@ export default function HomeView({
             </div>
             {selectedWorkspaceDevice ? (
               <div className="lifecycle-grid">
+                <div className="lifecycle-card"><strong>Alarm Triggered</strong><span>{formatTimestamp(getAlarmTriggeredAt(selectedWorkspaceDevice))}</span></div>
+                <div className="lifecycle-card"><strong>Alarm Cancelled</strong><span>{formatTimestamp(getAlarmCancelledAt(selectedWorkspaceDevice))}</span></div>
                 <div className="lifecycle-card"><strong>Last Power ON</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastPowerOnAt || selectedWorkspaceDevice.last_power_on_at)}</span></div>
                 <div className="lifecycle-card"><strong>Last Power OFF</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastPowerOffAt || selectedWorkspaceDevice.last_power_off_at)}</span></div>
                 <div className="lifecycle-card"><strong>Last Disconnected</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastDisconnectedAt || selectedWorkspaceDevice.last_disconnected_at)}</span></div>

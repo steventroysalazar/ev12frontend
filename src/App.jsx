@@ -156,6 +156,14 @@ const normalizeAlarmUpdatePayload = (update) => {
       update?.alertCode ??
       update?.alert_code ??
       null,
+    alarmTriggeredAt:
+      update?.alarmTriggeredAt ??
+      update?.alarm_triggered_at ??
+      null,
+    alarmCancelledAt:
+      update?.alarmCancelledAt ??
+      update?.alarm_cancelled_at ??
+      null,
     updatedAt:
       update?.updatedAt ||
       update?.updated_at ||
@@ -367,6 +375,8 @@ export default function App() {
         alarm_code: null,
         alertCode: null,
         alert_code: null,
+        alarmTriggeredAt: null,
+        alarm_triggered_at: null,
         alarmCancelledAt: cancelledAt,
         alarm_cancelled_at: cancelledAt
       }
@@ -397,6 +407,8 @@ export default function App() {
         deviceId: resolvedInternalId || undefined,
         externalDeviceId: externalId || undefined,
         alarmCode: null,
+        alarmTriggeredAt: null,
+        alarmCancelledAt: cancelledAt,
         updatedAt: cancelledAt,
         source: 'portal-cancel'
       })
@@ -481,6 +493,8 @@ export default function App() {
       if (!resolvedDeviceId) return
 
       try {
+        const eventTimestamp = update?.updatedAt || new Date().toISOString()
+        const hasActiveAlarm = resolvedAlarmCode !== null
         const { response } = await fetchWithFallback(`/api/devices/${resolvedDeviceId}`, {
           method: 'PATCH',
           headers: {
@@ -491,7 +505,11 @@ export default function App() {
             alarmCode: resolvedAlarmCode,
             alarm_code: resolvedAlarmCode,
             alertCode: resolvedAlarmCode,
-            alert_code: resolvedAlarmCode
+            alert_code: resolvedAlarmCode,
+            alarmTriggeredAt: hasActiveAlarm ? eventTimestamp : null,
+            alarm_triggered_at: hasActiveAlarm ? eventTimestamp : null,
+            alarmCancelledAt: hasActiveAlarm ? null : undefined,
+            alarm_cancelled_at: hasActiveAlarm ? null : undefined
           })
         })
 
@@ -506,7 +524,11 @@ export default function App() {
               alarmCode: resolvedAlarmCode,
               alarm_code: resolvedAlarmCode,
               alertCode: resolvedAlarmCode,
-              alert_code: resolvedAlarmCode
+              alert_code: resolvedAlarmCode,
+              alarmTriggeredAt: hasActiveAlarm ? eventTimestamp : null,
+              alarm_triggered_at: hasActiveAlarm ? eventTimestamp : null,
+              alarmCancelledAt: hasActiveAlarm ? null : undefined,
+              alarm_cancelled_at: hasActiveAlarm ? null : undefined
             })
           })
         }
