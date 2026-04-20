@@ -3310,7 +3310,7 @@ export default function HomeView({
                       </button>
                     </div>
                   ))}
-                  <small className="field-hint">Commands are sent as `A#,1,0,<number>` and blank numbers are skipped automatically.</small>
+                  <small className="field-hint">Commands are sent as <code>A#,1,0,&lt;number&gt;</code> and blank numbers are skipped automatically.</small>
                 </div>
               ) : null}
             </article>
