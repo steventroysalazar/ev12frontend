@@ -224,7 +224,7 @@ const defaultSettingTooltipByField = {
   geoFenceEnabled: 'Default: device firmware profile',
   geoFenceRadius: 'Default: device firmware profile',
   geoFenceMode: 'Default: Leave Area (0)',
-  contacts: 'Default: up to 10 contacts (A1..A10)'
+  contacts: 'Default: SMS gateway slot uses A1,1,0,<number> then callin(0/1)'
 }
 
 function SettingDefaultHint({ field }) {
@@ -547,6 +547,7 @@ export default function HomeView({
   }, [])
 
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
+  const isSuperAdmin = normalizedRole === 'qview admin'
   const isAdminDashboard = normalizedRole === 'qview admin' || normalizedRole === 'company admin'
   const locationDeviceOptions = useMemo(() => {
     if (isAdminDashboard) return devices
@@ -573,7 +574,7 @@ export default function HomeView({
   const toggle = (key) => setConfigForm((prev) => ({ ...prev, [key]: !prev[key] }))
 
   const getContacts = (form) => {
-    if (Array.isArray(form.contacts) && form.contacts.length) return form.contacts.slice(0, 10)
+    if (Array.isArray(form.contacts) && form.contacts.length) return form.contacts.slice(0, 1)
 
     return [{
       slot: 1,
@@ -588,7 +589,7 @@ export default function HomeView({
     setConfigForm((prev) => {
       const baseContacts = getContacts(prev)
       const updatedContacts = updater(baseContacts)
-        .slice(0, 10)
+        .slice(0, 1)
         .map((contact, index) => ({
           slot: index + 1,
           name: contact.name || '',
@@ -612,6 +613,28 @@ export default function HomeView({
         contactNumber: primaryContact.phone,
         contactSmsEnabled: primaryContact.smsEnabled,
         contactCallEnabled: primaryContact.callEnabled
+      }
+    })
+  }
+
+  const getAuthorizedNumbers = (form) => {
+    if (Array.isArray(form.authorizedNumbers) && form.authorizedNumbers.length) {
+      return form.authorizedNumbers.slice(0, 10).map((value) => String(value || ''))
+    }
+
+    const primaryPhone = getContacts(form)[0]?.phone || ''
+    return [primaryPhone]
+  }
+
+  const updateAuthorizedNumbers = (updater) => {
+    setConfigForm((prev) => {
+      const nextAuthorizedNumbers = updater(getAuthorizedNumbers(prev))
+        .slice(0, 10)
+        .map((value) => String(value || ''))
+
+      return {
+        ...prev,
+        authorizedNumbers: nextAuthorizedNumbers
       }
     })
   }
@@ -1023,7 +1046,7 @@ export default function HomeView({
 
     setSelectedDevice(device)
     const seededContacts = Array.isArray(protocolSettings.contacts) && protocolSettings.contacts.length
-      ? protocolSettings.contacts.slice(0, 10)
+      ? protocolSettings.contacts.slice(0, 1)
       : [...getContacts(configForm)]
 
     const primaryName = device.ownerName || device.owner?.firstName || protocolSettings.contactName || seededContacts[0]?.name || configForm.contactName
@@ -1043,7 +1066,10 @@ export default function HomeView({
       deviceId: device.id || device.deviceId || configForm.deviceId,
       imei: device.imei || protocolSettings.imei || configForm.imei,
       prefixName: device.name || device.deviceName || protocolSettings.prefixName || configForm.prefixName,
-      contacts: seededContacts.slice(0, 10),
+      contacts: seededContacts.slice(0, 1),
+      authorizedNumbers: Array.isArray(protocolSettings.authorizedNumbers) && protocolSettings.authorizedNumbers.length
+        ? protocolSettings.authorizedNumbers.slice(0, 10).map((value) => String(value || ''))
+        : [primaryPhone || ''],
       contactSlot: protocolSettings.contactSlot || 1,
       contactNumber: primaryPhone || '',
       contactName: primaryName || ''
@@ -3185,28 +3211,88 @@ export default function HomeView({
             <article className="settings-group" id="setting-contacts" tabIndex={-1}>
               <div className="section-head">
                 <h3 className="block-title label-with-default-hint">Contact Information<SettingDefaultHint field="contacts" /></h3>
-                <button
-                  className="mini-action add-contact-btn device-detail-btn-primary"
-                  type="button"
-                  onClick={() => updateContacts((contacts) => [...contacts, { name: '', phone: '', smsEnabled: true, callEnabled: true }])}
-                  disabled={(configForm.contacts?.length || 1) >= 10}
-                >
-                  + Add Contact
-                </button>
               </div>
-              <div className="contact-table">
-                <div className="contact-head"><span>Contact</span><span>Name</span><span>Contact Number</span><span>SMS</span><span>Call</span><span>Action</span></div>
-                {getContacts(configForm).map((contact, index) => (
-                  <div className="contact-row" key={`contact-${index + 1}`}>
-                    <span className="chip">Contact {index + 1}</span>
-                    <input className="basic-config-input" value={contact.name} onChange={(event) => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, name: event.target.value } : entry))} placeholder="Lorem Ipsum" />
-                    <input className="basic-config-input" value={contact.phone} onChange={(event) => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, phone: event.target.value } : entry))} placeholder="+639184532165" />
-                    <label className="switch-row"><input type="checkbox" checked={contact.smsEnabled !== false} onChange={() => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, smsEnabled: entry.smsEnabled === false } : entry))} /><span className="switch-pill">{contact.smsEnabled !== false ? 'On' : 'Off'}</span></label>
-                    <label className="switch-row"><input type="checkbox" checked={contact.callEnabled !== false} onChange={() => updateContacts((contacts) => contacts.map((entry, entryIndex) => entryIndex === index ? { ...entry, callEnabled: entry.callEnabled === false } : entry))} /><span className="switch-pill">{contact.callEnabled !== false ? 'On' : 'Off'}</span></label>
-                    <button className="table-link remove-contact-btn" type="button" onClick={() => updateContacts((contacts) => contacts.length <= 1 ? contacts : contacts.filter((_, entryIndex) => entryIndex !== index))}>Remove</button>
+              {isSuperAdmin ? (
+                <div className="field-grid two-col">
+                  <div>
+                    <label>Gateway Name</label>
+                    <input
+                      className="basic-config-input"
+                      value={getContacts(configForm)[0]?.name || ''}
+                      onChange={(event) => updateContacts((contacts) => contacts.map((entry, entryIndex) => (entryIndex === 0 ? { ...entry, name: event.target.value } : entry)))}
+                      placeholder="SMS Gateway"
+                    />
                   </div>
-                ))}
-              </div>
+                  <div>
+                    <label>Gateway Number (A1)</label>
+                    <input
+                      className="basic-config-input"
+                      value={getContacts(configForm)[0]?.phone || ''}
+                      onChange={(event) => {
+                        const nextPhone = event.target.value
+                        updateContacts((contacts) => contacts.map((entry, entryIndex) => (entryIndex === 0 ? { ...entry, phone: nextPhone } : entry)))
+                        updateAuthorizedNumbers((numbers) => {
+                          const next = numbers.length ? [...numbers] : ['']
+                          next[0] = nextPhone
+                          return next
+                        })
+                      }}
+                      placeholder="+639693106202"
+                    />
+                    <small className="field-hint">Call delivery is forced OFF for gateway commands (`A1,1,0,...`) and cannot be changed.</small>
+                  </div>
+                  <div>
+                    <label className="switch-row">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(configForm.applyGatewayToAllDevices)}
+                        onChange={() => setConfigForm((prev) => ({ ...prev, applyGatewayToAllDevices: !prev.applyGatewayToAllDevices }))}
+                      />
+                      <span className="switch-pill">{configForm.applyGatewayToAllDevices ? 'Bulk On' : 'Bulk Off'}</span>
+                    </label>
+                    <small className="field-hint">When enabled, this gateway number is included in bulk settings payloads for all devices.</small>
+                  </div>
+                </div>
+              ) : (
+                <p className="status">Contact information is managed by Super Admin. This SMS gateway value is read-only for your role.</p>
+              )}
+              {isSuperAdmin ? (
+                <div className="contact-table" style={{ marginTop: '1rem' }}>
+                  <div className="section-head">
+                    <h4 className="block-title">Whitelisted Numbers (A1-A10)</h4>
+                    <button
+                      className="mini-action add-contact-btn device-detail-btn-primary"
+                      type="button"
+                      onClick={() => updateAuthorizedNumbers((numbers) => [...numbers, ''])}
+                      disabled={getAuthorizedNumbers(configForm).length >= 10}
+                    >
+                      + Add Number
+                    </button>
+                  </div>
+                  <div className="contact-head"><span>Slot</span><span>Number</span><span>SMS</span><span>Call</span><span>Action</span></div>
+                  {getAuthorizedNumbers(configForm).map((number, index) => (
+                    <div className="contact-row" key={`whitelist-${index + 1}`}>
+                      <span className="chip">A{index + 1}</span>
+                      <input
+                        className="basic-config-input"
+                        value={number}
+                        onChange={(event) => updateAuthorizedNumbers((numbers) => numbers.map((entry, entryIndex) => (entryIndex === index ? event.target.value : entry)))}
+                        placeholder="+447111111111"
+                      />
+                      <span className="chip">1</span>
+                      <span className="chip">0</span>
+                      <button
+                        className="table-link remove-contact-btn"
+                        type="button"
+                        onClick={() => updateAuthorizedNumbers((numbers) => numbers.length <= 1 ? [''] : numbers.filter((_, entryIndex) => entryIndex !== index))}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <small className="field-hint">Commands are sent as `A#,1,0,<number>` and blank numbers are skipped automatically.</small>
+                </div>
+              ) : null}
             </article>
             <div className="basic-config-footer-actions">
               <button
@@ -3428,6 +3514,9 @@ export default function HomeView({
               </p>
             </article>
             ) : null}
+            <div className="basic-config-footer-actions">
+              <button className="mini-action device-detail-btn-primary" type="button" onClick={openConfigReview} disabled={!configForm.deviceId || !configChangeRows.length}>Apply Changes</button>
+            </div>
           </section>
         )}
 
