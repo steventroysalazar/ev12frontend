@@ -31,9 +31,19 @@ export async function fetchWithFallback(url, options = {}) {
   const candidates = candidateUrls(url)
   let lastError = null
 
-  for (const candidate of candidates) {
+  for (let index = 0; index < candidates.length; index += 1) {
+    const candidate = candidates[index]
+
     try {
       const response = await fetch(candidate, options)
+      const canRetryAnotherCandidate = index < candidates.length - 1
+      const isServerGatewayError = response.status === 502 || response.status === 503 || response.status === 504
+
+      if (canRetryAnotherCandidate && isServerGatewayError) {
+        lastError = new Error(`Gateway error ${response.status} for ${candidate}`)
+        continue
+      }
+
       return { response, url: candidate }
     } catch (error) {
       lastError = error
