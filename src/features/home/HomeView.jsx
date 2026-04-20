@@ -3204,7 +3204,27 @@ export default function HomeView({
                 <div><label>IMEI</label><input className="basic-config-input" value={configForm.imei} placeholder="Testdevice" readOnly /></div>
                 <div id="setting-prefix-name" tabIndex={-1}><label className="label-with-default-hint">Device Name<SettingDefaultHint field="prefixName" /></label><input className="basic-config-input" title={defaultSettingTooltipByField.prefixName} value={configForm.prefixName} placeholder="Testdevice" onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
                 <div id="setting-sms-password" tabIndex={-1}><label className="label-with-default-hint">SMS Password<SettingDefaultHint field="smsPassword" /></label><input className="basic-config-input" title={defaultSettingTooltipByField.smsPassword} value={configForm.smsPassword} placeholder="Lorem Ipsum" onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} /><small className="field-hint">Default: 123456 (unless modified on the device)</small></div>
-                <div><label className="label-with-default-hint">SMS White List<SettingDefaultHint field="smsWhitelistEnabled" /></label><label className="switch-row"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={() => toggle('smsWhitelistEnabled')} /><span className="switch-pill" title={defaultSettingTooltipByField.smsWhitelistEnabled}>{configForm.smsWhitelistEnabled ? 'On' : 'Off'}</span></label></div>
+                <div>
+                  <label className="label-with-default-hint">SMS White List<SettingDefaultHint field="smsWhitelistEnabled" /></label>
+                  <label className="switch-row"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={() => toggle('smsWhitelistEnabled')} /><span className="switch-pill" title={defaultSettingTooltipByField.smsWhitelistEnabled}>{configForm.smsWhitelistEnabled ? 'On' : 'Off'}</span></label>
+                  {isSuperAdmin ? (
+                    <button
+                      className="mini-action add-contact-btn device-detail-btn-primary"
+                      type="button"
+                      onClick={() => {
+                        setConfigForm((prev) => ({ ...prev, smsWhitelistEnabled: true }))
+                        updateAuthorizedNumbers((numbers) => {
+                          const safeNumbers = numbers.slice(0, 10)
+                          if (safeNumbers.length >= 10) return safeNumbers
+                          return [...safeNumbers, '']
+                        })
+                      }}
+                      disabled={getAuthorizedNumbers(configForm).length >= 10}
+                    >
+                      + Add Device to Whitelist
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </article>
 
