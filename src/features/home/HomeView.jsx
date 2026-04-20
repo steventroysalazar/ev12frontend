@@ -339,6 +339,7 @@ export default function HomeView({
   const [showEditUserModal, setShowEditUserModal] = useState(false)
   const [showEditLocationModal, setShowEditLocationModal] = useState(false)
   const [showConfigReviewModal, setShowConfigReviewModal] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, message: '', onConfirm: null })
   const [deviceWorkspaceLoading, setDeviceWorkspaceLoading] = useState(false)
   const [advancedSettingsTab, setAdvancedSettingsTab] = useState('general')
   const [workspaceSettingQuery, setWorkspaceSettingQuery] = useState('')
@@ -2636,19 +2637,17 @@ export default function HomeView({
       setActionStatus({ type: 'error', message: 'Select a device before resetting defaults.' })
       return
     }
-
-    const shouldReset = typeof window !== 'undefined'
-      ? window.confirm('Reset this device to supported defaults and send only changed commands?')
-      : true
-
-    if (!shouldReset) return
-
-    const defaultedForm = applySupportedDeviceDefaults({
-      ...(configForm && typeof configForm === 'object' ? configForm : {})
+    setConfirmDialog({
+      open: true,
+      message: 'Reset this device to its default settings',
+      onConfirm: async () => {
+        const defaultedForm = applySupportedDeviceDefaults({
+          ...(configForm && typeof configForm === 'object' ? configForm : {})
+        })
+        setConfigForm(defaultedForm)
+        await sendConfig(defaultedForm)
+      }
     })
-
-    setConfigForm(defaultedForm)
-    await sendConfig(defaultedForm)
   }
 
   const confirmSendConfig = async () => {
@@ -2663,13 +2662,26 @@ export default function HomeView({
 
   const moveToDeviceSection = (nextSection, { force = false } = {}) => {
     if (!force && isDeviceWorkspaceSection && !isDeviceDetailSection(nextSection) && hasPendingWorkspaceChanges) {
-      const shouldLeave = typeof window !== 'undefined'
-        ? window.confirm('You have unsaved device changes. Leave this workspace anyway?')
-        : true
-      if (!shouldLeave) return false
+      setConfirmDialog({
+        open: true,
+        message: 'You have unsaved device changes. Leave this workspace anyway?',
+        onConfirm: () => setActiveSection(nextSection)
+      })
+      return false
     }
     setActiveSection(nextSection)
     return true
+  }
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ open: false, message: '', onConfirm: null })
+  }
+
+  const confirmDialogAction = async () => {
+    const callback = confirmDialog.onConfirm
+    closeConfirmDialog()
+    if (typeof callback !== 'function') return
+    await callback()
   }
 
   const jumpToChangedField = (fieldKey) => {
@@ -3950,6 +3962,19 @@ export default function HomeView({
           </section>
         )}
       </div>
+
+      {confirmDialog.open ? (
+        <div className="overlay" onClick={closeConfirmDialog}>
+          <div className="modal confirm-dialog-modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Confirm Action</h3>
+            <p className="status">{confirmDialog.message}</p>
+            <div className="section-head">
+              <button className="table-link action-chip action-chip-neutral" type="button" onClick={closeConfirmDialog}>Cancel</button>
+              <button className="mini-action" type="button" onClick={confirmDialogAction}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showConfigReviewModal ? (
         <div className="overlay" onClick={() => setShowConfigReviewModal(false)}>
