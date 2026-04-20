@@ -983,11 +983,12 @@ export default function App() {
     }
   }
 
-  const handleSendConfig = async () => {
-    const to = configForm.contactNumber?.trim() || phone.trim()
-    const normalizedDeviceId = Number(configForm.deviceId)
+  const handleSendConfig = async (formOverride = null) => {
+    const activeConfigForm = formOverride && typeof formOverride === 'object' ? formOverride : configForm
+    const to = activeConfigForm.contactNumber?.trim() || phone.trim()
+    const normalizedDeviceId = Number(activeConfigForm.deviceId)
     const hasDeviceId = Number.isInteger(normalizedDeviceId) && normalizedDeviceId > 0
-    let command = commandPreview.trim()
+    let command = buildEv12Preview(activeConfigForm, configBaseline).trim()
 
     if (!to) {
       setConfigStatus('Config failed: device/contact number is required.')
@@ -997,7 +998,7 @@ export default function App() {
     setLoading(true)
     setConfigStatus('Sending configuration...')
     try {
-      const protocolSettings = { ...configForm }
+      const protocolSettings = { ...activeConfigForm }
       let baselineForDiff = (configBaseline && typeof configBaseline === 'object')
         ? { ...configBaseline, deviceId: hasDeviceId ? normalizedDeviceId : configBaseline.deviceId }
         : null
@@ -1021,7 +1022,7 @@ export default function App() {
       }
 
       if (baselineForDiff) {
-        command = buildEv12Preview(configForm, baselineForDiff).trim()
+        command = buildEv12Preview(activeConfigForm, baselineForDiff).trim()
       }
 
       if (!command) {
@@ -1029,11 +1030,11 @@ export default function App() {
         return
       }
 
-      const changedProtocolSettings = pickChangedFields(configForm, baselineForDiff)
+      const changedProtocolSettings = pickChangedFields(activeConfigForm, baselineForDiff)
 
       const payload = {
-        ...configForm,
-        deviceId: hasDeviceId ? normalizedDeviceId : configForm.deviceId,
+        ...activeConfigForm,
+        deviceId: hasDeviceId ? normalizedDeviceId : activeConfigForm.deviceId,
         protocolSettings: changedProtocolSettings,
         to,
         command
@@ -1105,6 +1106,7 @@ export default function App() {
         }
         setConfigQueue(queueStatus)
         setConfigBaseline(protocolSettings)
+        setConfigForm(protocolSettings)
       }
 
       if (persisted) {
