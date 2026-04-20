@@ -1,3 +1,5 @@
+import { buildEviewSmsAccessSetup, SmsAccessValidationError } from './smsAccessSetup'
+
 export const initialConfigForm = {
   deviceId: '',
   imei: '',
@@ -9,6 +11,8 @@ export const initialConfigForm = {
   contacts: [
     { slot: 1, name: '', phone: '', smsEnabled: true, callEnabled: true }
   ],
+  authorizedNumbers: [''],
+  applyGatewayToAllDevices: false,
   smsPassword: '',
   smsWhitelistEnabled: false,
   requestLocation: true,
@@ -92,18 +96,45 @@ const normalizedContacts = (form) => {
   }]
 }
 
+const normalizedAuthorizedNumbers = (form) => {
+  if (Array.isArray(form.authorizedNumbers)) {
+    return form.authorizedNumbers
+      .slice(0, 10)
+      .map((value) => String(value || '').trim())
+  }
+
+  const contacts = normalizedContacts(form).map((contact) => contact.phone)
+  if (contacts.length) return contacts
+  if (form.contactNumber) return [String(form.contactNumber).trim()]
+  return []
+}
+
 const buildCommandEntries = (form) => {
   const entries = []
-
-  normalizedContacts(form).forEach((contact) => {
-    entries.push({
-      key: `contact-${contact.slot}`,
-      command: `A${contact.slot},${boolToFlag(contact.smsEnabled)},${boolToFlag(contact.callEnabled)},${contact.phone}${contact.name ? `,${contact.name}` : ''}`
+  let smsAccessSetup
+  try {
+    smsAccessSetup = buildEviewSmsAccessSetup({
+      authorizedNumbers: normalizedAuthorizedNumbers(form),
+      restrictedAccess: Boolean(form.smsWhitelistEnabled)
     })
+  } catch (error) {
+    if (!(error instanceof SmsAccessValidationError)) throw error
+    smsAccessSetup = {
+      config: {
+        authorizedNumbers: [],
+        restrictedAccess: Boolean(form.smsWhitelistEnabled),
+        accessModeSms: form.smsWhitelistEnabled ? 'callin(1)' : 'callin(0)'
+      },
+      smsQueue: [form.smsWhitelistEnabled ? 'callin(1)' : 'callin(0)']
+    }
+  }
+
+  smsAccessSetup.config.authorizedNumbers.forEach((contact) => {
+    entries.push({ key: `contact-${contact.slot}`, command: contact.sms })
   })
+  entries.push({ key: 'smsWhitelistEnabled', command: smsAccessSetup.config.accessModeSms })
 
   if (form.smsPassword) entries.push({ key: 'smsPassword', command: `P${form.smsPassword}` })
-  if (form.smsWhitelistEnabled) entries.push({ key: 'smsWhitelistEnabled', command: 'sms1' })
   if (form.requestLocation) entries.push({ key: 'requestLocation', command: 'Loc' })
   if (form.requestGpsLocation) entries.push({ key: 'requestGpsLocation', command: 'loc,gps' })
   if (form.requestLbsLocation) entries.push({ key: 'requestLbsLocation', command: 'LBS1' })
