@@ -17,7 +17,7 @@ export const initialConfigForm = {
   sosMode: 1,
   sosActionTime: 20,
   fallDownEnabled: '1',
-  fallDownSensitivity: 5,
+  fallDownSensitivity: '6',
   fallDownCall: true,
   motionAlarmType: 'motion',
   motionEnabled: '1',
@@ -30,13 +30,27 @@ export const initialConfigForm = {
   geoFenceMode: '0',
   geoFenceRadius: '100m',
   wifiEnabled: '1',
-  speakerVolume: '90',
+  speakerVolume: '100',
   prefixName: 'Emma',
   continuousLocateInterval: '10s',
   continuousLocateDuration: '600s',
   timeZone: '+08:00',
   checkStatus: true
 }
+
+export const SUPPORTED_DEVICE_DEFAULTS = {
+  smsWhitelistEnabled: false,
+  sosMode: '1',
+  sosActionTime: '20',
+  fallDownEnabled: '1',
+  fallDownSensitivity: '6',
+  speakerVolume: '100'
+}
+
+export const applySupportedDeviceDefaults = (form = {}) => ({
+  ...form,
+  ...SUPPORTED_DEVICE_DEFAULTS
+})
 
 const boolToFlag = (value) => (value ? 1 : 0)
 const normalizeMotionAlarmType = (value) => (value === 'no-motion' ? 'no-motion' : 'motion')
