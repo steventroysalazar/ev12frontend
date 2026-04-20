@@ -6,6 +6,8 @@ export interface SmsAccessSetupInput {
 export interface AuthorizedNumberConfig {
   slot: number
   number: string
+  smsEnabled: 1
+  callEnabled: 0
   sms: string
 }
 
@@ -87,7 +89,9 @@ export const buildEviewSmsAccessSetup = (input: SmsAccessSetupInput = {}): SmsAc
       return {
         slot,
         number: normalized,
-        sms: `A${slot},${normalized}`
+        smsEnabled: 1 as const,
+        callEnabled: 0 as const,
+        sms: `A${slot},1,0,${normalized}`
       }
     })
     .filter((entry): entry is AuthorizedNumberConfig => Boolean(entry))

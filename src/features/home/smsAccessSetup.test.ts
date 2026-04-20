@@ -23,12 +23,12 @@ describe('buildEviewSmsAccessSetup', () => {
     })).toEqual({
       config: {
         authorizedNumbers: [
-          { slot: 1, number: '+447111111111', sms: 'A1,+447111111111' }
+          { slot: 1, number: '+447111111111', smsEnabled: 1, callEnabled: 0, sms: 'A1,1,0,+447111111111' }
         ],
         restrictedAccess: false,
         accessModeSms: 'callin(0)'
       },
-      smsQueue: ['A1,+447111111111', 'callin(0)']
+      smsQueue: ['A1,1,0,+447111111111', 'callin(0)']
     })
   })
 
@@ -39,14 +39,14 @@ describe('buildEviewSmsAccessSetup', () => {
     })).toEqual({
       config: {
         authorizedNumbers: [
-          { slot: 1, number: '+447111111111', sms: 'A1,+447111111111' },
-          { slot: 2, number: '+447222222222', sms: 'A2,+447222222222' },
-          { slot: 3, number: '+447333333333', sms: 'A3,+447333333333' }
+          { slot: 1, number: '+447111111111', smsEnabled: 1, callEnabled: 0, sms: 'A1,1,0,+447111111111' },
+          { slot: 2, number: '+447222222222', smsEnabled: 1, callEnabled: 0, sms: 'A2,1,0,+447222222222' },
+          { slot: 3, number: '+447333333333', smsEnabled: 1, callEnabled: 0, sms: 'A3,1,0,+447333333333' }
         ],
         restrictedAccess: true,
         accessModeSms: 'callin(1)'
       },
-      smsQueue: ['A1,+447111111111', 'A2,+447222222222', 'A3,+447333333333', 'callin(1)']
+      smsQueue: ['A1,1,0,+447111111111', 'A2,1,0,+447222222222', 'A3,1,0,+447333333333', 'callin(1)']
     })
   })
 
@@ -57,13 +57,13 @@ describe('buildEviewSmsAccessSetup', () => {
     })).toEqual({
       config: {
         authorizedNumbers: [
-          { slot: 1, number: '+447111111111', sms: 'A1,+447111111111' },
-          { slot: 4, number: '+447444444444', sms: 'A4,+447444444444' }
+          { slot: 1, number: '+447111111111', smsEnabled: 1, callEnabled: 0, sms: 'A1,1,0,+447111111111' },
+          { slot: 4, number: '+447444444444', smsEnabled: 1, callEnabled: 0, sms: 'A4,1,0,+447444444444' }
         ],
         restrictedAccess: false,
         accessModeSms: 'callin(0)'
       },
-      smsQueue: ['A1,+447111111111', 'A4,+447444444444', 'callin(0)']
+      smsQueue: ['A1,1,0,+447111111111', 'A4,1,0,+447444444444', 'callin(0)']
     })
   })
 

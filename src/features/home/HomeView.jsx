@@ -224,7 +224,7 @@ const defaultSettingTooltipByField = {
   geoFenceEnabled: 'Default: device firmware profile',
   geoFenceRadius: 'Default: device firmware profile',
   geoFenceMode: 'Default: Leave Area (0)',
-  contacts: 'Default: SMS gateway slot uses A1, followed by callin(0/1)'
+  contacts: 'Default: SMS gateway slot uses A1,1,0,<number> then callin(0/1)'
 }
 
 function SettingDefaultHint({ field }) {
@@ -3206,6 +3206,7 @@ export default function HomeView({
                       onChange={(event) => updateContacts((contacts) => contacts.map((entry, entryIndex) => (entryIndex === 0 ? { ...entry, phone: event.target.value } : entry)))}
                       placeholder="+639693106202"
                     />
+                    <small className="field-hint">Call delivery is forced OFF for gateway commands (`A1,1,0,...`) and cannot be changed.</small>
                   </div>
                   <div>
                     <label className="switch-row">
