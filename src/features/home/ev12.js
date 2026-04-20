@@ -1,3 +1,5 @@
+import { buildEviewSmsAccessSetup } from './smsAccessSetup'
+
 export const initialConfigForm = {
   deviceId: '',
   imei: '',
@@ -9,6 +11,7 @@ export const initialConfigForm = {
   contacts: [
     { slot: 1, name: '', phone: '', smsEnabled: true, callEnabled: true }
   ],
+  applyGatewayToAllDevices: false,
   smsPassword: '',
   smsWhitelistEnabled: false,
   requestLocation: true,
@@ -94,16 +97,17 @@ const normalizedContacts = (form) => {
 
 const buildCommandEntries = (form) => {
   const entries = []
-
-  normalizedContacts(form).forEach((contact) => {
-    entries.push({
-      key: `contact-${contact.slot}`,
-      command: `A${contact.slot},${boolToFlag(contact.smsEnabled)},${boolToFlag(contact.callEnabled)},${contact.phone}${contact.name ? `,${contact.name}` : ''}`
-    })
+  const smsAccessSetup = buildEviewSmsAccessSetup({
+    authorizedNumbers: normalizedContacts(form).map((contact) => contact.phone),
+    restrictedAccess: Boolean(form.smsWhitelistEnabled)
   })
 
+  smsAccessSetup.config.authorizedNumbers.forEach((contact) => {
+    entries.push({ key: `contact-${contact.slot}`, command: contact.sms })
+  })
+  entries.push({ key: 'smsWhitelistEnabled', command: smsAccessSetup.config.accessModeSms })
+
   if (form.smsPassword) entries.push({ key: 'smsPassword', command: `P${form.smsPassword}` })
-  if (form.smsWhitelistEnabled) entries.push({ key: 'smsWhitelistEnabled', command: 'sms1' })
   if (form.requestLocation) entries.push({ key: 'requestLocation', command: 'Loc' })
   if (form.requestGpsLocation) entries.push({ key: 'requestGpsLocation', command: 'loc,gps' })
   if (form.requestLbsLocation) entries.push({ key: 'requestLbsLocation', command: 'LBS1' })

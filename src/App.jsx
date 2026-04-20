@@ -4,6 +4,7 @@ import HomeView from './features/home/HomeView'
 import LoginView from './features/login/LoginView'
 import RegisterView from './features/register/RegisterView'
 import { buildEv12Preview, formatReply, initialConfigForm } from './features/home/ev12'
+import { buildEviewSmsAccessSetup } from './features/home/smsAccessSetup'
 import { fetchWithFallback } from './lib/apiClient'
 import { startAlarmStream } from './lib/alarmStream'
 import { authReducer, initialAuthState, loadPersistedAuth, persistAuth } from './store/authStore'
@@ -1038,6 +1039,18 @@ export default function App() {
         protocolSettings: changedProtocolSettings,
         to,
         command
+      }
+
+      if (activeConfigForm.applyGatewayToAllDevices) {
+        const gatewaySetup = buildEviewSmsAccessSetup({
+          authorizedNumbers: [activeConfigForm.contactNumber || activeConfigForm.contacts?.[0]?.phone || ''],
+          restrictedAccess: Boolean(activeConfigForm.smsWhitelistEnabled)
+        })
+        payload.bulkGatewaySettings = {
+          enabled: true,
+          gatewayNumber: gatewaySetup.config.authorizedNumbers[0]?.number || '',
+          smsQueue: gatewaySetup.smsQueue
+        }
       }
       const endpoints = ['/api/send-config', '/api/config/send', '/api/messages/send']
 
