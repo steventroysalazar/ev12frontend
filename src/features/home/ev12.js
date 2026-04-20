@@ -1,4 +1,4 @@
-import { buildEviewSmsAccessSetup } from './smsAccessSetup'
+import { buildEviewSmsAccessSetup, SmsAccessValidationError } from './smsAccessSetup'
 
 export const initialConfigForm = {
   deviceId: '',
@@ -11,6 +11,7 @@ export const initialConfigForm = {
   contacts: [
     { slot: 1, name: '', phone: '', smsEnabled: true, callEnabled: true }
   ],
+  authorizedNumbers: [''],
   applyGatewayToAllDevices: false,
   smsPassword: '',
   smsWhitelistEnabled: false,
@@ -95,12 +96,38 @@ const normalizedContacts = (form) => {
   }]
 }
 
+const normalizedAuthorizedNumbers = (form) => {
+  if (Array.isArray(form.authorizedNumbers)) {
+    return form.authorizedNumbers
+      .slice(0, 10)
+      .map((value) => String(value || '').trim())
+  }
+
+  const contacts = normalizedContacts(form).map((contact) => contact.phone)
+  if (contacts.length) return contacts
+  if (form.contactNumber) return [String(form.contactNumber).trim()]
+  return []
+}
+
 const buildCommandEntries = (form) => {
   const entries = []
-  const smsAccessSetup = buildEviewSmsAccessSetup({
-    authorizedNumbers: normalizedContacts(form).map((contact) => contact.phone),
-    restrictedAccess: Boolean(form.smsWhitelistEnabled)
-  })
+  let smsAccessSetup
+  try {
+    smsAccessSetup = buildEviewSmsAccessSetup({
+      authorizedNumbers: normalizedAuthorizedNumbers(form),
+      restrictedAccess: Boolean(form.smsWhitelistEnabled)
+    })
+  } catch (error) {
+    if (!(error instanceof SmsAccessValidationError)) throw error
+    smsAccessSetup = {
+      config: {
+        authorizedNumbers: [],
+        restrictedAccess: Boolean(form.smsWhitelistEnabled),
+        accessModeSms: form.smsWhitelistEnabled ? 'callin(1)' : 'callin(0)'
+      },
+      smsQueue: [form.smsWhitelistEnabled ? 'callin(1)' : 'callin(0)']
+    }
+  }
 
   smsAccessSetup.config.authorizedNumbers.forEach((contact) => {
     entries.push({ key: `contact-${contact.slot}`, command: contact.sms })

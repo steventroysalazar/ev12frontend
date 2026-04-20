@@ -999,6 +999,14 @@ export default function App() {
     setLoading(true)
     setConfigStatus('Sending configuration...')
     try {
+      const authorizedNumbersForValidation = Array.isArray(activeConfigForm.authorizedNumbers)
+        ? activeConfigForm.authorizedNumbers
+        : [activeConfigForm.contactNumber || activeConfigForm.contacts?.[0]?.phone || '']
+      buildEviewSmsAccessSetup({
+        authorizedNumbers: authorizedNumbersForValidation,
+        restrictedAccess: Boolean(activeConfigForm.smsWhitelistEnabled)
+      })
+
       const protocolSettings = { ...activeConfigForm }
       let baselineForDiff = (configBaseline && typeof configBaseline === 'object')
         ? { ...configBaseline, deviceId: hasDeviceId ? normalizedDeviceId : configBaseline.deviceId }
@@ -1043,7 +1051,9 @@ export default function App() {
 
       if (activeConfigForm.applyGatewayToAllDevices) {
         const gatewaySetup = buildEviewSmsAccessSetup({
-          authorizedNumbers: [activeConfigForm.contactNumber || activeConfigForm.contacts?.[0]?.phone || ''],
+          authorizedNumbers: Array.isArray(activeConfigForm.authorizedNumbers)
+            ? activeConfigForm.authorizedNumbers
+            : [activeConfigForm.contactNumber || activeConfigForm.contacts?.[0]?.phone || ''],
           restrictedAccess: Boolean(activeConfigForm.smsWhitelistEnabled)
         })
         payload.bulkGatewaySettings = {

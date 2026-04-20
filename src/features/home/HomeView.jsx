@@ -617,6 +617,28 @@ export default function HomeView({
     })
   }
 
+  const getAuthorizedNumbers = (form) => {
+    if (Array.isArray(form.authorizedNumbers) && form.authorizedNumbers.length) {
+      return form.authorizedNumbers.slice(0, 10).map((value) => String(value || ''))
+    }
+
+    const primaryPhone = getContacts(form)[0]?.phone || ''
+    return [primaryPhone]
+  }
+
+  const updateAuthorizedNumbers = (updater) => {
+    setConfigForm((prev) => {
+      const nextAuthorizedNumbers = updater(getAuthorizedNumbers(prev))
+        .slice(0, 10)
+        .map((value) => String(value || ''))
+
+      return {
+        ...prev,
+        authorizedNumbers: nextAuthorizedNumbers
+      }
+    })
+  }
+
 
 
   const asCollection = useCallback((payload, keys = []) => {
@@ -1045,6 +1067,9 @@ export default function HomeView({
       imei: device.imei || protocolSettings.imei || configForm.imei,
       prefixName: device.name || device.deviceName || protocolSettings.prefixName || configForm.prefixName,
       contacts: seededContacts.slice(0, 1),
+      authorizedNumbers: Array.isArray(protocolSettings.authorizedNumbers) && protocolSettings.authorizedNumbers.length
+        ? protocolSettings.authorizedNumbers.slice(0, 10).map((value) => String(value || ''))
+        : [primaryPhone || ''],
       contactSlot: protocolSettings.contactSlot || 1,
       contactNumber: primaryPhone || '',
       contactName: primaryName || ''
@@ -3203,7 +3228,15 @@ export default function HomeView({
                     <input
                       className="basic-config-input"
                       value={getContacts(configForm)[0]?.phone || ''}
-                      onChange={(event) => updateContacts((contacts) => contacts.map((entry, entryIndex) => (entryIndex === 0 ? { ...entry, phone: event.target.value } : entry)))}
+                      onChange={(event) => {
+                        const nextPhone = event.target.value
+                        updateContacts((contacts) => contacts.map((entry, entryIndex) => (entryIndex === 0 ? { ...entry, phone: nextPhone } : entry)))
+                        updateAuthorizedNumbers((numbers) => {
+                          const next = numbers.length ? [...numbers] : ['']
+                          next[0] = nextPhone
+                          return next
+                        })
+                      }}
                       placeholder="+639693106202"
                     />
                     <small className="field-hint">Call delivery is forced OFF for gateway commands (`A1,1,0,...`) and cannot be changed.</small>
@@ -3223,6 +3256,43 @@ export default function HomeView({
               ) : (
                 <p className="status">Contact information is managed by Super Admin. This SMS gateway value is read-only for your role.</p>
               )}
+              {isSuperAdmin ? (
+                <div className="contact-table" style={{ marginTop: '1rem' }}>
+                  <div className="section-head">
+                    <h4 className="block-title">Whitelisted Numbers (A1-A10)</h4>
+                    <button
+                      className="mini-action add-contact-btn device-detail-btn-primary"
+                      type="button"
+                      onClick={() => updateAuthorizedNumbers((numbers) => [...numbers, ''])}
+                      disabled={getAuthorizedNumbers(configForm).length >= 10}
+                    >
+                      + Add Number
+                    </button>
+                  </div>
+                  <div className="contact-head"><span>Slot</span><span>Number</span><span>SMS</span><span>Call</span><span>Action</span></div>
+                  {getAuthorizedNumbers(configForm).map((number, index) => (
+                    <div className="contact-row" key={`whitelist-${index + 1}`}>
+                      <span className="chip">A{index + 1}</span>
+                      <input
+                        className="basic-config-input"
+                        value={number}
+                        onChange={(event) => updateAuthorizedNumbers((numbers) => numbers.map((entry, entryIndex) => (entryIndex === index ? event.target.value : entry)))}
+                        placeholder="+447111111111"
+                      />
+                      <span className="chip">1</span>
+                      <span className="chip">0</span>
+                      <button
+                        className="table-link remove-contact-btn"
+                        type="button"
+                        onClick={() => updateAuthorizedNumbers((numbers) => numbers.length <= 1 ? [''] : numbers.filter((_, entryIndex) => entryIndex !== index))}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <small className="field-hint">Commands are sent as `A#,1,0,<number>` and blank numbers are skipped automatically.</small>
+                </div>
+              ) : null}
             </article>
             <div className="basic-config-footer-actions">
               <button
@@ -3444,6 +3514,9 @@ export default function HomeView({
               </p>
             </article>
             ) : null}
+            <div className="basic-config-footer-actions">
+              <button className="mini-action device-detail-btn-primary" type="button" onClick={openConfigReview} disabled={!configForm.deviceId || !configChangeRows.length}>Apply Changes</button>
+            </div>
           </section>
         )}
 
