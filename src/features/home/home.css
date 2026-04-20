@@ -431,6 +431,27 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   letter-spacing: 0.02em;
 }
 
+.label-with-default-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.setting-default-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid #bfd0ea;
+  background: #edf3ff;
+  color: #3f5f91;
+  cursor: help;
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
 .device-profile-grid input,
 .device-profile-grid select {
   height: 44px;

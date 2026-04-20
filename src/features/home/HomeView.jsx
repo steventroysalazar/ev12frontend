@@ -9,6 +9,7 @@ import CompaniesPage from './pages/CompaniesPage'
 import DeviceSettingsPage from './pages/DeviceSettingsPage'
 import UserDetailPage from './pages/UserDetailPage'
 import LocationDetailPage from './pages/LocationDetailPage'
+import { applySupportedDeviceDefaults } from './ev12'
 import './home.css'
 
 const initialLocationForm = {
@@ -202,6 +203,41 @@ const workspaceSettingCatalog = [
   { key: 'commands-queue', label: 'Send Commands: Command Queue', section: 'device-detail-commands', anchorId: 'setting-command-queue' }
 ]
 
+const defaultSettingTooltipByField = {
+  prefixName: 'Default: use current device name',
+  smsPassword: 'Default: 123456',
+  smsWhitelistEnabled: 'Default: Off',
+  wifiEnabled: 'Default: device firmware profile',
+  speakerVolume: 'Default: 100',
+  continuousLocateInterval: 'Default: 180 sec',
+  continuousLocateDuration: 'Default: device firmware profile',
+  timeZone: 'Default: device firmware profile',
+  checkStatus: 'Default: enabled status check',
+  sosMode: 'Default: Long Press',
+  sosActionTime: 'Default: 2.0s',
+  fallDownEnabled: 'Default: On',
+  fallDownSensitivity: 'Default: 6',
+  motionAlarmType: 'Default: device firmware profile',
+  motionEnabled: 'Default: device firmware profile',
+  motionStaticTime: 'Default: device firmware profile',
+  motionDurationTime: 'Default: device firmware profile',
+  geoFenceEnabled: 'Default: device firmware profile',
+  geoFenceRadius: 'Default: device firmware profile',
+  geoFenceMode: 'Default: Leave Area (0)',
+  contacts: 'Default: up to 10 contacts (A1..A10)'
+}
+
+function SettingDefaultHint({ field }) {
+  const hint = defaultSettingTooltipByField[field]
+  if (!hint) return null
+
+  return (
+    <span className="setting-default-hint" title={hint} aria-label={hint}>
+      ⓘ
+    </span>
+  )
+}
+
 export default function HomeView({
   user,
   onLogout,
@@ -303,6 +339,7 @@ export default function HomeView({
   const [showEditUserModal, setShowEditUserModal] = useState(false)
   const [showEditLocationModal, setShowEditLocationModal] = useState(false)
   const [showConfigReviewModal, setShowConfigReviewModal] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, message: '', onConfirm: null })
   const [deviceWorkspaceLoading, setDeviceWorkspaceLoading] = useState(false)
   const [advancedSettingsTab, setAdvancedSettingsTab] = useState('general')
   const [workspaceSettingQuery, setWorkspaceSettingQuery] = useState('')
@@ -1171,6 +1208,7 @@ export default function HomeView({
         version: deviceForm.eviewVersion.trim(),
         locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
         userId: Number(deviceForm.ownerUserId),
+        protocolSettings: applySupportedDeviceDefaults({}),
         ...(deviceForm.externalDeviceId.trim()
           ? { externalDeviceId: deviceForm.externalDeviceId.trim(), deviceId: deviceForm.externalDeviceId.trim() }
           : {})
@@ -2594,6 +2632,24 @@ export default function HomeView({
     setShowConfigReviewModal(true)
   }
 
+  const applyDefaultsAndSendConfig = async () => {
+    if (!configForm.deviceId) {
+      setActionStatus({ type: 'error', message: 'Select a device before resetting defaults.' })
+      return
+    }
+    setConfirmDialog({
+      open: true,
+      message: 'Reset this device to its default settings',
+      onConfirm: async () => {
+        const defaultedForm = applySupportedDeviceDefaults({
+          ...(configForm && typeof configForm === 'object' ? configForm : {})
+        })
+        setConfigForm(defaultedForm)
+        await sendConfig(defaultedForm)
+      }
+    })
+  }
+
   const confirmSendConfig = async () => {
     try {
       await sendConfig()
@@ -2606,13 +2662,26 @@ export default function HomeView({
 
   const moveToDeviceSection = (nextSection, { force = false } = {}) => {
     if (!force && isDeviceWorkspaceSection && !isDeviceDetailSection(nextSection) && hasPendingWorkspaceChanges) {
-      const shouldLeave = typeof window !== 'undefined'
-        ? window.confirm('You have unsaved device changes. Leave this workspace anyway?')
-        : true
-      if (!shouldLeave) return false
+      setConfirmDialog({
+        open: true,
+        message: 'You have unsaved device changes. Leave this workspace anyway?',
+        onConfirm: () => setActiveSection(nextSection)
+      })
+      return false
     }
     setActiveSection(nextSection)
     return true
+  }
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ open: false, message: '', onConfirm: null })
+  }
+
+  const confirmDialogAction = async () => {
+    const callback = confirmDialog.onConfirm
+    closeConfirmDialog()
+    if (typeof callback !== 'function') return
+    await callback()
   }
 
   const jumpToChangedField = (fieldKey) => {
@@ -3107,15 +3176,15 @@ export default function HomeView({
               <h3 className="block-title">Basic Configuration</h3>
               <div className="field-grid two-col">
                 <div><label>IMEI</label><input className="basic-config-input" value={configForm.imei} placeholder="Testdevice" readOnly /></div>
-                <div id="setting-prefix-name" tabIndex={-1}><label>Device Name</label><input className="basic-config-input" value={configForm.prefixName} placeholder="Testdevice" onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
-                <div id="setting-sms-password" tabIndex={-1}><label>SMS Password</label><input className="basic-config-input" value={configForm.smsPassword} placeholder="Lorem Ipsum" onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} /><small className="field-hint">Default: 123456 (unless modified on the device)</small></div>
-                <div><label>SMS White List</label><label className="switch-row"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={() => toggle('smsWhitelistEnabled')} /><span className="switch-pill">{configForm.smsWhitelistEnabled ? 'On' : 'Off'}</span></label></div>
+                <div id="setting-prefix-name" tabIndex={-1}><label className="label-with-default-hint">Device Name<SettingDefaultHint field="prefixName" /></label><input className="basic-config-input" title={defaultSettingTooltipByField.prefixName} value={configForm.prefixName} placeholder="Testdevice" onChange={(event) => setConfigForm((prev) => ({ ...prev, prefixName: event.target.value }))} /></div>
+                <div id="setting-sms-password" tabIndex={-1}><label className="label-with-default-hint">SMS Password<SettingDefaultHint field="smsPassword" /></label><input className="basic-config-input" title={defaultSettingTooltipByField.smsPassword} value={configForm.smsPassword} placeholder="Lorem Ipsum" onChange={(event) => setConfigForm((prev) => ({ ...prev, smsPassword: event.target.value }))} /><small className="field-hint">Default: 123456 (unless modified on the device)</small></div>
+                <div><label className="label-with-default-hint">SMS White List<SettingDefaultHint field="smsWhitelistEnabled" /></label><label className="switch-row"><input type="checkbox" checked={configForm.smsWhitelistEnabled} onChange={() => toggle('smsWhitelistEnabled')} /><span className="switch-pill" title={defaultSettingTooltipByField.smsWhitelistEnabled}>{configForm.smsWhitelistEnabled ? 'On' : 'Off'}</span></label></div>
               </div>
             </article>
 
             <article className="settings-group" id="setting-contacts" tabIndex={-1}>
               <div className="section-head">
-                <h3 className="block-title">Contact Information</h3>
+                <h3 className="block-title label-with-default-hint">Contact Information<SettingDefaultHint field="contacts" /></h3>
                 <button
                   className="mini-action add-contact-btn device-detail-btn-primary"
                   type="button"
@@ -3148,6 +3217,15 @@ export default function HomeView({
               >
                 Discard Changes
               </button>
+              <button
+                className="table-link action-chip action-chip-neutral device-detail-btn-secondary"
+                type="button"
+                onClick={applyDefaultsAndSendConfig}
+                disabled={!configForm.deviceId || loading}
+                title="Apply default settings and send only the changed commands."
+              >
+                Reset to Defaults
+              </button>
               <button className="mini-action device-detail-btn-primary" type="button" onClick={openConfigReview} disabled={!configForm.deviceId || !configChangeRows.length}>Apply Changes</button>
             </div>
           </section>
@@ -3174,14 +3252,14 @@ export default function HomeView({
               </div>
               <div className="advanced-form-grid">
                 <div className="advanced-form-row">
-                  <label>Wi-Fi Positioning</label>
+                  <label className="label-with-default-hint">Wi-Fi Positioning<SettingDefaultHint field="wifiEnabled" /></label>
                   <label className="switch-row">
                     <input type="checkbox" checked={configForm.wifiEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, wifiEnabled: prev.wifiEnabled === '1' ? '0' : '1' }))} />
                     <span>{configForm.wifiEnabled === '1' ? 'On' : 'Off'}</span>
                   </label>
                 </div>
                 <div className="advanced-form-row" id="setting-speaker-volume" tabIndex={-1}>
-                  <label>Speaker Volume</label>
+                  <label className="label-with-default-hint">Speaker Volume<SettingDefaultHint field="speakerVolume" /></label>
                   <div className="range-with-value">
                     <input
                       type="range"
@@ -3195,28 +3273,28 @@ export default function HomeView({
                   </div>
                 </div>
                 <div className="advanced-form-row">
-                  <label>Continuous Tracking Interval (seconds)</label>
+                  <label className="label-with-default-hint">Continuous Tracking Interval (seconds)<SettingDefaultHint field="continuousLocateInterval" /></label>
                   <div>
                     <input type="number" min="5" step="1" value={configForm.continuousLocateInterval} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateInterval: event.target.value }))} />
                     <small className="field-hint">Recommended: 30-300s.</small>
                   </div>
                 </div>
                 <div className="advanced-form-row">
-                  <label>Continuous Tracking Duration (seconds)</label>
+                  <label className="label-with-default-hint">Continuous Tracking Duration (seconds)<SettingDefaultHint field="continuousLocateDuration" /></label>
                   <div>
                     <input type="number" min="30" step="1" value={configForm.continuousLocateDuration} onChange={(event) => setConfigForm((prev) => ({ ...prev, continuousLocateDuration: event.target.value }))} />
                     <small className="field-hint">Recommended: 60-3600s.</small>
                   </div>
                 </div>
                 <div className="advanced-form-row" id="setting-timezone" tabIndex={-1}>
-                  <label>Timezone (UTC offset)</label>
+                  <label className="label-with-default-hint">Timezone (UTC offset)<SettingDefaultHint field="timeZone" /></label>
                   <div>
                     <input placeholder="e.g. +0 or +8" value={configForm.timeZone} onChange={(event) => setConfigForm((prev) => ({ ...prev, timeZone: event.target.value }))} />
                     <small className="field-hint">Use device-supported offset format.</small>
                   </div>
                 </div>
                 <div className="advanced-form-row">
-                  <label>Timezone (UTC offset)</label>
+                  <label className="label-with-default-hint">Timezone (UTC offset)<SettingDefaultHint field="checkStatus" /></label>
                   <label className="switch-row"><input type="checkbox" checked={configForm.checkStatus} onChange={() => toggle('checkStatus')} /><span>{configForm.checkStatus ? 'On' : 'Off'}</span></label>
                 </div>
               </div>
@@ -3229,11 +3307,11 @@ export default function HomeView({
               <div className="alarm-card">
                 <h4>SOS Action</h4>
                 <div className="advanced-form-row">
-                  <label>Mode</label>
+                  <label className="label-with-default-hint">Mode<SettingDefaultHint field="sosMode" /></label>
                   <select value={configForm.sosMode} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosMode: event.target.value }))}><option value="1">Long Press</option><option value="2">Double Click</option></select>
                 </div>
                 <div className="advanced-form-row">
-                  <label>Action Time</label>
+                  <label className="label-with-default-hint">Action Time<SettingDefaultHint field="sosActionTime" /></label>
                   <div className="range-with-value">
                     <input type="range" min="5" max="60" value={configForm.sosActionTime} style={getRangeProgressStyle(configForm.sosActionTime, 5, 60)} onChange={(event) => setConfigForm((prev) => ({ ...prev, sosActionTime: event.target.value }))} />
                     <span className="range-value">{configForm.sosActionTime}</span>
@@ -3243,11 +3321,11 @@ export default function HomeView({
               <div className="alarm-card" id="setting-fall" tabIndex={-1}>
                 <h4>Fall Detection</h4>
                 <div className="advanced-form-row">
-                  <label>Enable</label>
+                  <label className="label-with-default-hint">Enable<SettingDefaultHint field="fallDownEnabled" /></label>
                   <label className="switch-row"><input type="checkbox" checked={configForm.fallDownEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, fallDownEnabled: prev.fallDownEnabled === '1' ? '0' : '1' }))} /><span>{configForm.fallDownEnabled === '1' ? 'On' : 'Off'}</span></label>
                 </div>
                 <div className="advanced-form-row">
-                  <label>Sensitivity</label>
+                  <label className="label-with-default-hint">Sensitivity<SettingDefaultHint field="fallDownSensitivity" /></label>
                   <div className="range-with-value">
                     <input type="range" min="1" max="9" value={configForm.fallDownSensitivity} style={getRangeProgressStyle(configForm.fallDownSensitivity, 1, 9)} onChange={(event) => setConfigForm((prev) => ({ ...prev, fallDownSensitivity: event.target.value }))} />
                     <span className="range-value">{configForm.fallDownSensitivity}</span>
@@ -3257,7 +3335,7 @@ export default function HomeView({
               <div className="alarm-card" id="setting-motion" tabIndex={-1}>
                 <h4>Motion / No Motion</h4>
                 <div className="advanced-form-row">
-                  <label>Alarm Type</label>
+                  <label className="label-with-default-hint">Alarm Type<SettingDefaultHint field="motionAlarmType" /></label>
                   <select
                     value={configForm.motionAlarmType || 'motion'}
                     onChange={(event) => setConfigForm((prev) => ({ ...prev, motionAlarmType: event.target.value }))}
@@ -3267,18 +3345,18 @@ export default function HomeView({
                   </select>
                 </div>
                 <div className="advanced-form-row">
-                  <label>Enable</label>
+                  <label className="label-with-default-hint">Enable<SettingDefaultHint field="motionEnabled" /></label>
                   <label className="switch-row">
                     <input type="checkbox" checked={configForm.motionEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, motionEnabled: prev.motionEnabled === '1' ? '0' : '1' }))} />
                     <span>{configForm.motionEnabled === '1' ? 'On' : 'Off'}</span>
                   </label>
                 </div>
                 <div className="advanced-form-row">
-                  <label>Static Time</label>
+                  <label className="label-with-default-hint">Static Time<SettingDefaultHint field="motionStaticTime" /></label>
                   <input type="number" min="1" step="1" value={configForm.motionStaticTime} onChange={(event) => setConfigForm((prev) => ({ ...prev, motionStaticTime: event.target.value }))} />
                 </div>
                 <div className="advanced-form-row">
-                  <label>Duration</label>
+                  <label className="label-with-default-hint">Duration<SettingDefaultHint field="motionDurationTime" /></label>
                   <input
                     type="number"
                     min="1"
@@ -3298,14 +3376,14 @@ export default function HomeView({
               <p className="status advanced-geofence-tip"><span className="advanced-callout-icon" aria-hidden="true" />Command format: <code>Geo1,n,on/off,distance</code>. Radius range: 100-65535 meters.</p>
               <div className="advanced-form-grid">
                 <div className="advanced-form-row">
-                  <label>Enable</label>
+                  <label className="label-with-default-hint">Enable<SettingDefaultHint field="geoFenceEnabled" /></label>
                   <label className="switch-row">
                     <input type="checkbox" checked={configForm.geoFenceEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, geoFenceEnabled: prev.geoFenceEnabled === '1' ? '0' : '1' }))} />
                     <span>{configForm.geoFenceEnabled === '1' ? 'On' : 'Off'}</span>
                   </label>
                 </div>
                 <div className="advanced-form-row">
-                  <label>Radius (meters)</label>
+                  <label className="label-with-default-hint">Radius (meters)<SettingDefaultHint field="geoFenceRadius" /></label>
                   <div className="range-with-value">
                     <input
                       type="range"
@@ -3320,7 +3398,7 @@ export default function HomeView({
                   </div>
                 </div>
                 <div className="advanced-form-row">
-                  <label>Trigger Mode</label>
+                  <label className="label-with-default-hint">Trigger Mode<SettingDefaultHint field="geoFenceMode" /></label>
                   <select value={configForm.geoFenceMode || '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceMode: event.target.value }))}>
                     <option value="0">Leave Area (0)</option>
                     <option value="1">Enter Area (1)</option>
@@ -3884,6 +3962,19 @@ export default function HomeView({
           </section>
         )}
       </div>
+
+      {confirmDialog.open ? (
+        <div className="overlay" onClick={closeConfirmDialog}>
+          <div className="modal confirm-dialog-modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Confirm Action</h3>
+            <p className="status">{confirmDialog.message}</p>
+            <div className="section-head">
+              <button className="table-link action-chip action-chip-neutral" type="button" onClick={closeConfirmDialog}>Cancel</button>
+              <button className="mini-action" type="button" onClick={confirmDialogAction}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showConfigReviewModal ? (
         <div className="overlay" onClick={() => setShowConfigReviewModal(false)}>
