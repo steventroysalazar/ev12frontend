@@ -49,6 +49,7 @@ const initialUserForm = {
   allCompanyLocations: false
 }
 const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '', externalDeviceId: '' }
+const initialImeiLinkState = { open: false, deviceId: null, phoneNumber: '', externalDeviceId: '', status: '', polling: false, resendPending: false }
 const WEBHOOK_STORAGE_KEY = 'ev12:webhook-events'
 const DEFAULT_HOME_SECTION = 'dashboard'
 const DEFAULT_MOTION_ALERT_DURATION_MS = 3000
@@ -391,6 +392,7 @@ export default function HomeView({
 
   const [dataStatus, setDataStatus] = useState('')
   const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
+  const [imeiLinkState, setImeiLinkState] = useState(initialImeiLinkState)
   const [autoFetchReplies, setAutoFetchReplies] = useState(false)
   const [webhookRaw, setWebhookRaw] = useState(null)
   const [webhookStatus, setWebhookStatus] = useState('')
@@ -1221,6 +1223,36 @@ export default function HomeView({
     }
   }
 
+  const pollForDeviceImei = useCallback(async (deviceId) => {
+    if (!deviceId) return null
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const refreshed = await fetchJson(`/api/devices/${deviceId}`, { headers: {} })
+      const resolvedExternalId = String(refreshed?.externalDeviceId || refreshed?.external_device_id || refreshed?.deviceId || '').trim()
+      if (resolvedExternalId) return { device: refreshed, externalDeviceId: resolvedExternalId }
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+    }
+    return null
+  }, [])
+
+  const handleImeiResend = useCallback(async (deviceId, { showGlobalStatus = false } = {}) => {
+    if (!deviceId) throw new Error('Device id is missing')
+    setImeiLinkState((prev) => ({ ...prev, resendPending: true, status: 'Sending IMEI request (V?)…' }))
+    try {
+      const payload = await fetchJson(`/api/devices/${deviceId}/imei-resend`, { method: 'POST' })
+      setImeiLinkState((prev) => ({ ...prev, resendPending: false, status: `Retry sent at ${payload?.sentAt || 'just now'}. Waiting for IMEI link…` }))
+      if (showGlobalStatus) {
+        setActionStatus({ type: 'success', message: 'Manual IMEI resend sent successfully.' })
+      }
+      return payload
+    } catch (error) {
+      setImeiLinkState((prev) => ({ ...prev, resendPending: false, status: `Retry failed: ${error.message}` }))
+      if (showGlobalStatus) {
+        setActionStatus({ type: 'error', message: `Manual IMEI resend failed: ${error.message}` })
+      }
+      throw error
+    }
+  }, [])
+
   const handleCreateDevice = async () => {
     try {
       if (!deviceForm.ownerUserId) throw new Error('Owner user is required')
@@ -1240,18 +1272,51 @@ export default function HomeView({
           : {})
       }
 
+      let createdDevice
       try {
-        await fetchJson(`/api/users/${payload.userId}/devices`, { method: 'POST', body: JSON.stringify(payload) })
+        createdDevice = await fetchJson(`/api/users/${payload.userId}/devices`, { method: 'POST', body: JSON.stringify(payload) })
       } catch {
-        await fetchJson('/api/devices', { method: 'POST', body: JSON.stringify(payload) })
+        createdDevice = await fetchJson('/api/devices', { method: 'POST', body: JSON.stringify(payload) })
       }
+
+      const createdDeviceId = createdDevice?.id || createdDevice?.deviceId
+      const createdExternalId = String(createdDevice?.externalDeviceId || createdDevice?.external_device_id || createdDevice?.deviceId || '').trim()
+      setImeiLinkState({
+        open: true,
+        deviceId: createdDeviceId || null,
+        phoneNumber: createdDevice?.phoneNumber || payload.phoneNumber,
+        externalDeviceId: createdExternalId,
+        status: createdExternalId
+          ? 'IMEI linked automatically.'
+          : 'Device created. Backend auto-sent V?. Waiting for IMEI link…',
+        polling: !createdExternalId && Boolean(createdDeviceId),
+        resendPending: false
+      })
 
       setActionStatus({ type: 'success', message: 'Device created successfully.' })
       setDeviceForm(initialDeviceForm)
-      setShowDeviceModal(false)
       await loadDevices()
+      if (!createdExternalId && createdDeviceId) {
+        try {
+          const linkedResult = await pollForDeviceImei(createdDeviceId)
+          if (linkedResult?.externalDeviceId) {
+            setImeiLinkState((prev) => ({
+              ...prev,
+              externalDeviceId: linkedResult.externalDeviceId,
+              status: `IMEI linked: ${linkedResult.externalDeviceId}`,
+              polling: false
+            }))
+            await loadDevices()
+          } else {
+            setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI not linked yet. You can manually retry V?.' }))
+          }
+        } catch {
+          setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI polling failed. You can manually retry V?.' }))
+        }
+      }
     } catch (error) {
       setActionStatus({ type: 'error', message: `Create device failed: ${error.message}` })
+      setImeiLinkState(initialImeiLinkState)
     }
   }
 
@@ -3157,6 +3222,14 @@ export default function HomeView({
             <div className="device-quick-actions">
               <button className="table-link action-chip action-chip-neutral" type="button" onClick={() => moveToDeviceSection('device-detail-location', { force: true })}>Go to Live Location</button>
               <button className="table-link action-chip action-chip-primary device-detail-btn-primary" type="button" onClick={requestLocationUpdate} disabled={loading}>Request Location Now</button>
+              <button
+                className="table-link action-chip action-chip-neutral"
+                type="button"
+                onClick={() => handleImeiResend(editingDeviceId, { showGlobalStatus: true })}
+                disabled={!editingDeviceId}
+              >
+                Retry IMEI Request (V?)
+              </button>
               <button className="table-link action-chip action-chip-danger" type="button" onClick={() => selectedWorkspaceDevice && handleCancelAlarm(selectedWorkspaceDevice)} disabled={!selectedWorkspaceDevice || !resolveLiveAlarmCode(selectedWorkspaceDevice)}>Cancel Active Alarm</button>
               <button className="table-link action-chip action-chip-neutral" type="button" onClick={() => moveToDeviceSection('device-detail-commands', { force: true })}>Open Command Center</button>
             </div>
@@ -4302,7 +4375,7 @@ export default function HomeView({
       ) : null}
 
       {showDeviceModal ? (
-        <div className="overlay" onClick={() => setShowDeviceModal(false)}>
+        <div className="overlay" onClick={() => { setShowDeviceModal(false); setImeiLinkState(initialImeiLinkState) }}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <h3>Add Device</h3>
             <div className="field-grid">
@@ -4314,6 +4387,21 @@ export default function HomeView({
               <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
             </div>
             <button className="mini-action" onClick={handleCreateDevice}>Add Device</button>
+            {imeiLinkState.open ? (
+              <div className="status" style={{ marginTop: 12 }}>
+                <p>{imeiLinkState.status}</p>
+                <p>Device ID: {imeiLinkState.deviceId || '-'} · Phone: {imeiLinkState.phoneNumber || '-'}</p>
+                <p>Webhook Device ID: {imeiLinkState.externalDeviceId || '-'}</p>
+                <button
+                  className="table-link action-chip action-chip-neutral"
+                  type="button"
+                  onClick={() => handleImeiResend(imeiLinkState.deviceId)}
+                  disabled={!imeiLinkState.deviceId || imeiLinkState.resendPending}
+                >
+                  {imeiLinkState.resendPending ? 'Retrying…' : 'Manual Retry IMEI (V?)'}
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
