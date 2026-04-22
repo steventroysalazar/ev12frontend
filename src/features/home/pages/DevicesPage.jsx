@@ -1,5 +1,7 @@
 import AppIcon from '../../../components/icons/AppIcon'
 
+const DEFAULT_EVIEW_DEVICE_VERSIONS = ['EV-04', 'EV-07', 'EV-08', 'EV-10', 'EV-12']
+
 function SuggestionInput({ id, placeholder, value, options, onChange }) {
   return (
     <>
@@ -53,6 +55,11 @@ export default function DevicesPage({
     return acc
   }, { device: new Set(), owner: new Set(), location: new Set(), phone: new Set(), version: new Set() })
 
+  const deviceVersionFilterOptions = [...new Set([
+    ...DEFAULT_EVIEW_DEVICE_VERSIONS,
+    ...[...filterOptions.version]
+  ])].sort((a, b) => a.localeCompare(b))
+
   const updateFilter = (key, value) => {
     setDeviceFilters((prev) => ({ ...prev, [key]: value || '' }))
   }
@@ -103,7 +110,7 @@ export default function DevicesPage({
             />
             <select value={deviceFilters.version} onChange={(event) => updateFilter('version', event.target.value)}>
               <option value="">All versions</option>
-              {[...filterOptions.version].sort((a, b) => a.localeCompare(b)).map((version) => (
+              {deviceVersionFilterOptions.map((version) => (
                 <option key={`device-version-filter-${version}`} value={version}>{version}</option>
               ))}
             </select>
