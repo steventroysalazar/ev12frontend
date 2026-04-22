@@ -1,5 +1,7 @@
 import AppIcon from '../../../components/icons/AppIcon'
 
+const DEFAULT_EVIEW_DEVICE_VERSIONS = ['EV-04', 'EV-07', 'EV-08', 'EV-10', 'EV-12']
+
 function SuggestionInput({ id, placeholder, value, options, onChange }) {
   return (
     <>
@@ -43,13 +45,20 @@ export default function DevicesPage({
     const phone = entry.phoneNumber || ''
     const location = owner.ownerLocation || ''
     const ownerName = owner.ownerName || ''
+    const version = entry.eviewVersion || entry.version || ''
 
     if (deviceName) acc.device.add(deviceName)
     if (phone) acc.phone.add(phone)
     if (location) acc.location.add(location)
     if (ownerName) acc.owner.add(ownerName)
+    if (version) acc.version.add(version)
     return acc
-  }, { device: new Set(), owner: new Set(), location: new Set(), phone: new Set() })
+  }, { device: new Set(), owner: new Set(), location: new Set(), phone: new Set(), version: new Set() })
+
+  const deviceVersionFilterOptions = [...new Set([
+    ...DEFAULT_EVIEW_DEVICE_VERSIONS,
+    ...[...filterOptions.version]
+  ])].sort((a, b) => a.localeCompare(b))
 
   const updateFilter = (key, value) => {
     setDeviceFilters((prev) => ({ ...prev, [key]: value || '' }))
@@ -99,6 +108,12 @@ export default function DevicesPage({
               options={[...filterOptions.phone].sort((a, b) => a.localeCompare(b))}
               onChange={(value) => updateFilter('phone', value)}
             />
+            <select value={deviceFilters.version} onChange={(event) => updateFilter('version', event.target.value)}>
+              <option value="">All versions</option>
+              {deviceVersionFilterOptions.map((version) => (
+                <option key={`device-version-filter-${version}`} value={version}>{version}</option>
+              ))}
+            </select>
           </div>
           <select value={deviceAlarmFilter} onChange={(event) => setDeviceAlarmFilter(event.target.value)}>
             <option value="all">All alarms</option>

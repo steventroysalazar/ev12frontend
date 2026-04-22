@@ -961,9 +961,31 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .device-filter-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
   gap: 0.5rem;
+  min-width: 0;
+}
+
+.device-filter-grid > * {
+  flex: 1;
+  min-width: 170px;
+}
+
+.device-table-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.device-table-controls > .device-filter-grid {
+  flex: 1;
+}
+
+.device-table-controls > select {
+  flex: 0 0 180px;
 }
 
 .detail-overview-card,
@@ -2400,8 +2422,8 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
     grid-template-columns: 1fr;
   }
 
-  .device-filter-grid {
-    grid-template-columns: 1fr;
+  .device-table-controls {
+    overflow-x: auto;
   }
 }
 
