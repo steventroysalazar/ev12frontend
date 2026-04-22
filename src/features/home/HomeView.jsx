@@ -833,11 +833,22 @@ export default function HomeView({
   useEffect(() => {
     const load = async () => {
       try {
-        await loadLookups()
+        const needsLookups =
+          activeSection === 'companies' ||
+          activeSection === 'users' ||
+          activeSection === 'user-detail' ||
+          activeSection === 'locations' ||
+          activeSection === 'location-detail' ||
+          activeSection === 'devices' ||
+          activeSection === 'alarm-logs' ||
+          isDeviceDetailSection(activeSection)
+
+        if (needsLookups) await loadLookups()
+
         if (activeSection === 'companies') await loadCompanies()
         if (activeSection === 'users' || activeSection === 'user-detail') await loadUsers()
         if (activeSection === 'locations' || activeSection === 'location-detail') await loadLocations()
-        if (activeSection === 'devices') await loadDevices()
+        if (activeSection === 'devices' || isDeviceDetailSection(activeSection)) await loadDevices()
         if (activeSection === 'dashboard') {
           await Promise.all([loadCompanies(), loadUsers(), loadLocations(), loadDevices()])
         }
