@@ -10,6 +10,7 @@ const operationsGroup = {
     { id: 'users', label: 'Users', icon: 'users' },
     { id: 'locations', label: 'Locations', icon: 'location' },
     { id: 'devices', label: 'Devices', icon: 'devices' },
+    { id: 'bulk-sim', label: 'Bulk SIM', icon: 'settings', superAdminOnly: true },
     { id: 'alarm-logs', label: 'Alarm Logs', icon: 'clock' },
     { id: 'replies', label: 'Replies', icon: 'replies' },
     { id: 'webhooks', label: 'Webhook Events', icon: 'webhook' }
@@ -35,10 +36,15 @@ const deviceCenterGroup = {
   ]
 }
 
-export default function Sidebar({ activeSection, onChangeSection, onLogout, showDeviceCenter = false }) {
+export default function Sidebar({ activeSection, onChangeSection, onLogout, showDeviceCenter = false, isSuperAdmin = false }) {
   const isSettingsActive = activeSection.startsWith('device-detail-') || activeSection.startsWith('settings')
   const isDevicesActive = activeSection === 'devices' || activeSection === 'device-detail-overview'
-  const sidebarGroups = showDeviceCenter ? [operationsGroup, deviceCenterGroup] : [operationsGroup]
+  const filteredOperationsGroup = {
+    ...operationsGroup,
+    items: operationsGroup.items.filter((item) => !item.superAdminOnly || isSuperAdmin)
+  }
+
+  const sidebarGroups = showDeviceCenter ? [filteredOperationsGroup, deviceCenterGroup] : [filteredOperationsGroup]
 
   return (
     <aside className="sidebar-panel">

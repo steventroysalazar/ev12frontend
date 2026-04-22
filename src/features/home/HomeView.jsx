@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
 import AppIcon from '../../components/icons/AppIcon'
 import { fetchJsonWithFallback, fetchWithFallback } from '../../lib/apiClient'
-import UsersPage from './pages/UsersPage'
-import LocationsPage from './pages/LocationsPage'
-import DevicesPage from './pages/DevicesPage'
-import CompaniesPage from './pages/CompaniesPage'
-import DeviceSettingsPage from './pages/DeviceSettingsPage'
-import UserDetailPage from './pages/UserDetailPage'
-import LocationDetailPage from './pages/LocationDetailPage'
-import { applySupportedDeviceDefaults } from './ev12'
+import { applySupportedDeviceDefaults, initialConfigForm } from './ev12'
 import './home.css'
+
+
+const UsersPage = lazy(() => import('./pages/UsersPage'))
+const LocationsPage = lazy(() => import('./pages/LocationsPage'))
+const DevicesPage = lazy(() => import('./pages/DevicesPage'))
+const CompaniesPage = lazy(() => import('./pages/CompaniesPage'))
+const DeviceSettingsPage = lazy(() => import('./pages/DeviceSettingsPage'))
+const UserDetailPage = lazy(() => import('./pages/UserDetailPage'))
+const LocationDetailPage = lazy(() => import('./pages/LocationDetailPage'))
+const BulkSimPage = lazy(() => import('./pages/BulkSimPage'))
 
 const initialLocationForm = {
   name: '',
@@ -62,6 +65,7 @@ const supportedSections = new Set([
   'locations',
   'location-detail',
   'devices',
+  'bulk-sim',
   'device-detail-overview',
   'device-detail-basic',
   'device-detail-advanced',
@@ -389,6 +393,12 @@ export default function HomeView({
   const [companyForm, setCompanyForm] = useState(initialCompanyForm)
   const [userForm, setUserForm] = useState(initialUserForm)
   const [deviceForm, setDeviceForm] = useState(initialDeviceForm)
+
+  useEffect(() => {
+    if (!showDeviceModal) return
+    setEditingDeviceId(null)
+    setDeviceForm(initialDeviceForm)
+  }, [showDeviceModal])
   const [userLocationQuery, setUserLocationQuery] = useState('')
 
   const [dataStatus, setDataStatus] = useState('')
@@ -396,6 +406,7 @@ export default function HomeView({
   const [imeiLinkState, setImeiLinkState] = useState(initialImeiLinkState)
   const [deviceRegistrationModal, setDeviceRegistrationModal] = useState(initialDeviceRegistrationModal)
   const [simActionPendingByDevice, setSimActionPendingByDevice] = useState({})
+  const [bulkSimSelectedDeviceIds, setBulkSimSelectedDeviceIds] = useState([])
   const [autoFetchReplies, setAutoFetchReplies] = useState(false)
   const [webhookRaw, setWebhookRaw] = useState(null)
   const [webhookStatus, setWebhookStatus] = useState('')
@@ -554,6 +565,12 @@ export default function HomeView({
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
   const isSuperAdmin = normalizedRole === 'qview admin'
   const isAdminDashboard = normalizedRole === 'qview admin' || normalizedRole === 'company admin'
+  useEffect(() => {
+    if (activeSection !== 'bulk-sim') return
+    if (isSuperAdmin) return
+    setActiveSection('dashboard')
+  }, [activeSection, isSuperAdmin])
+
   const locationDeviceOptions = useMemo(() => {
     if (isAdminDashboard) return devices
 
@@ -827,11 +844,22 @@ export default function HomeView({
   useEffect(() => {
     const load = async () => {
       try {
-        await loadLookups()
+        const needsLookups =
+          activeSection === 'companies' ||
+          activeSection === 'users' ||
+          activeSection === 'user-detail' ||
+          activeSection === 'locations' ||
+          activeSection === 'location-detail' ||
+          activeSection === 'devices' ||
+          activeSection === 'alarm-logs' ||
+          isDeviceDetailSection(activeSection)
+
+        if (needsLookups) await loadLookups()
+
         if (activeSection === 'companies') await loadCompanies()
         if (activeSection === 'users' || activeSection === 'user-detail') await loadUsers()
         if (activeSection === 'locations' || activeSection === 'location-detail') await loadLocations()
-        if (activeSection === 'devices') await loadDevices()
+        if (activeSection === 'devices' || activeSection === 'bulk-sim' || isDeviceDetailSection(activeSection)) await loadDevices()
         if (activeSection === 'dashboard') {
           await Promise.all([loadCompanies(), loadUsers(), loadLocations(), loadDevices()])
         }
@@ -1045,17 +1073,22 @@ export default function HomeView({
   const hydrateDeviceWorkspace = useCallback((device, { announceLoaded = false } = {}) => {
     if (!device || typeof device !== 'object') return
 
-    const protocolSettings = device?.protocolSettings && typeof device.protocolSettings === 'object'
-      ? device.protocolSettings
-      : {}
+    const protocolSettingsCandidate =
+      (device?.protocolSettings && typeof device.protocolSettings === 'object' ? device.protocolSettings : null) ||
+      (device?.protocol_settings && typeof device.protocol_settings === 'object' ? device.protocol_settings : null) ||
+      (device?.settings && typeof device.settings === 'object' ? device.settings : null) ||
+      (device?.config && typeof device.config === 'object' ? device.config : null)
+
+    const protocolSettings = protocolSettingsCandidate || {}
+    const baseConfigForm = { ...initialConfigForm }
 
     setSelectedDevice(device)
     const seededContacts = Array.isArray(protocolSettings.contacts) && protocolSettings.contacts.length
       ? protocolSettings.contacts.slice(0, 1)
-      : [...getContacts(configForm)]
+      : [...getContacts(baseConfigForm)]
 
-    const primaryName = device.ownerName || device.owner?.firstName || protocolSettings.contactName || seededContacts[0]?.name || configForm.contactName
-    const primaryPhone = device.phoneNumber || protocolSettings.contactNumber || seededContacts[0]?.phone || configForm.contactNumber
+    const primaryName = device.ownerName || device.owner?.firstName || protocolSettings.contactName || seededContacts[0]?.name || baseConfigForm.contactName
+    const primaryPhone = device.phoneNumber || protocolSettings.contactNumber || seededContacts[0]?.phone || baseConfigForm.contactNumber
 
     seededContacts[0] = {
       slot: 1,
@@ -1066,11 +1099,11 @@ export default function HomeView({
     }
 
     const nextConfigForm = {
-      ...configForm,
+      ...baseConfigForm,
       ...protocolSettings,
-      deviceId: device.id || device.deviceId || configForm.deviceId,
-      imei: device.imei || protocolSettings.imei || configForm.imei,
-      prefixName: device.name || device.deviceName || protocolSettings.prefixName || configForm.prefixName,
+      deviceId: device.id || device.deviceId || baseConfigForm.deviceId,
+      imei: device.imei || protocolSettings.imei || baseConfigForm.imei,
+      prefixName: device.name || device.deviceName || protocolSettings.prefixName || baseConfigForm.prefixName,
       contacts: seededContacts.slice(0, 1),
       authorizedNumbers: Array.isArray(protocolSettings.authorizedNumbers) && protocolSettings.authorizedNumbers.length
         ? protocolSettings.authorizedNumbers.slice(0, 10).map((value) => String(value || ''))
@@ -1098,7 +1131,7 @@ export default function HomeView({
     if (announceLoaded) {
       setActionStatus((prev) => (prev.type === 'error' ? prev : { type: 'success', message: 'Device workspace loaded.' }))
     }
-  }, [configForm, getContacts, setConfigBaseline, setConfigForm])
+  }, [getContacts, setConfigBaseline, setConfigForm])
 
   const openDeviceSettings = async (device) => {
     setDeviceWorkspaceLoading(true)
@@ -1453,9 +1486,9 @@ export default function HomeView({
     }
   }
 
-  const handleSetSimActivation = useCallback(async (device, activate) => {
+  const handleSetSimActivation = useCallback(async (device, activate, { silent = false } = {}) => {
     const deviceId = device?.id || device?.deviceId
-    if (!deviceId) return
+    if (!deviceId) return false
     setSimActionPendingByDevice((prev) => ({ ...prev, [deviceId]: true }))
     try {
       if (activate) {
@@ -1468,15 +1501,48 @@ export default function HomeView({
           simStatusUpdatedAt: response?.updatedAt || new Date().toISOString()
         })
       }
-      setActionStatus({ type: 'success', message: `SIM ${activate ? 'activated' : 'deactivated'} for device ${device?.name || deviceId}.` })
+      if (!silent) setActionStatus({ type: 'success', message: `SIM ${activate ? 'activated' : 'deactivated'} for device ${device?.name || deviceId}.` })
+      return true
     } catch (error) {
-      setActionStatus({ type: 'error', message: `SIM ${activate ? 'activation' : 'deactivation'} failed: ${error.message}` })
+      if (!silent) setActionStatus({ type: 'error', message: `SIM ${activate ? 'activation' : 'deactivation'} failed: ${error.message}` })
+      return false
     } finally {
       setSimActionPendingByDevice((prev) => ({ ...prev, [deviceId]: false }))
     }
   }, [activateDeviceSim, fetchJson, syncDeviceRecord])
 
 
+
+
+  useEffect(() => {
+    setBulkSimSelectedDeviceIds((prev) => prev.filter((id) => devices.some((device) => String(device.id || device.deviceId || '') === id)))
+  }, [devices])
+
+  const handleBulkSetSimActivation = useCallback(async (activate) => {
+    const selectedDevices = devices.filter((device) => bulkSimSelectedDeviceIds.includes(String(device.id || device.deviceId || '')))
+    if (!selectedDevices.length) return
+
+    let successCount = 0
+    for (const device of selectedDevices) {
+      const ok = await handleSetSimActivation(device, activate, { silent: true })
+      if (ok) successCount += 1
+    }
+
+    const failedCount = selectedDevices.length - successCount
+    if (failedCount > 0) {
+      setActionStatus({
+        type: 'error',
+        message: `Bulk SIM ${activate ? 'activation' : 'deactivation'} completed with partial failures. Success: ${successCount}, Failed: ${failedCount}.`
+      })
+    } else {
+      setActionStatus({
+        type: 'success',
+        message: `Bulk SIM ${activate ? 'activation' : 'deactivation'} completed for ${successCount} device${successCount === 1 ? '' : 's'}.`
+      })
+    }
+
+    await loadDevices()
+  }, [bulkSimSelectedDeviceIds, devices, handleSetSimActivation, loadDevices])
 
   const prepareUserEditor = useCallback((entry) => {
     if (!entry) return
@@ -2897,12 +2963,14 @@ export default function HomeView({
         onChangeSection={handleSectionChange}
         onLogout={onLogout}
         showDeviceCenter={false}
+        isSuperAdmin={isSuperAdmin}
       />
 
       <div className="dashboard-content">
         {dataStatus ? <p className="status">{dataStatus}</p> : null}
         {isDeviceWorkspaceSection ? (
-          <DeviceSettingsPage
+          <Suspense fallback={<p className="status">Loading device workspace...</p>}>
+            <DeviceSettingsPage
             actionStatus={actionStatus}
             workspaceSettingQuery={workspaceSettingQuery}
             setWorkspaceSettingQuery={setWorkspaceSettingQuery}
@@ -2917,7 +2985,8 @@ export default function HomeView({
             selectedWorkspaceDevice={selectedWorkspaceDevice}
             workspaceDeviceMeta={workspaceDeviceMeta}
             hasPendingWorkspaceChanges={hasPendingWorkspaceChanges}
-          />
+            />
+          </Suspense>
         ) : (
           actionStatus.message && actionStatus.type === 'error'
             ? <p className="status-error">{actionStatus.message}</p>
@@ -3158,7 +3227,8 @@ export default function HomeView({
         )}
 
         {activeSection === 'users' && (
-          <UsersPage
+          <Suspense fallback={<p className="status">Loading users page...</p>}>
+            <UsersPage
             loadLocations={loadLocations}
             loadUsers={loadUsers}
             loadCompanies={loadCompanies}
@@ -3176,11 +3246,13 @@ export default function HomeView({
             openUserDetailPage={openUserDetailPage}
             roleLabel={roleLabel}
             getUserDevices={getUserDevices}
-          />
+            />
+          </Suspense>
         )}
 
         {activeSection === 'companies' && (
-          <CompaniesPage
+          <Suspense fallback={<p className="status">Loading companies page...</p>}>
+            <CompaniesPage
             companySearch={companySearch}
             setCompanySearch={setCompanySearch}
             pagedCompanies={pagedCompanies}
@@ -3188,11 +3260,13 @@ export default function HomeView({
             setCompaniesPage={setCompaniesPage}
             setShowCompanyModal={setShowCompanyModal}
             onEditCompany={openEditCompanyModal}
-          />
+            />
+          </Suspense>
         )}
 
         {activeSection === 'locations' && (
-          <LocationsPage
+          <Suspense fallback={<p className="status">Loading locations page...</p>}>
+            <LocationsPage
             setShowLocationModal={setShowLocationModal}
             locationSearch={locationSearch}
             setLocationSearch={setLocationSearch}
@@ -3202,11 +3276,13 @@ export default function HomeView({
             locationsPage={locationsPage}
             setLocationsPage={setLocationsPage}
             openLocationDetailPage={openLocationDetailPage}
-          />
+            />
+          </Suspense>
         )}
 
         {activeSection === 'devices' && (
-          <DevicesPage
+          <Suspense fallback={<p className="status">Loading devices page...</p>}>
+            <DevicesPage
             devices={devices}
             loadUsers={loadUsers}
             loadLocations={loadLocations}
@@ -3227,11 +3303,27 @@ export default function HomeView({
             simActionPendingByDevice={simActionPendingByDevice}
             devicesPage={devicesPage}
             setDevicesPage={setDevicesPage}
-          />
+            />
+          </Suspense>
+        )}
+
+
+        {activeSection === 'bulk-sim' && isSuperAdmin && (
+          <Suspense fallback={<p className="status">Loading bulk SIM manager...</p>}>
+            <BulkSimPage
+              devices={devices}
+              selectedDeviceIds={bulkSimSelectedDeviceIds}
+              setSelectedDeviceIds={setBulkSimSelectedDeviceIds}
+              onBulkSetSimActivation={handleBulkSetSimActivation}
+              simActionPendingByDevice={simActionPendingByDevice}
+              loading={loading}
+            />
+          </Suspense>
         )}
 
         {activeSection === 'user-detail' && (
-          <UserDetailPage
+          <Suspense fallback={<p className="status">Loading user profile...</p>}>
+            <UserDetailPage
             selectedUser={selectedUser}
             roleLabel={roleLabel}
             devices={devices}
@@ -3244,11 +3336,13 @@ export default function HomeView({
             userDevicePage={userDetailDevicePage}
             setUserDevicePage={setUserDetailDevicePage}
             onBack={() => setActiveSection('users')}
-          />
+            />
+          </Suspense>
         )}
 
         {activeSection === 'location-detail' && (
-          <LocationDetailPage
+          <Suspense fallback={<p className="status">Loading location profile...</p>}>
+            <LocationDetailPage
             selectedLocation={selectedLocation}
             devices={devices}
             users={users}
@@ -3266,7 +3360,8 @@ export default function HomeView({
             locationDevicePage={locationDetailDevicePage}
             setLocationDevicePage={setLocationDetailDevicePage}
             onBack={() => setActiveSection('locations')}
-          />
+            />
+          </Suspense>
         )}
 
         {activeSection === 'device-detail-overview' && (
