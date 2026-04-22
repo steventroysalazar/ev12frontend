@@ -57,6 +57,7 @@ const initialDeviceRegistrationModal = { open: false, device: null, status: '', 
 const WEBHOOK_STORAGE_KEY = 'ev12:webhook-events'
 const DEFAULT_HOME_SECTION = 'dashboard'
 const DEFAULT_MOTION_ALERT_DURATION_MS = 3000
+const DEFAULT_EVIEW_DEVICE_VERSIONS = ['EV-04', 'EV-07', 'EV-08', 'EV-10', 'EV-12']
 const supportedSections = new Set([
   'dashboard',
   'companies',
@@ -1820,6 +1821,15 @@ export default function HomeView({
     if (!Number.isFinite(id) || id <= 0) return false
     return all.findIndex((nextEntry) => Number(nextEntry?.id) === id) === index
   })
+  const eviewDeviceVersionOptions = useMemo(() => {
+    const knownOptions = DEFAULT_EVIEW_DEVICE_VERSIONS.map((version) => String(version).trim()).filter(Boolean)
+    const discoveredOptions = devices
+      .map((entry) => String(entry?.eviewVersion || entry?.version || '').trim())
+      .filter(Boolean)
+
+    const merged = [...knownOptions, ...discoveredOptions]
+    return merged.filter((option, index, all) => all.indexOf(option) === index)
+  }, [devices])
   useEffect(() => {
     if (!(showUserModal || showEditUserModal)) return
     const selectedLocation = locationTypeaheadRows.find((entry) => entry.id === String(userForm.locationId || ''))
@@ -3483,7 +3493,10 @@ export default function HomeView({
               </div>
               <div>
                 <label htmlFor="setting-device-version">Device Version</label>
-                <input id="setting-device-version" placeholder="Lorem Ipsum" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
+                <select id="setting-device-version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))}>
+                  <option value="">Select Device Version</option>
+                  {eviewDeviceVersionOptions.map((version) => <option key={version} value={version}>{version}</option>)}
+                </select>
               </div>
               <div>
                 <label htmlFor="setting-device-external-id">Webhook Device ID</label>
@@ -4696,7 +4709,10 @@ export default function HomeView({
             <div className="field-grid">
               <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
-              <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
+              <select value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))}>
+                <option value="">Select Device Version</option>
+                {eviewDeviceVersionOptions.map((version) => <option key={version} value={version}>{version}</option>)}
+              </select>
               <input placeholder="Webhook Device ID (externalDeviceId)" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
               <input placeholder="SIM ICCID" value={deviceForm.simIccid} onChange={(event) => setDeviceForm((prev) => ({ ...prev, simIccid: event.target.value }))} />
               <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
@@ -4729,7 +4745,10 @@ export default function HomeView({
             <div className="field-grid">
               <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
-              <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
+              <select value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))}>
+                <option value="">Select Device Version</option>
+                {eviewDeviceVersionOptions.map((version) => <option key={version} value={version}>{version}</option>)}
+              </select>
               <input placeholder="Webhook Device ID (externalDeviceId)" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
               <input placeholder="SIM ICCID" value={deviceForm.simIccid} onChange={(event) => setDeviceForm((prev) => ({ ...prev, simIccid: event.target.value }))} />
               <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
