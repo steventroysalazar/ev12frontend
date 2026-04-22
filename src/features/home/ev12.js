@@ -33,6 +33,7 @@ export const initialConfigForm = {
   geoFenceEnabled: '1',
   geoFenceMode: '0',
   geoFenceRadius: '100m',
+  geoFenceCount: '1',
   wifiEnabled: '1',
   speakerVolume: '100',
   prefixName: 'Emma',
@@ -58,6 +59,11 @@ export const applySupportedDeviceDefaults = (form = {}) => ({
 
 const boolToFlag = (value) => (value ? 1 : 0)
 const normalizeMotionAlarmType = (value) => (value === 'no-motion' ? 'no-motion' : 'motion')
+const normalizeGeoFenceCount = (value) => {
+  const parsed = Number.parseInt(String(value || '1'), 10)
+  if (Number.isNaN(parsed)) return 1
+  return Math.min(4, Math.max(1, parsed))
+}
 const normalizeTimeToken = (value, fallback) => {
   const raw = String(value || '').trim()
   if (!raw) return fallback
@@ -157,7 +163,15 @@ const buildCommandEntries = (form) => {
     }
   }
   if (form.overSpeedEnabled !== '' && form.overSpeedLimit) entries.push({ key: 'overSpeed', command: `Speed${form.overSpeedEnabled},${form.overSpeedLimit}` })
-  if (form.geoFenceEnabled !== '' && form.geoFenceRadius) entries.push({ key: 'geoFence', command: `Geo1,${form.geoFenceEnabled},${form.geoFenceMode || 0},${form.geoFenceRadius}` })
+  if (form.geoFenceEnabled !== '' && form.geoFenceRadius) {
+    const geoFenceCount = normalizeGeoFenceCount(form.geoFenceCount)
+    for (let geoFenceIndex = 1; geoFenceIndex <= geoFenceCount; geoFenceIndex += 1) {
+      entries.push({
+        key: `geoFence-${geoFenceIndex}`,
+        command: `Geo${geoFenceIndex},${form.geoFenceEnabled},${form.geoFenceMode || 0},${form.geoFenceRadius}`
+      })
+    }
+  }
   if (form.wifiEnabled !== '') entries.push({ key: 'wifiEnabled', command: `Wifi${form.wifiEnabled}` })
   if (form.speakerVolume) entries.push({ key: 'speakerVolume', command: `Speakervolume${form.speakerVolume}` })
   if (form.prefixName) entries.push({ key: 'prefixName', command: `prefix1,${form.prefixName}` })
