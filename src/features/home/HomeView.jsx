@@ -9,7 +9,7 @@ import CompaniesPage from './pages/CompaniesPage'
 import DeviceSettingsPage from './pages/DeviceSettingsPage'
 import UserDetailPage from './pages/UserDetailPage'
 import LocationDetailPage from './pages/LocationDetailPage'
-import { applySupportedDeviceDefaults } from './ev12'
+import { applySupportedDeviceDefaults, initialConfigForm } from './ev12'
 import './home.css'
 
 const initialLocationForm = {
@@ -389,6 +389,12 @@ export default function HomeView({
   const [companyForm, setCompanyForm] = useState(initialCompanyForm)
   const [userForm, setUserForm] = useState(initialUserForm)
   const [deviceForm, setDeviceForm] = useState(initialDeviceForm)
+
+  useEffect(() => {
+    if (!showDeviceModal) return
+    setEditingDeviceId(null)
+    setDeviceForm(initialDeviceForm)
+  }, [showDeviceModal])
   const [userLocationQuery, setUserLocationQuery] = useState('')
 
   const [dataStatus, setDataStatus] = useState('')
@@ -1045,17 +1051,22 @@ export default function HomeView({
   const hydrateDeviceWorkspace = useCallback((device, { announceLoaded = false } = {}) => {
     if (!device || typeof device !== 'object') return
 
-    const protocolSettings = device?.protocolSettings && typeof device.protocolSettings === 'object'
-      ? device.protocolSettings
-      : {}
+    const protocolSettingsCandidate =
+      (device?.protocolSettings && typeof device.protocolSettings === 'object' ? device.protocolSettings : null) ||
+      (device?.protocol_settings && typeof device.protocol_settings === 'object' ? device.protocol_settings : null) ||
+      (device?.settings && typeof device.settings === 'object' ? device.settings : null) ||
+      (device?.config && typeof device.config === 'object' ? device.config : null)
+
+    const protocolSettings = protocolSettingsCandidate || {}
+    const baseConfigForm = { ...initialConfigForm }
 
     setSelectedDevice(device)
     const seededContacts = Array.isArray(protocolSettings.contacts) && protocolSettings.contacts.length
       ? protocolSettings.contacts.slice(0, 1)
-      : [...getContacts(configForm)]
+      : [...getContacts(baseConfigForm)]
 
-    const primaryName = device.ownerName || device.owner?.firstName || protocolSettings.contactName || seededContacts[0]?.name || configForm.contactName
-    const primaryPhone = device.phoneNumber || protocolSettings.contactNumber || seededContacts[0]?.phone || configForm.contactNumber
+    const primaryName = device.ownerName || device.owner?.firstName || protocolSettings.contactName || seededContacts[0]?.name || baseConfigForm.contactName
+    const primaryPhone = device.phoneNumber || protocolSettings.contactNumber || seededContacts[0]?.phone || baseConfigForm.contactNumber
 
     seededContacts[0] = {
       slot: 1,
@@ -1066,11 +1077,11 @@ export default function HomeView({
     }
 
     const nextConfigForm = {
-      ...configForm,
+      ...baseConfigForm,
       ...protocolSettings,
-      deviceId: device.id || device.deviceId || configForm.deviceId,
-      imei: device.imei || protocolSettings.imei || configForm.imei,
-      prefixName: device.name || device.deviceName || protocolSettings.prefixName || configForm.prefixName,
+      deviceId: device.id || device.deviceId || baseConfigForm.deviceId,
+      imei: device.imei || protocolSettings.imei || baseConfigForm.imei,
+      prefixName: device.name || device.deviceName || protocolSettings.prefixName || baseConfigForm.prefixName,
       contacts: seededContacts.slice(0, 1),
       authorizedNumbers: Array.isArray(protocolSettings.authorizedNumbers) && protocolSettings.authorizedNumbers.length
         ? protocolSettings.authorizedNumbers.slice(0, 10).map((value) => String(value || ''))
@@ -1098,7 +1109,7 @@ export default function HomeView({
     if (announceLoaded) {
       setActionStatus((prev) => (prev.type === 'error' ? prev : { type: 'success', message: 'Device workspace loaded.' }))
     }
-  }, [configForm, getContacts, setConfigBaseline, setConfigForm])
+  }, [getContacts, setConfigBaseline, setConfigForm])
 
   const openDeviceSettings = async (device) => {
     setDeviceWorkspaceLoading(true)
