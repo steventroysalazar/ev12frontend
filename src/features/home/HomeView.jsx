@@ -230,6 +230,7 @@ const defaultSettingTooltipByField = {
   geoFenceEnabled: 'Default: device firmware profile',
   geoFenceRadius: 'Default: device firmware profile',
   geoFenceMode: 'Default: Leave Area (0)',
+  geoFenceCount: 'Default: 1 (supports up to 4)',
   contacts: 'Default: SMS gateway slot uses A1,1,0,<number> then callin(0/1)'
 }
 
@@ -3741,8 +3742,17 @@ export default function HomeView({
             {advancedSettingsTab === 'geofence' ? (
             <article className="settings-group advanced-settings-group" id="setting-geofence" tabIndex={-1}>
               <h3 className="block-title">Geo-fencing</h3>
-              <p className="status advanced-geofence-tip"><span className="advanced-callout-icon" aria-hidden="true" />Command format: <code>Geo1,n,on/off,distance</code>. Radius range: 100-65535 meters.</p>
+              <p className="status advanced-geofence-tip"><span className="advanced-callout-icon" aria-hidden="true" />Command format: <code>Geo#,n,on/off,distance</code> where # is 1-4. Radius range: 100-65535 meters.</p>
               <div className="advanced-form-grid">
+                <div className="advanced-form-row">
+                  <label className="label-with-default-hint">Geo-fence Slots<SettingDefaultHint field="geoFenceCount" /></label>
+                  <select value={String(configForm.geoFenceCount || '1')} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceCount: event.target.value }))}>
+                    <option value="1">1 fence (Geo1)</option>
+                    <option value="2">2 fences (Geo1-Geo2)</option>
+                    <option value="3">3 fences (Geo1-Geo3)</option>
+                    <option value="4">4 fences (Geo1-Geo4)</option>
+                  </select>
+                </div>
                 <div className="advanced-form-row">
                   <label className="label-with-default-hint">Enable<SettingDefaultHint field="geoFenceEnabled" /></label>
                   <label className="switch-row">
@@ -4148,6 +4158,15 @@ export default function HomeView({
                   <div>
                     <label>Geo-fence</label>
                     <input title="Geo-fence radius command value (e.g. 500m)." value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} />
+                  </div>
+                  <div>
+                    <label>Geo-fence Slots</label>
+                    <select title="Number of geo-fence commands to generate (Geo1-Geo4)." value={String(configForm.geoFenceCount || '1')} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceCount: event.target.value }))}>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                    </select>
                   </div>
                 </div>
                 <button className="mini-action commands-btn commands-btn-primary commands-btn-send" title="Send the currently prepared command set to the selected device." disabled={loading} onClick={sendConfig}>Send Command</button>
