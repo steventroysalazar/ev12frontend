@@ -32,6 +32,8 @@ export default function DevicesPage({
   getAlarmMeta,
   resolveLiveAlarmCode,
   openDeviceSettings,
+  onSetSimActivation,
+  simActionPendingByDevice,
   devicesPage,
   setDevicesPage
 }) {
@@ -108,14 +110,27 @@ export default function DevicesPage({
         </div>
         <div className="table-shell">
           <table className="data-table devices-list-table">
-            <thead><tr><th>Settings</th><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Owner</th><th>Location</th></tr></thead>
+            <thead><tr><th>Settings</th><th>SIM</th><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Owner</th><th>Location</th></tr></thead>
             <tbody>
               {pagedDevices.rows.map((d) => {
                 const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(d))
                 const deviceMeta = resolveDeviceMeta(d)
+                const deviceId = d.id || d.deviceId
+                const simActivated = d.simActivated === true
+                const simActionPending = Boolean(simActionPendingByDevice?.[deviceId])
                 return (
                   <tr key={d.id || d.phoneNumber || d.name}>
                     <td><button className="table-link table-link-compact action-chip action-chip-primary device-manage-button" type="button" onClick={() => openDeviceSettings(d)}>Manage</button></td>
+                    <td>
+                      <button
+                        className={`table-link table-link-compact action-chip ${simActivated ? 'action-chip-danger' : 'action-chip-neutral'}`}
+                        type="button"
+                        onClick={() => onSetSimActivation?.(d, !simActivated)}
+                        disabled={simActionPending}
+                      >
+                        {simActionPending ? 'Working…' : simActivated ? 'Deactivate SIM' : 'Activate SIM'}
+                      </button>
+                    </td>
                     <td>{d.name || d.deviceName || '-'}</td>
                     <td>{d.phoneNumber || '-'}</td>
                     <td>{d.eviewVersion || d.version || '-'}</td>

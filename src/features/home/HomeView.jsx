@@ -48,8 +48,9 @@ const initialUserForm = {
   locationId: '',
   allCompanyLocations: false
 }
-const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '', externalDeviceId: '' }
+const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '', externalDeviceId: '', simIccid: '' }
 const initialImeiLinkState = { open: false, deviceId: null, phoneNumber: '', externalDeviceId: '', status: '', polling: false, resendPending: false }
+const initialDeviceRegistrationModal = { open: false, device: null, status: '', activatingSim: false }
 const WEBHOOK_STORAGE_KEY = 'ev12:webhook-events'
 const DEFAULT_HOME_SECTION = 'dashboard'
 const DEFAULT_MOTION_ALERT_DURATION_MS = 3000
@@ -393,6 +394,8 @@ export default function HomeView({
   const [dataStatus, setDataStatus] = useState('')
   const [actionStatus, setActionStatus] = useState({ type: '', message: '' })
   const [imeiLinkState, setImeiLinkState] = useState(initialImeiLinkState)
+  const [deviceRegistrationModal, setDeviceRegistrationModal] = useState(initialDeviceRegistrationModal)
+  const [simActionPendingByDevice, setSimActionPendingByDevice] = useState({})
   const [autoFetchReplies, setAutoFetchReplies] = useState(false)
   const [webhookRaw, setWebhookRaw] = useState(null)
   const [webhookStatus, setWebhookStatus] = useState('')
@@ -1088,7 +1091,8 @@ export default function HomeView({
       eviewVersion: device.eviewVersion || device.version || '',
       ownerUserId: device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || '',
       locationId: device.locationId || device.location_id || '',
-      externalDeviceId: device.externalDeviceId || device.external_device_id || device.deviceId || ''
+      externalDeviceId: device.externalDeviceId || device.external_device_id || device.deviceId || '',
+      simIccid: device.simIccid || ''
     })
 
     if (announceLoaded) {
@@ -1253,6 +1257,36 @@ export default function HomeView({
     }
   }, [])
 
+  const syncDeviceRecord = useCallback((deviceId, nextValues) => {
+    if (!deviceId || !nextValues) return
+    setDevices((prev) => prev.map((entry) => {
+      const entryId = entry?.id || entry?.deviceId
+      if (String(entryId || '') !== String(deviceId)) return entry
+      return { ...entry, ...nextValues }
+    }))
+    setSelectedDevice((prev) => {
+      if (!prev) return prev
+      const selectedId = prev?.id || prev?.deviceId
+      if (String(selectedId || '') !== String(deviceId)) return prev
+      return { ...prev, ...nextValues }
+    })
+  }, [])
+
+  const activateDeviceSim = useCallback(async (deviceId, { refreshDevices = false } = {}) => {
+    if (!deviceId) throw new Error('Device id is missing')
+    const response = await fetchJson(`/api/devices/${deviceId}/sim/activate`, { method: 'POST' })
+    const status = String(response?.status || '').trim()
+    const activated = response?.activated === true || status.toUpperCase() === 'ACTIVATED'
+    const mergedStatus = {
+      simActivated: activated,
+      simStatus: status || (activated ? 'ACTIVATED' : null),
+      simStatusUpdatedAt: response?.updatedAt || new Date().toISOString()
+    }
+    syncDeviceRecord(deviceId, mergedStatus)
+    if (refreshDevices) await loadDevices()
+    return response
+  }, [fetchJson, loadDevices, syncDeviceRecord])
+
   const handleCreateDevice = async () => {
     try {
       if (!deviceForm.ownerUserId) throw new Error('Owner user is required')
@@ -1266,6 +1300,7 @@ export default function HomeView({
         version: deviceForm.eviewVersion.trim(),
         locationId: deviceForm.locationId ? Number(deviceForm.locationId) : null,
         userId: Number(deviceForm.ownerUserId),
+        simIccid: deviceForm.simIccid.trim() || null,
         protocolSettings: applySupportedDeviceDefaults({}),
         ...(deviceForm.externalDeviceId.trim()
           ? { externalDeviceId: deviceForm.externalDeviceId.trim(), deviceId: deviceForm.externalDeviceId.trim() }
@@ -1281,6 +1316,15 @@ export default function HomeView({
 
       const createdDeviceId = createdDevice?.id || createdDevice?.deviceId
       const createdExternalId = String(createdDevice?.externalDeviceId || createdDevice?.external_device_id || createdDevice?.deviceId || '').trim()
+      const normalizedCreatedDevice = {
+        ...createdDevice,
+        id: createdDeviceId || createdDevice?.id,
+        deviceId: createdDeviceId || createdDevice?.deviceId,
+        phoneNumber: createdDevice?.phoneNumber || payload.phoneNumber,
+        externalDeviceId: createdExternalId || null,
+        simIccid: createdDevice?.simIccid || payload.simIccid || null,
+        simActivated: createdDevice?.simActivated === true
+      }
       setImeiLinkState({
         open: true,
         deviceId: createdDeviceId || null,
@@ -1292,8 +1336,17 @@ export default function HomeView({
         polling: !createdExternalId && Boolean(createdDeviceId),
         resendPending: false
       })
+      setDeviceRegistrationModal({
+        open: true,
+        device: normalizedCreatedDevice,
+        status: createdExternalId
+          ? 'IMEI linked automatically.'
+          : 'Waiting for IMEI link…',
+        activatingSim: false
+      })
 
       setActionStatus({ type: 'success', message: 'Device created successfully.' })
+      setShowDeviceModal(false)
       setDeviceForm(initialDeviceForm)
       await loadDevices()
       if (!createdExternalId && createdDeviceId) {
@@ -1306,17 +1359,25 @@ export default function HomeView({
               status: `IMEI linked: ${linkedResult.externalDeviceId}`,
               polling: false
             }))
+            setDeviceRegistrationModal((prev) => ({
+              ...prev,
+              status: `IMEI linked: ${linkedResult.externalDeviceId}`,
+              device: prev.device ? { ...prev.device, externalDeviceId: linkedResult.externalDeviceId } : prev.device
+            }))
             await loadDevices()
           } else {
             setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI not linked yet. You can manually retry V?.' }))
+            setDeviceRegistrationModal((prev) => ({ ...prev, status: 'IMEI not linked yet. You can manually retry V?.' }))
           }
         } catch {
           setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI polling failed. You can manually retry V?.' }))
+          setDeviceRegistrationModal((prev) => ({ ...prev, status: 'IMEI polling failed. You can manually retry V?.' }))
         }
       }
     } catch (error) {
       setActionStatus({ type: 'error', message: `Create device failed: ${error.message}` })
       setImeiLinkState(initialImeiLinkState)
+      setDeviceRegistrationModal(initialDeviceRegistrationModal)
     }
   }
 
@@ -1330,7 +1391,8 @@ export default function HomeView({
       eviewVersion: device.eviewVersion || device.version || '',
       ownerUserId: device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || '',
       locationId: device.locationId || device.location_id || '',
-      externalDeviceId: device.externalDeviceId || device.external_device_id || device.deviceId || ''
+      externalDeviceId: device.externalDeviceId || device.external_device_id || device.deviceId || '',
+      simIccid: device.simIccid || ''
     })
     setShowEditDeviceModal(true)
   }
@@ -1351,6 +1413,7 @@ export default function HomeView({
         version: deviceForm.eviewVersion.trim(),
         ...(normalizedOwnerUserId ? { userId: normalizedOwnerUserId } : {}),
         ...(shouldClearLocation ? { clearLocation: true } : { locationId: normalizedLocationId }),
+        simIccid: deviceForm.simIccid.trim() || null,
         externalDeviceId: deviceForm.externalDeviceId.trim() || null,
         deviceId: deviceForm.externalDeviceId.trim() || null
       }
@@ -1389,6 +1452,29 @@ export default function HomeView({
       setActionStatus({ type: 'error', message: `Update device failed: ${error.message}` })
     }
   }
+
+  const handleSetSimActivation = useCallback(async (device, activate) => {
+    const deviceId = device?.id || device?.deviceId
+    if (!deviceId) return
+    setSimActionPendingByDevice((prev) => ({ ...prev, [deviceId]: true }))
+    try {
+      if (activate) {
+        await activateDeviceSim(deviceId)
+      } else {
+        const response = await fetchJson(`/api/devices/${deviceId}/sim/deactivate`, { method: 'POST' })
+        syncDeviceRecord(deviceId, {
+          simActivated: false,
+          simStatus: String(response?.status || '').trim() || 'DEACTIVATED',
+          simStatusUpdatedAt: response?.updatedAt || new Date().toISOString()
+        })
+      }
+      setActionStatus({ type: 'success', message: `SIM ${activate ? 'activated' : 'deactivated'} for device ${device?.name || deviceId}.` })
+    } catch (error) {
+      setActionStatus({ type: 'error', message: `SIM ${activate ? 'activation' : 'deactivation'} failed: ${error.message}` })
+    } finally {
+      setSimActionPendingByDevice((prev) => ({ ...prev, [deviceId]: false }))
+    }
+  }, [activateDeviceSim, fetchJson, syncDeviceRecord])
 
 
 
@@ -2681,13 +2767,15 @@ export default function HomeView({
     const selectedOwnerId = String(selectedWorkspaceDevice.ownerUserId || selectedWorkspaceDevice.userId || selectedWorkspaceDevice.user_id || selectedWorkspaceDevice.owner?.id || selectedWorkspaceDevice.app_user?.id || '')
     const selectedLocationId = String(selectedWorkspaceDevice.locationId || selectedWorkspaceDevice.location_id || '')
     const selectedExternalId = String(selectedWorkspaceDevice.externalDeviceId || selectedWorkspaceDevice.external_device_id || selectedWorkspaceDevice.deviceId || '')
+    const selectedSimIccid = String(selectedWorkspaceDevice.simIccid || '')
     return (
       String(deviceForm.name || '') !== String(selectedWorkspaceDevice.name || selectedWorkspaceDevice.deviceName || '') ||
       String(deviceForm.phoneNumber || '') !== String(selectedWorkspaceDevice.phoneNumber || '') ||
       String(deviceForm.eviewVersion || '') !== String(selectedWorkspaceDevice.eviewVersion || selectedWorkspaceDevice.version || '') ||
       String(deviceForm.ownerUserId || '') !== selectedOwnerId ||
       String(deviceForm.locationId || '') !== selectedLocationId ||
-      String(deviceForm.externalDeviceId || '') !== selectedExternalId
+      String(deviceForm.externalDeviceId || '') !== selectedExternalId ||
+      String(deviceForm.simIccid || '') !== selectedSimIccid
     )
   }, [deviceForm, selectedWorkspaceDevice])
   const hasPendingWorkspaceChanges = workspaceDeviceProfileChanged || configChangeRows.length > 0
@@ -3135,6 +3223,8 @@ export default function HomeView({
             handleCancelAlarm={handleCancelAlarm}
             openLocationDetailPage={openLocationDetailPage}
             openDeviceSettings={openDeviceSettings}
+            onSetSimActivation={handleSetSimActivation}
+            simActionPendingByDevice={simActionPendingByDevice}
             devicesPage={devicesPage}
             setDevicesPage={setDevicesPage}
           />
@@ -3200,6 +3290,10 @@ export default function HomeView({
               <div>
                 <label htmlFor="setting-device-external-id">Webhook Device ID</label>
                 <input id="setting-device-external-id" placeholder="Lorem Ipsum" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
+              </div>
+              <div>
+                <label htmlFor="setting-device-sim-iccid">SIM ICCID</label>
+                <input id="setting-device-sim-iccid" placeholder="898821..." value={deviceForm.simIccid} onChange={(event) => setDeviceForm((prev) => ({ ...prev, simIccid: event.target.value }))} />
               </div>
               <div>
                 <label htmlFor="setting-device-owner">Owner</label>
@@ -4383,6 +4477,7 @@ export default function HomeView({
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
               <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
               <input placeholder="Webhook Device ID (externalDeviceId)" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
+              <input placeholder="SIM ICCID" value={deviceForm.simIccid} onChange={(event) => setDeviceForm((prev) => ({ ...prev, simIccid: event.target.value }))} />
               <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
               <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
             </div>
@@ -4415,10 +4510,75 @@ export default function HomeView({
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
               <input placeholder="Device Version" value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))} />
               <input placeholder="Webhook Device ID (externalDeviceId)" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
+              <input placeholder="SIM ICCID" value={deviceForm.simIccid} onChange={(event) => setDeviceForm((prev) => ({ ...prev, simIccid: event.target.value }))} />
               <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
               <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
             </div>
             <button className="mini-action" onClick={handleUpdateDevice}>Save Device</button>
+          </div>
+        </div>
+      ) : null}
+
+      {deviceRegistrationModal.open ? (
+        <div className="overlay" onClick={() => setDeviceRegistrationModal(initialDeviceRegistrationModal)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Device Registered</h3>
+            <div className="status" style={{ marginTop: 12 }}>
+              <p>{deviceRegistrationModal.status || 'Device created successfully.'}</p>
+              <p>Device ID: {deviceRegistrationModal.device?.id || deviceRegistrationModal.device?.deviceId || '-'}</p>
+              <p>Name: {deviceRegistrationModal.device?.name || deviceRegistrationModal.device?.deviceName || '-'}</p>
+              <p>Phone: {deviceRegistrationModal.device?.phoneNumber || '-'}</p>
+              <p>SIM ICCID: {deviceRegistrationModal.device?.simIccid || '-'}</p>
+              <p>
+                SIM Status: {deviceRegistrationModal.device?.simActivated ? 'Activated' : 'Not activated'}
+                {deviceRegistrationModal.device?.simStatus ? ` (${deviceRegistrationModal.device.simStatus})` : ''}
+              </p>
+              <p>Waiting for IMEI: {deviceRegistrationModal.device?.externalDeviceId ? 'No' : 'Yes'}</p>
+              <p>Webhook Device ID / IMEI: {deviceRegistrationModal.device?.externalDeviceId || '-'}</p>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="table-link action-chip action-chip-neutral"
+                type="button"
+                onClick={() => handleImeiResend(deviceRegistrationModal.device?.id || deviceRegistrationModal.device?.deviceId)}
+                disabled={!deviceRegistrationModal.device || imeiLinkState.resendPending}
+              >
+                {imeiLinkState.resendPending ? 'Retrying…' : 'Manual Retry IMEI (V?)'}
+              </button>
+              {!deviceRegistrationModal.device?.simActivated ? (
+                <button
+                  className="table-link action-chip action-chip-primary"
+                  type="button"
+                  onClick={async () => {
+                    const deviceId = deviceRegistrationModal.device?.id || deviceRegistrationModal.device?.deviceId
+                    if (!deviceId) return
+                    setDeviceRegistrationModal((prev) => ({ ...prev, activatingSim: true }))
+                    try {
+                      const response = await activateDeviceSim(deviceId, { refreshDevices: true })
+                      setDeviceRegistrationModal((prev) => ({
+                        ...prev,
+                        activatingSim: false,
+                        status: `SIM activated${response?.status ? ` (${response.status})` : ''}.`,
+                        device: prev.device
+                          ? {
+                              ...prev.device,
+                              simActivated: true,
+                              simStatus: response?.status || 'ACTIVATED',
+                              simStatusUpdatedAt: response?.updatedAt || new Date().toISOString()
+                            }
+                          : prev.device
+                      }))
+                    } catch (error) {
+                      setDeviceRegistrationModal((prev) => ({ ...prev, activatingSim: false, status: `SIM activation failed: ${error.message}` }))
+                    }
+                  }}
+                  disabled={deviceRegistrationModal.activatingSim}
+                >
+                  {deviceRegistrationModal.activatingSim ? 'Activating SIM…' : 'Activate SIM'}
+                </button>
+              ) : null}
+              <button className="mini-action" type="button" onClick={() => setDeviceRegistrationModal(initialDeviceRegistrationModal)}>Close</button>
+            </div>
           </div>
         </div>
       ) : null}
