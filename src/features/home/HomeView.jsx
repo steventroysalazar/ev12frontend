@@ -13,6 +13,7 @@ const CompaniesPage = lazy(() => import('./pages/CompaniesPage'))
 const DeviceSettingsPage = lazy(() => import('./pages/DeviceSettingsPage'))
 const UserDetailPage = lazy(() => import('./pages/UserDetailPage'))
 const LocationDetailPage = lazy(() => import('./pages/LocationDetailPage'))
+const BulkSimPage = lazy(() => import('./pages/BulkSimPage'))
 
 const initialLocationForm = {
   name: '',
@@ -64,6 +65,7 @@ const supportedSections = new Set([
   'locations',
   'location-detail',
   'devices',
+  'bulk-sim',
   'device-detail-overview',
   'device-detail-basic',
   'device-detail-advanced',
@@ -404,6 +406,7 @@ export default function HomeView({
   const [imeiLinkState, setImeiLinkState] = useState(initialImeiLinkState)
   const [deviceRegistrationModal, setDeviceRegistrationModal] = useState(initialDeviceRegistrationModal)
   const [simActionPendingByDevice, setSimActionPendingByDevice] = useState({})
+  const [bulkSimSelectedDeviceIds, setBulkSimSelectedDeviceIds] = useState([])
   const [autoFetchReplies, setAutoFetchReplies] = useState(false)
   const [webhookRaw, setWebhookRaw] = useState(null)
   const [webhookStatus, setWebhookStatus] = useState('')
@@ -562,6 +565,12 @@ export default function HomeView({
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
   const isSuperAdmin = normalizedRole === 'qview admin'
   const isAdminDashboard = normalizedRole === 'qview admin' || normalizedRole === 'company admin'
+  useEffect(() => {
+    if (activeSection !== 'bulk-sim') return
+    if (isSuperAdmin) return
+    setActiveSection('dashboard')
+  }, [activeSection, isSuperAdmin])
+
   const locationDeviceOptions = useMemo(() => {
     if (isAdminDashboard) return devices
 
@@ -850,7 +859,7 @@ export default function HomeView({
         if (activeSection === 'companies') await loadCompanies()
         if (activeSection === 'users' || activeSection === 'user-detail') await loadUsers()
         if (activeSection === 'locations' || activeSection === 'location-detail') await loadLocations()
-        if (activeSection === 'devices' || isDeviceDetailSection(activeSection)) await loadDevices()
+        if (activeSection === 'devices' || activeSection === 'bulk-sim' || isDeviceDetailSection(activeSection)) await loadDevices()
         if (activeSection === 'dashboard') {
           await Promise.all([loadCompanies(), loadUsers(), loadLocations(), loadDevices()])
         }
@@ -1477,9 +1486,9 @@ export default function HomeView({
     }
   }
 
-  const handleSetSimActivation = useCallback(async (device, activate) => {
+  const handleSetSimActivation = useCallback(async (device, activate, { silent = false } = {}) => {
     const deviceId = device?.id || device?.deviceId
-    if (!deviceId) return
+    if (!deviceId) return false
     setSimActionPendingByDevice((prev) => ({ ...prev, [deviceId]: true }))
     try {
       if (activate) {
@@ -1492,15 +1501,48 @@ export default function HomeView({
           simStatusUpdatedAt: response?.updatedAt || new Date().toISOString()
         })
       }
-      setActionStatus({ type: 'success', message: `SIM ${activate ? 'activated' : 'deactivated'} for device ${device?.name || deviceId}.` })
+      if (!silent) setActionStatus({ type: 'success', message: `SIM ${activate ? 'activated' : 'deactivated'} for device ${device?.name || deviceId}.` })
+      return true
     } catch (error) {
-      setActionStatus({ type: 'error', message: `SIM ${activate ? 'activation' : 'deactivation'} failed: ${error.message}` })
+      if (!silent) setActionStatus({ type: 'error', message: `SIM ${activate ? 'activation' : 'deactivation'} failed: ${error.message}` })
+      return false
     } finally {
       setSimActionPendingByDevice((prev) => ({ ...prev, [deviceId]: false }))
     }
   }, [activateDeviceSim, fetchJson, syncDeviceRecord])
 
 
+
+
+  useEffect(() => {
+    setBulkSimSelectedDeviceIds((prev) => prev.filter((id) => devices.some((device) => String(device.id || device.deviceId || '') === id)))
+  }, [devices])
+
+  const handleBulkSetSimActivation = useCallback(async (activate) => {
+    const selectedDevices = devices.filter((device) => bulkSimSelectedDeviceIds.includes(String(device.id || device.deviceId || '')))
+    if (!selectedDevices.length) return
+
+    let successCount = 0
+    for (const device of selectedDevices) {
+      const ok = await handleSetSimActivation(device, activate, { silent: true })
+      if (ok) successCount += 1
+    }
+
+    const failedCount = selectedDevices.length - successCount
+    if (failedCount > 0) {
+      setActionStatus({
+        type: 'error',
+        message: `Bulk SIM ${activate ? 'activation' : 'deactivation'} completed with partial failures. Success: ${successCount}, Failed: ${failedCount}.`
+      })
+    } else {
+      setActionStatus({
+        type: 'success',
+        message: `Bulk SIM ${activate ? 'activation' : 'deactivation'} completed for ${successCount} device${successCount === 1 ? '' : 's'}.`
+      })
+    }
+
+    await loadDevices()
+  }, [bulkSimSelectedDeviceIds, devices, handleSetSimActivation, loadDevices])
 
   const prepareUserEditor = useCallback((entry) => {
     if (!entry) return
@@ -2921,6 +2963,7 @@ export default function HomeView({
         onChangeSection={handleSectionChange}
         onLogout={onLogout}
         showDeviceCenter={false}
+        isSuperAdmin={isSuperAdmin}
       />
 
       <div className="dashboard-content">
@@ -3260,6 +3303,20 @@ export default function HomeView({
             simActionPendingByDevice={simActionPendingByDevice}
             devicesPage={devicesPage}
             setDevicesPage={setDevicesPage}
+            />
+          </Suspense>
+        )}
+
+
+        {activeSection === 'bulk-sim' && isSuperAdmin && (
+          <Suspense fallback={<p className="status">Loading bulk SIM manager...</p>}>
+            <BulkSimPage
+              devices={devices}
+              selectedDeviceIds={bulkSimSelectedDeviceIds}
+              setSelectedDeviceIds={setBulkSimSelectedDeviceIds}
+              onBulkSetSimActivation={handleBulkSetSimActivation}
+              simActionPendingByDevice={simActionPendingByDevice}
+              loading={loading}
             />
           </Suspense>
         )}
