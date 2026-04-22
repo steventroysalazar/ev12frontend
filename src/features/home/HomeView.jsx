@@ -416,7 +416,7 @@ export default function HomeView({
   const [userSearch, setUserSearch] = useState('')
   const [companySearch, setCompanySearch] = useState('')
   const [locationSearch, setLocationSearch] = useState('')
-  const [deviceFilters, setDeviceFilters] = useState({ device: '', owner: '', location: '', phone: '' })
+  const [deviceFilters, setDeviceFilters] = useState({ device: '', owner: '', location: '', phone: '', version: '' })
   const [userRoleFilter, setUserRoleFilter] = useState('all')
   const [userLocationFilter, setUserLocationFilter] = useState('all')
   const [locationDeviceFilter, setLocationDeviceFilter] = useState('all')
@@ -2322,6 +2322,7 @@ export default function HomeView({
     const ownerKeyword = deviceFilters.owner.trim().toLowerCase()
     const locationKeyword = deviceFilters.location.trim().toLowerCase()
     const phoneKeyword = deviceFilters.phone.trim().toLowerCase()
+    const versionFilter = deviceFilters.version.trim().toLowerCase()
     return devices.filter((entry) => {
       const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(entry))
       const alarmMatch = deviceAlarmFilter === 'all' ? true : alarmMeta.tone === deviceAlarmFilter
@@ -2330,12 +2331,14 @@ export default function HomeView({
       const ownerText = String(owner.ownerName || '').toLowerCase()
       const locationText = String(owner.ownerLocation || '').toLowerCase()
       const phoneText = String(entry.phoneNumber || '').toLowerCase()
+      const versionText = String(entry.eviewVersion || entry.version || '').toLowerCase()
 
       const deviceMatch = !deviceKeyword || deviceText.includes(deviceKeyword)
       const ownerMatch = !ownerKeyword || ownerText.includes(ownerKeyword)
       const locationMatch = !locationKeyword || locationText.includes(locationKeyword)
       const phoneMatch = !phoneKeyword || phoneText.includes(phoneKeyword)
-      return alarmMatch && deviceMatch && ownerMatch && locationMatch && phoneMatch
+      const versionMatch = !versionFilter || versionText === versionFilter
+      return alarmMatch && deviceMatch && ownerMatch && locationMatch && phoneMatch && versionMatch
     })
   }, [deviceAlarmFilter, deviceFilters, devices, getAlarmMeta, resolveDeviceMeta, resolveLiveAlarmCode])
 
