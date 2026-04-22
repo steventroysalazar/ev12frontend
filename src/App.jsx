@@ -1,8 +1,5 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import Navbar from './components/navbar/Navbar'
-import HomeView from './features/home/HomeView'
-import LoginView from './features/login/LoginView'
-import RegisterView from './features/register/RegisterView'
 import { buildEv12Preview, formatReply, initialConfigForm } from './features/home/ev12'
 import { buildEviewSmsAccessSetup } from './features/home/smsAccessSetup'
 import { fetchWithFallback } from './lib/apiClient'
@@ -24,6 +21,11 @@ const initialRegisterForm = {
 
 const initialLoginForm = { email: '', password: '' }
 const ALARM_CANCELLED_STORAGE_KEY = 'ev12:alarm-cancelled-at'
+
+const HomeView = lazy(() => import('./features/home/HomeView'))
+const LoginView = lazy(() => import('./features/login/LoginView'))
+const RegisterView = lazy(() => import('./features/register/RegisterView'))
+
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -1235,7 +1237,8 @@ export default function App() {
       ) : null}
 
       {activeView === 'login' && (
-        <LoginView
+        <Suspense fallback={<div className="card">Loading login…</div>}>
+          <LoginView
           loginForm={loginForm}
           setLoginForm={setLoginForm}
           onLogin={handleLogin}
@@ -1246,11 +1249,13 @@ export default function App() {
           }}
           authStatus={authStatus}
           authLoading={authLoading}
-        />
+          />
+        </Suspense>
       )}
 
       {activeView === 'register' && (
-        <RegisterView
+        <Suspense fallback={<div className="card">Loading registration…</div>}>
+          <RegisterView
           registerForm={registerForm}
           setRegisterForm={setRegisterForm}
           onRegister={handleRegister}
@@ -1258,11 +1263,13 @@ export default function App() {
             setActiveView('login')
             updateUrlForView('login')
           }}
-        />
+          />
+        </Suspense>
       )}
 
       {activeView === 'home' && (
-        <HomeView
+        <Suspense fallback={<div className="card">Loading dashboard…</div>}>
+          <HomeView
           user={auth.user}
           authStatus={authStatus}
           onLogout={handleLogout}
@@ -1301,7 +1308,8 @@ export default function App() {
           onSectionChange={setHomeActiveSection}
           onCancelDeviceAlarm={cancelDeviceAlarm}
           alarmCancelledAtByDevice={alarmCancelledAtByDevice}
-        />
+          />
+        </Suspense>
       )}
     </main>
   )
