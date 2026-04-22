@@ -1,16 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Sidebar from '../../components/sidebar/Sidebar'
 import AppIcon from '../../components/icons/AppIcon'
 import { fetchJsonWithFallback, fetchWithFallback } from '../../lib/apiClient'
-import UsersPage from './pages/UsersPage'
-import LocationsPage from './pages/LocationsPage'
-import DevicesPage from './pages/DevicesPage'
-import CompaniesPage from './pages/CompaniesPage'
-import DeviceSettingsPage from './pages/DeviceSettingsPage'
-import UserDetailPage from './pages/UserDetailPage'
-import LocationDetailPage from './pages/LocationDetailPage'
 import { applySupportedDeviceDefaults, initialConfigForm } from './ev12'
 import './home.css'
+
+
+const UsersPage = lazy(() => import('./pages/UsersPage'))
+const LocationsPage = lazy(() => import('./pages/LocationsPage'))
+const DevicesPage = lazy(() => import('./pages/DevicesPage'))
+const CompaniesPage = lazy(() => import('./pages/CompaniesPage'))
+const DeviceSettingsPage = lazy(() => import('./pages/DeviceSettingsPage'))
+const UserDetailPage = lazy(() => import('./pages/UserDetailPage'))
+const LocationDetailPage = lazy(() => import('./pages/LocationDetailPage'))
 
 const initialLocationForm = {
   name: '',
@@ -2924,7 +2926,8 @@ export default function HomeView({
       <div className="dashboard-content">
         {dataStatus ? <p className="status">{dataStatus}</p> : null}
         {isDeviceWorkspaceSection ? (
-          <DeviceSettingsPage
+          <Suspense fallback={<p className="status">Loading device workspace...</p>}>
+            <DeviceSettingsPage
             actionStatus={actionStatus}
             workspaceSettingQuery={workspaceSettingQuery}
             setWorkspaceSettingQuery={setWorkspaceSettingQuery}
@@ -2939,7 +2942,8 @@ export default function HomeView({
             selectedWorkspaceDevice={selectedWorkspaceDevice}
             workspaceDeviceMeta={workspaceDeviceMeta}
             hasPendingWorkspaceChanges={hasPendingWorkspaceChanges}
-          />
+            />
+          </Suspense>
         ) : (
           actionStatus.message && actionStatus.type === 'error'
             ? <p className="status-error">{actionStatus.message}</p>
@@ -3180,7 +3184,8 @@ export default function HomeView({
         )}
 
         {activeSection === 'users' && (
-          <UsersPage
+          <Suspense fallback={<p className="status">Loading users page...</p>}>
+            <UsersPage
             loadLocations={loadLocations}
             loadUsers={loadUsers}
             loadCompanies={loadCompanies}
@@ -3198,11 +3203,13 @@ export default function HomeView({
             openUserDetailPage={openUserDetailPage}
             roleLabel={roleLabel}
             getUserDevices={getUserDevices}
-          />
+            />
+          </Suspense>
         )}
 
         {activeSection === 'companies' && (
-          <CompaniesPage
+          <Suspense fallback={<p className="status">Loading companies page...</p>}>
+            <CompaniesPage
             companySearch={companySearch}
             setCompanySearch={setCompanySearch}
             pagedCompanies={pagedCompanies}
@@ -3210,11 +3217,13 @@ export default function HomeView({
             setCompaniesPage={setCompaniesPage}
             setShowCompanyModal={setShowCompanyModal}
             onEditCompany={openEditCompanyModal}
-          />
+            />
+          </Suspense>
         )}
 
         {activeSection === 'locations' && (
-          <LocationsPage
+          <Suspense fallback={<p className="status">Loading locations page...</p>}>
+            <LocationsPage
             setShowLocationModal={setShowLocationModal}
             locationSearch={locationSearch}
             setLocationSearch={setLocationSearch}
@@ -3224,11 +3233,13 @@ export default function HomeView({
             locationsPage={locationsPage}
             setLocationsPage={setLocationsPage}
             openLocationDetailPage={openLocationDetailPage}
-          />
+            />
+          </Suspense>
         )}
 
         {activeSection === 'devices' && (
-          <DevicesPage
+          <Suspense fallback={<p className="status">Loading devices page...</p>}>
+            <DevicesPage
             devices={devices}
             loadUsers={loadUsers}
             loadLocations={loadLocations}
@@ -3249,11 +3260,13 @@ export default function HomeView({
             simActionPendingByDevice={simActionPendingByDevice}
             devicesPage={devicesPage}
             setDevicesPage={setDevicesPage}
-          />
+            />
+          </Suspense>
         )}
 
         {activeSection === 'user-detail' && (
-          <UserDetailPage
+          <Suspense fallback={<p className="status">Loading user profile...</p>}>
+            <UserDetailPage
             selectedUser={selectedUser}
             roleLabel={roleLabel}
             devices={devices}
@@ -3266,11 +3279,13 @@ export default function HomeView({
             userDevicePage={userDetailDevicePage}
             setUserDevicePage={setUserDetailDevicePage}
             onBack={() => setActiveSection('users')}
-          />
+            />
+          </Suspense>
         )}
 
         {activeSection === 'location-detail' && (
-          <LocationDetailPage
+          <Suspense fallback={<p className="status">Loading location profile...</p>}>
+            <LocationDetailPage
             selectedLocation={selectedLocation}
             devices={devices}
             users={users}
@@ -3288,7 +3303,8 @@ export default function HomeView({
             locationDevicePage={locationDetailDevicePage}
             setLocationDevicePage={setLocationDetailDevicePage}
             onBack={() => setActiveSection('locations')}
-          />
+            />
+          </Suspense>
         )}
 
         {activeSection === 'device-detail-overview' && (
