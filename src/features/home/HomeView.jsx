@@ -142,6 +142,42 @@ const parseGeoFenceRadiusToMeters = (value) => {
   return Math.round(Math.min(65535, Math.max(100, meters)))
 }
 
+const normalizeGeoFenceSlot = (value, fallback = 1) => {
+  const parsed = Number.parseInt(String(value || fallback), 10)
+  if (Number.isNaN(parsed)) return fallback
+  return Math.min(4, Math.max(1, parsed))
+}
+
+const buildGeoFencesFromForm = (form) => {
+  if (Array.isArray(form?.geoFences) && form.geoFences.length) {
+    const usedSlots = new Set()
+    return form.geoFences
+      .slice(0, 4)
+      .map((geoFence, index) => {
+        const preferredSlot = normalizeGeoFenceSlot(geoFence?.slot, index + 1)
+        const slot = usedSlots.has(preferredSlot)
+          ? ([1, 2, 3, 4].find((value) => !usedSlots.has(value)) || preferredSlot)
+          : preferredSlot
+        usedSlots.add(slot)
+        return {
+          slot,
+          enabled: String(geoFence?.enabled ?? form?.geoFenceEnabled ?? '1'),
+          mode: String(geoFence?.mode ?? form?.geoFenceMode ?? '0'),
+          radius: String(geoFence?.radius ?? form?.geoFenceRadius ?? '100m')
+        }
+      })
+      .sort((a, b) => a.slot - b.slot)
+  }
+
+  const count = Math.min(4, Math.max(1, Number.parseInt(String(form?.geoFenceCount || '1'), 10) || 1))
+  return Array.from({ length: count }, (_, index) => ({
+    slot: index + 1,
+    enabled: String(form?.geoFenceEnabled ?? '1'),
+    mode: String(form?.geoFenceMode ?? '0'),
+    radius: String(form?.geoFenceRadius ?? '100m')
+  }))
+}
+
 const parseCsvLines = (value) => String(value || '')
   .split(/[,\n]/)
   .map((entry) => entry.trim())
@@ -349,6 +385,7 @@ export default function HomeView({
   const [confirmDialog, setConfirmDialog] = useState({ open: false, message: '', onConfirm: null })
   const [deviceWorkspaceLoading, setDeviceWorkspaceLoading] = useState(false)
   const [advancedSettingsTab, setAdvancedSettingsTab] = useState('general')
+  const [selectedGeoFenceSlot, setSelectedGeoFenceSlot] = useState(1)
   const [workspaceSettingQuery, setWorkspaceSettingQuery] = useState('')
   const [editingUserId, setEditingUserId] = useState(null)
   const [editingCompanyId, setEditingCompanyId] = useState(null)
@@ -1099,6 +1136,11 @@ export default function HomeView({
       callEnabled: seededContacts[0]?.callEnabled !== false
     }
 
+    const normalizedGeoFences = buildGeoFencesFromForm({
+      ...baseConfigForm,
+      ...protocolSettings
+    })
+
     const nextConfigForm = {
       ...baseConfigForm,
       ...protocolSettings,
@@ -1111,11 +1153,17 @@ export default function HomeView({
         : [primaryPhone || ''],
       contactSlot: protocolSettings.contactSlot || 1,
       contactNumber: primaryPhone || '',
-      contactName: primaryName || ''
+      contactName: primaryName || '',
+      geoFenceCount: String(normalizedGeoFences.length),
+      geoFences: normalizedGeoFences,
+      geoFenceEnabled: normalizedGeoFences[0]?.enabled ?? baseConfigForm.geoFenceEnabled,
+      geoFenceMode: normalizedGeoFences[0]?.mode ?? baseConfigForm.geoFenceMode,
+      geoFenceRadius: normalizedGeoFences[0]?.radius ?? baseConfigForm.geoFenceRadius
     }
 
     setConfigForm(nextConfigForm)
     setConfigBaseline(nextConfigForm)
+    setSelectedGeoFenceSlot(1)
     const nextDeviceId = device.id || device.deviceId || null
     setEditingDeviceId(nextDeviceId)
     setSelectedDeviceId(nextDeviceId ? String(nextDeviceId) : '')
@@ -2009,6 +2057,17 @@ export default function HomeView({
     if (dbCoordinates) return dbCoordinates
     return resolveValidCoordinates(selectedDevice)
   }, [resolveValidCoordinates, selectedDevice, selectedWorkspaceDevice])
+  const geoFenceConfigs = useMemo(() => buildGeoFencesFromForm(configForm), [configForm])
+  const activeGeoFenceSlot = normalizeGeoFenceSlot(selectedGeoFenceSlot, 1)
+  const activeGeoFenceConfig = useMemo(() => (
+    geoFenceConfigs.find((entry) => entry.slot === activeGeoFenceSlot) || geoFenceConfigs[0] || { slot: 1, enabled: '1', mode: '0', radius: '100m' }
+  ), [activeGeoFenceSlot, geoFenceConfigs])
+
+  useEffect(() => {
+    if (!geoFenceConfigs.length) return
+    if (geoFenceConfigs.some((entry) => entry.slot === activeGeoFenceSlot)) return
+    setSelectedGeoFenceSlot(geoFenceConfigs[0].slot)
+  }, [activeGeoFenceSlot, geoFenceConfigs])
 
   const selectedDeviceWebhookLocation = useMemo(() => {
     if (!locationViewerDevice) return null
@@ -2634,12 +2693,12 @@ export default function HomeView({
     layer.clearLayers()
 
     const center = [geofenceCenterLocation.latitude, geofenceCenterLocation.longitude]
-    const radiusMeters = parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)
-    const modeLabel = String(configForm.geoFenceMode || '0') === '1' ? 'Enter alert' : 'Leave alert'
-    const enabled = String(configForm.geoFenceEnabled || '0') === '1'
+    const radiusMeters = parseGeoFenceRadiusToMeters(activeGeoFenceConfig.radius)
+    const modeLabel = String(activeGeoFenceConfig.mode || '0') === '1' ? 'Enter alert' : 'Leave alert'
+    const enabled = String(activeGeoFenceConfig.enabled || '0') === '1'
 
     L.marker(center)
-      .bindPopup(`Geo-fence center<br/>Mode: ${modeLabel}<br/>Radius: ${radiusMeters} m`)
+      .bindPopup(`Geo-fence #${activeGeoFenceConfig.slot} center<br/>Mode: ${modeLabel}<br/>Radius: ${radiusMeters} m`)
       .addTo(layer)
     L.circle(center, {
       radius: radiusMeters,
@@ -2651,7 +2710,7 @@ export default function HomeView({
 
     map.setView(center, 15)
     setTimeout(() => map.invalidateSize(), 120)
-  }, [activeSection, configForm.geoFenceEnabled, configForm.geoFenceMode, configForm.geoFenceRadius, geofenceCenterLocation, leafletReady])
+  }, [activeGeoFenceConfig, activeSection, geofenceCenterLocation, leafletReady])
 
   useEffect(() => {
     return () => {
@@ -2846,7 +2905,7 @@ export default function HomeView({
     )
   }, [deviceForm, selectedWorkspaceDevice])
   const hasPendingWorkspaceChanges = workspaceDeviceProfileChanged || configChangeRows.length > 0
-  const geoFenceRawRadius = String(configForm.geoFenceRadius || '').trim().toLowerCase()
+  const geoFenceRawRadius = String(activeGeoFenceConfig.radius || '').trim().toLowerCase()
   const isGeoFenceRadiusRawValid = !geoFenceRawRadius || /^(\d+(?:\.\d+)?)(m|meter|meters|km|kilometer|kilometers)?$/.test(geoFenceRawRadius)
   const workspaceSettingSuggestions = useMemo(() => {
     const query = workspaceSettingQuery.trim().toLowerCase()
@@ -2864,6 +2923,49 @@ export default function HomeView({
     } catch {
       return String(value)
     }
+  }
+
+  const updateActiveGeoFenceConfig = (updates) => {
+    const targetSlot = activeGeoFenceConfig.slot
+    setConfigForm((prev) => {
+      const currentEntries = buildGeoFencesFromForm(prev)
+      const nextEntries = currentEntries.map((entry) => (
+        entry.slot === targetSlot ? { ...entry, ...updates } : entry
+      ))
+      const primaryGeoFence = nextEntries[0] || activeGeoFenceConfig
+      return {
+        ...prev,
+        geoFences: nextEntries,
+        geoFenceCount: String(nextEntries.length),
+        geoFenceEnabled: primaryGeoFence.enabled,
+        geoFenceMode: primaryGeoFence.mode,
+        geoFenceRadius: primaryGeoFence.radius
+      }
+    })
+  }
+
+  const addGeoFenceConfig = () => {
+    setConfigForm((prev) => {
+      const currentEntries = buildGeoFencesFromForm(prev)
+      if (currentEntries.length >= 4) return prev
+      const nextSlot = [1, 2, 3, 4].find((slot) => !currentEntries.some((entry) => entry.slot === slot))
+      if (!nextSlot) return prev
+      const seed = currentEntries[currentEntries.length - 1] || { enabled: '1', mode: '0', radius: '100m' }
+      const nextEntries = [...currentEntries, { slot: nextSlot, enabled: seed.enabled, mode: seed.mode, radius: seed.radius }]
+      const primaryGeoFence = nextEntries[0]
+      return {
+        ...prev,
+        geoFences: nextEntries,
+        geoFenceCount: String(nextEntries.length),
+        geoFenceEnabled: primaryGeoFence.enabled,
+        geoFenceMode: primaryGeoFence.mode,
+        geoFenceRadius: primaryGeoFence.radius
+      }
+    })
+    setSelectedGeoFenceSlot((prev) => {
+      const nextSlot = [1, 2, 3, 4].find((slot) => !geoFenceConfigs.some((entry) => entry.slot === slot))
+      return nextSlot || prev
+    })
   }
 
   const openConfigReview = () => {
@@ -3746,18 +3848,24 @@ export default function HomeView({
               <div className="advanced-form-grid">
                 <div className="advanced-form-row">
                   <label className="label-with-default-hint">Geo-fence Slots<SettingDefaultHint field="geoFenceCount" /></label>
-                  <select value={String(configForm.geoFenceCount || '1')} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceCount: event.target.value }))}>
-                    <option value="1">1 fence (Geo1)</option>
-                    <option value="2">2 fences (Geo1-Geo2)</option>
-                    <option value="3">3 fences (Geo1-Geo3)</option>
-                    <option value="4">4 fences (Geo1-Geo4)</option>
+                  <div className="inline-actions">
+                    <button type="button" className="mini-action" onClick={addGeoFenceConfig} disabled={geoFenceConfigs.length >= 4}>+ Add Geo-fence</button>
+                    <span className="field-hint">{geoFenceConfigs.length}/4 configured</span>
+                  </div>
+                </div>
+                {geoFenceConfigs.length > 1 ? (
+                <div className="advanced-form-row">
+                  <label>Editing Geo-fence #</label>
+                  <select value={String(activeGeoFenceConfig.slot)} onChange={(event) => setSelectedGeoFenceSlot(Number(event.target.value))}>
+                    {geoFenceConfigs.map((entry) => <option key={`geo-fence-slot-${entry.slot}`} value={entry.slot}>Geo{entry.slot}</option>)}
                   </select>
                 </div>
+                ) : null}
                 <div className="advanced-form-row">
                   <label className="label-with-default-hint">Enable<SettingDefaultHint field="geoFenceEnabled" /></label>
                   <label className="switch-row">
-                    <input type="checkbox" checked={configForm.geoFenceEnabled === '1'} onChange={() => setConfigForm((prev) => ({ ...prev, geoFenceEnabled: prev.geoFenceEnabled === '1' ? '0' : '1' }))} />
-                    <span>{configForm.geoFenceEnabled === '1' ? 'On' : 'Off'}</span>
+                    <input type="checkbox" checked={activeGeoFenceConfig.enabled === '1'} onChange={() => updateActiveGeoFenceConfig({ enabled: activeGeoFenceConfig.enabled === '1' ? '0' : '1' })} />
+                    <span>{activeGeoFenceConfig.enabled === '1' ? 'On' : 'Off'}</span>
                   </label>
                 </div>
                 <div className="advanced-form-row">
@@ -3768,16 +3876,16 @@ export default function HomeView({
                       min="100"
                       max="65535"
                       step="10"
-                      value={parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)}
-                      style={getRangeProgressStyle(parseGeoFenceRadiusToMeters(configForm.geoFenceRadius), 100, 65535)}
-                      onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: `${event.target.value}m` }))}
+                      value={parseGeoFenceRadiusToMeters(activeGeoFenceConfig.radius)}
+                      style={getRangeProgressStyle(parseGeoFenceRadiusToMeters(activeGeoFenceConfig.radius), 100, 65535)}
+                      onChange={(event) => updateActiveGeoFenceConfig({ radius: `${event.target.value}m` })}
                     />
-                    <span className="range-value">{parseGeoFenceRadiusToMeters(configForm.geoFenceRadius)}</span>
+                    <span className="range-value">{parseGeoFenceRadiusToMeters(activeGeoFenceConfig.radius)}</span>
                   </div>
                 </div>
                 <div className="advanced-form-row">
                   <label className="label-with-default-hint">Trigger Mode<SettingDefaultHint field="geoFenceMode" /></label>
-                  <select value={configForm.geoFenceMode || '0'} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceMode: event.target.value }))}>
+                  <select value={activeGeoFenceConfig.mode || '0'} onChange={(event) => updateActiveGeoFenceConfig({ mode: event.target.value })}>
                     <option value="0">Leave Area (0)</option>
                     <option value="1">Enter Area (1)</option>
                   </select>
@@ -3786,8 +3894,8 @@ export default function HomeView({
                   <label>Radius Manual Override</label>
                   <div>
                     <input
-                      value={configForm.geoFenceRadius}
-                      onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))}
+                      value={activeGeoFenceConfig.radius}
+                      onChange={(event) => updateActiveGeoFenceConfig({ radius: event.target.value })}
                       placeholder="100m"
                     />
                     {!isGeoFenceRadiusRawValid ? <small className="status-error">Use numbers with optional unit, e.g. 500m or 1km.</small> : <small className="field-hint">Supported units: m or km.</small>}
@@ -4157,17 +4265,16 @@ export default function HomeView({
                   </div>
                   <div>
                     <label>Geo-fence</label>
-                    <input title="Geo-fence radius command value (e.g. 500m)." value={configForm.geoFenceRadius} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceRadius: event.target.value }))} />
+                    <input title="Geo-fence radius command value (e.g. 500m)." value={activeGeoFenceConfig.radius} onChange={(event) => updateActiveGeoFenceConfig({ radius: event.target.value })} />
                   </div>
-                  <div>
-                    <label>Geo-fence Slots</label>
-                    <select title="Number of geo-fence commands to generate (Geo1-Geo4)." value={String(configForm.geoFenceCount || '1')} onChange={(event) => setConfigForm((prev) => ({ ...prev, geoFenceCount: event.target.value }))}>
-                      <option value="1">1</option>
-                      <option value="2">2</option>
-                      <option value="3">3</option>
-                      <option value="4">4</option>
-                    </select>
-                  </div>
+                  {geoFenceConfigs.length > 1 ? (
+                    <div>
+                      <label>Editing Geo-fence #</label>
+                      <select title="Choose which Geo# command to edit." value={String(activeGeoFenceConfig.slot)} onChange={(event) => setSelectedGeoFenceSlot(Number(event.target.value))}>
+                        {geoFenceConfigs.map((entry) => <option key={`commands-geo-slot-${entry.slot}`} value={entry.slot}>Geo{entry.slot}</option>)}
+                      </select>
+                    </div>
+                  ) : null}
                 </div>
                 <button className="mini-action commands-btn commands-btn-primary commands-btn-send" title="Send the currently prepared command set to the selected device." disabled={loading} onClick={sendConfig}>Send Command</button>
               </article>

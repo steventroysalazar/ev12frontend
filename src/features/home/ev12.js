@@ -34,6 +34,9 @@ export const initialConfigForm = {
   geoFenceMode: '0',
   geoFenceRadius: '100m',
   geoFenceCount: '1',
+  geoFences: [
+    { slot: 1, enabled: '1', mode: '0', radius: '100m' }
+  ],
   wifiEnabled: '1',
   speakerVolume: '100',
   prefixName: 'Emma',
@@ -63,6 +66,39 @@ const normalizeGeoFenceCount = (value) => {
   const parsed = Number.parseInt(String(value || '1'), 10)
   if (Number.isNaN(parsed)) return 1
   return Math.min(4, Math.max(1, parsed))
+}
+const normalizeGeoFenceSlot = (value, fallback = 1) => {
+  const parsed = Number.parseInt(String(value || fallback), 10)
+  if (Number.isNaN(parsed)) return fallback
+  return Math.min(4, Math.max(1, parsed))
+}
+const normalizeGeoFenceEntries = (form) => {
+  if (Array.isArray(form.geoFences) && form.geoFences.length) {
+    const usedSlots = new Set()
+    return form.geoFences
+      .slice(0, 4)
+      .map((entry, index) => {
+        const preferredSlot = normalizeGeoFenceSlot(entry?.slot, index + 1)
+        const fallbackSlot = [1, 2, 3, 4].find((slot) => !usedSlots.has(slot)) || preferredSlot
+        const slot = usedSlots.has(preferredSlot) ? fallbackSlot : preferredSlot
+        usedSlots.add(slot)
+        return {
+          slot,
+          enabled: String(entry?.enabled ?? form.geoFenceEnabled ?? '1'),
+          mode: String(entry?.mode ?? form.geoFenceMode ?? '0'),
+          radius: String(entry?.radius ?? form.geoFenceRadius ?? '100m')
+        }
+      })
+      .sort((a, b) => a.slot - b.slot)
+  }
+
+  const geoFenceCount = normalizeGeoFenceCount(form.geoFenceCount)
+  return Array.from({ length: geoFenceCount }, (_, index) => ({
+    slot: index + 1,
+    enabled: String(form.geoFenceEnabled ?? '1'),
+    mode: String(form.geoFenceMode ?? '0'),
+    radius: String(form.geoFenceRadius ?? '100m')
+  }))
 }
 const normalizeTimeToken = (value, fallback) => {
   const raw = String(value || '').trim()
@@ -163,15 +199,15 @@ const buildCommandEntries = (form) => {
     }
   }
   if (form.overSpeedEnabled !== '' && form.overSpeedLimit) entries.push({ key: 'overSpeed', command: `Speed${form.overSpeedEnabled},${form.overSpeedLimit}` })
-  if (form.geoFenceEnabled !== '' && form.geoFenceRadius) {
-    const geoFenceCount = normalizeGeoFenceCount(form.geoFenceCount)
-    for (let geoFenceIndex = 1; geoFenceIndex <= geoFenceCount; geoFenceIndex += 1) {
+  const geoFenceEntries = normalizeGeoFenceEntries(form)
+  geoFenceEntries.forEach((geoFenceEntry) => {
+    if (geoFenceEntry.enabled === '' || !geoFenceEntry.radius) return
+    const geoFenceIndex = normalizeGeoFenceSlot(geoFenceEntry.slot, 1)
       entries.push({
         key: `geoFence-${geoFenceIndex}`,
-        command: `Geo${geoFenceIndex},${form.geoFenceEnabled},${form.geoFenceMode || 0},${form.geoFenceRadius}`
+        command: `Geo${geoFenceIndex},${geoFenceEntry.enabled},${geoFenceEntry.mode || 0},${geoFenceEntry.radius}`
       })
-    }
-  }
+  })
   if (form.wifiEnabled !== '') entries.push({ key: 'wifiEnabled', command: `Wifi${form.wifiEnabled}` })
   if (form.speakerVolume) entries.push({ key: 'speakerVolume', command: `Speakervolume${form.speakerVolume}` })
   if (form.prefixName) entries.push({ key: 'prefixName', command: `prefix1,${form.prefixName}` })
