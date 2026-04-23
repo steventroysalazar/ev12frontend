@@ -220,9 +220,10 @@ const buildCommandEntries = (form) => {
 
 export const buildEv12Preview = (form, baselineForm = null) => {
   const currentEntries = buildCommandEntries(form)
+  const commandSeparator = ',\n'
 
   if (!baselineForm) {
-    return currentEntries.map((entry) => entry.command).join(',')
+    return currentEntries.map((entry) => entry.command).join(commandSeparator)
   }
 
   const baselineEntries = buildCommandEntries(baselineForm)
@@ -232,7 +233,7 @@ export const buildEv12Preview = (form, baselineForm = null) => {
     .filter((entry) => baselineMap.get(entry.key) !== entry.command)
     .map((entry) => entry.command)
 
-  return updatedOnlyCommands.join(',')
+  return updatedOnlyCommands.join(commandSeparator)
 }
 
 export const formatReply = (reply) => {
