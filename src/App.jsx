@@ -188,6 +188,42 @@ const pickChangedFields = (current = {}, baseline = null) => {
   }, {})
 }
 
+const buildProtocolSettingsPayload = (settings = {}) => {
+  const payload = { ...settings }
+  const authorizedNumbers = Array.isArray(settings.authorizedNumbers)
+    ? settings.authorizedNumbers.slice(0, 10).map((value) => String(value || '').trim()).filter(Boolean)
+    : []
+  if (authorizedNumbers.length) {
+    payload.authorizedNumbers = authorizedNumbers
+    payload.authorized_numbers = authorizedNumbers
+    payload.whitelistedNumbers = authorizedNumbers
+    payload.whitelisted_numbers = authorizedNumbers
+  }
+
+  const geoFences = Array.isArray(settings.geoFences)
+    ? settings.geoFences.slice(0, 4).map((entry, index) => ({
+      slot: Number(entry?.slot) || index + 1,
+      enabled: String(entry?.enabled ?? '1'),
+      mode: String(entry?.mode ?? '0'),
+      radius: String(entry?.radius ?? '100m')
+    }))
+    : []
+  if (geoFences.length) {
+    payload.geoFences = geoFences
+    payload.geo_fences = geoFences
+  }
+
+  if (settings.wifiEnabled !== undefined) {
+    const wifiEnabled = String(settings.wifiEnabled) === '1'
+    payload.wifiEnabled = wifiEnabled ? '1' : '0'
+    payload.wifi_enabled = wifiEnabled
+    payload.wifiPositioning = wifiEnabled
+    payload.wifi_positioning = wifiEnabled
+  }
+
+  return payload
+}
+
 export default function App() {
   const [auth, dispatchAuth] = useReducer(authReducer, initialAuthState, loadPersistedAuth)
   const [activeView, setActiveView] = useState(() => {
@@ -1009,7 +1045,7 @@ export default function App() {
         restrictedAccess: Boolean(activeConfigForm.smsWhitelistEnabled)
       })
 
-      const protocolSettings = { ...activeConfigForm }
+      const protocolSettings = buildProtocolSettingsPayload(activeConfigForm)
       let baselineForDiff = (configBaseline && typeof configBaseline === 'object')
         ? { ...configBaseline, deviceId: hasDeviceId ? normalizedDeviceId : configBaseline.deviceId }
         : null
