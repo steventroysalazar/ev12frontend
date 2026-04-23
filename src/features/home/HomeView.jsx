@@ -150,9 +150,13 @@ const normalizeGeoFenceSlot = (value, fallback = 1) => {
 }
 
 const buildGeoFencesFromForm = (form) => {
-  if (Array.isArray(form?.geoFences) && form.geoFences.length) {
+  const configuredGeoFences = Array.isArray(form?.geoFences) && form.geoFences.length
+    ? form.geoFences
+    : (Array.isArray(form?.geo_fences) && form.geo_fences.length ? form.geo_fences : [])
+
+  if (configuredGeoFences.length) {
     const usedSlots = new Set()
-    return form.geoFences
+    return configuredGeoFences
       .slice(0, 4)
       .map((geoFence, index) => {
         const preferredSlot = normalizeGeoFenceSlot(geoFence?.slot, index + 1)
@@ -194,6 +198,18 @@ const parseJsonInput = (value, fallback = {}) => {
   } catch {
     return fallback
   }
+}
+
+const resolveAuthorizedNumbers = (settings = {}, fallbackPhone = '') => {
+  const candidates = [
+    settings?.authorizedNumbers,
+    settings?.authorized_numbers,
+    settings?.whitelistedNumbers,
+    settings?.whitelisted_numbers
+  ]
+  const matched = candidates.find((entry) => Array.isArray(entry) && entry.length)
+  if (matched) return matched.slice(0, 10).map((value) => String(value || ''))
+  return [fallbackPhone || '']
 }
 
 const getRangeProgressStyle = (value, min, max) => {
@@ -1149,9 +1165,16 @@ export default function HomeView({
       imei: device.imei || protocolSettings.imei || baseConfigForm.imei,
       prefixName: device.name || device.deviceName || protocolSettings.prefixName || baseConfigForm.prefixName,
       contacts: seededContacts.slice(0, 1),
-      authorizedNumbers: Array.isArray(protocolSettings.authorizedNumbers) && protocolSettings.authorizedNumbers.length
-        ? protocolSettings.authorizedNumbers.slice(0, 10).map((value) => String(value || ''))
-        : [primaryPhone || ''],
+      authorizedNumbers: resolveAuthorizedNumbers(protocolSettings, primaryPhone),
+      wifiEnabled: String(
+        protocolSettings.wifiEnabled
+        ?? protocolSettings.wifi_enabled
+        ?? protocolSettings.wifiPositioning
+        ?? protocolSettings.wifi_positioning
+        ?? baseConfigForm.wifiEnabled
+      ) === '1' || protocolSettings.wifiPositioning === true || protocolSettings.wifi_positioning === true
+        ? '1'
+        : '0',
       contactSlot: protocolSettings.contactSlot || 1,
       contactNumber: primaryPhone || '',
       contactName: primaryName || '',
