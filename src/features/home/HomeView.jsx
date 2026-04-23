@@ -52,7 +52,7 @@ const initialUserForm = {
   allCompanyLocations: false
 }
 const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '', externalDeviceId: '', simIccid: '' }
-const initialImeiLinkState = { open: false, deviceId: null, phoneNumber: '', externalDeviceId: '', status: '', polling: false, resendPending: false }
+const initialImeiLinkState = { open: false, deviceId: null, phoneNumber: '', externalDeviceId: '', status: '', polling: false, resendPending: false, waitStartedAt: null }
 const initialDeviceRegistrationModal = { open: false, device: null, status: '', activatingSim: false }
 const WEBHOOK_STORAGE_KEY = 'ev12:webhook-events'
 const DEFAULT_HOME_SECTION = 'dashboard'
@@ -518,6 +518,7 @@ export default function HomeView({
   const [errorLogs, setErrorLogs] = useState([])
   const [errorLogsStatus, setErrorLogsStatus] = useState('')
   const [errorLogRange, setErrorLogRange] = useState('24h')
+  const [imeiElapsedSeconds, setImeiElapsedSeconds] = useState(0)
   const [locationBreadcrumbs, setLocationBreadcrumbs] = useState([])
   const [locationBreadcrumbsStatus, setLocationBreadcrumbsStatus] = useState('')
   const [breadcrumbDateFrom, setBreadcrumbDateFrom] = useState('')
@@ -576,6 +577,23 @@ export default function HomeView({
     }, 1000)
     return () => clearInterval(intervalId)
   }, [])
+
+  useEffect(() => {
+    const shouldTrackWait = imeiLinkState.open && !imeiLinkState.externalDeviceId && Boolean(imeiLinkState.waitStartedAt)
+    if (!shouldTrackWait) {
+      setImeiElapsedSeconds(0)
+      return undefined
+    }
+
+    const tick = () => {
+      const elapsedMs = Date.now() - new Date(imeiLinkState.waitStartedAt).getTime()
+      setImeiElapsedSeconds(Math.max(0, Math.floor(elapsedMs / 1000)))
+    }
+
+    tick()
+    const intervalId = setInterval(tick, 1000)
+    return () => clearInterval(intervalId)
+  }, [imeiLinkState.externalDeviceId, imeiLinkState.open, imeiLinkState.waitStartedAt])
 
   const isMotionAlarmCode = useCallback((alarmCode) => {
     const normalized = String(alarmCode || '').trim()
@@ -700,7 +718,7 @@ export default function HomeView({
       { label: 'TOTAL USERS', value: users.length, icon: 'users', section: 'users' },
       { label: 'TOTAL DEVICES', value: devices.length, icon: 'devices', section: 'devices' },
       { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location', section: 'locations' },
-      { label: 'BACKEND ERRORS', value: recentErrorLogs.length, icon: 'warning', section: 'error-logs', hasRangeControl: true }
+      { label: 'ERROR LOGS', value: recentErrorLogs.length, icon: 'warning', section: 'error-logs', hasRangeControl: true }
     ],
     [companies.length, users.length, devices.length, locations.length, recentErrorLogs.length]
   )
@@ -1419,10 +1437,10 @@ export default function HomeView({
 
   const handleImeiResend = useCallback(async (deviceId, { showGlobalStatus = false } = {}) => {
     if (!deviceId) throw new Error('Device id is missing')
-    setImeiLinkState((prev) => ({ ...prev, resendPending: true, status: 'Sending IMEI request (V?)…' }))
+    setImeiLinkState((prev) => ({ ...prev, resendPending: true, status: 'Sending IMEI request (V?)…', waitStartedAt: prev.waitStartedAt || new Date().toISOString() }))
     try {
       const payload = await fetchJson(`/api/devices/${deviceId}/imei-resend`, { method: 'POST' })
-      setImeiLinkState((prev) => ({ ...prev, resendPending: false, status: `Retry sent at ${payload?.sentAt || 'just now'}. Waiting for IMEI link…` }))
+      setImeiLinkState((prev) => ({ ...prev, resendPending: false, status: `Retry sent at ${payload?.sentAt || 'just now'}. Waiting for IMEI link…`, waitStartedAt: prev.waitStartedAt || new Date().toISOString() }))
       if (showGlobalStatus) {
         setActionStatus({ type: 'success', message: 'Manual IMEI resend sent successfully.' })
       }
@@ -1513,7 +1531,8 @@ export default function HomeView({
           ? 'IMEI linked automatically.'
           : 'Device created. Backend auto-sent V?. Waiting for IMEI link…',
         polling: !createdExternalId && Boolean(createdDeviceId),
-        resendPending: false
+        resendPending: false,
+        waitStartedAt: !createdExternalId && createdDeviceId ? new Date().toISOString() : null
       })
       setDeviceRegistrationModal({
         open: true,
@@ -1536,7 +1555,8 @@ export default function HomeView({
               ...prev,
               externalDeviceId: linkedResult.externalDeviceId,
               status: `IMEI linked: ${linkedResult.externalDeviceId}`,
-              polling: false
+              polling: false,
+              waitStartedAt: null
             }))
             setDeviceRegistrationModal((prev) => ({
               ...prev,
@@ -1545,11 +1565,11 @@ export default function HomeView({
             }))
             await loadDevices()
           } else {
-            setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI not linked yet. You can manually retry V?.' }))
+            setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI not linked yet. You can manually retry V?.', waitStartedAt: prev.waitStartedAt || new Date().toISOString() }))
             setDeviceRegistrationModal((prev) => ({ ...prev, status: 'IMEI not linked yet. You can manually retry V?.' }))
           }
         } catch {
-          setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI polling failed. You can manually retry V?.' }))
+          setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI polling failed. You can manually retry V?.', waitStartedAt: prev.waitStartedAt || new Date().toISOString() }))
           setDeviceRegistrationModal((prev) => ({ ...prev, status: 'IMEI polling failed. You can manually retry V?.' }))
         }
       }
@@ -4873,24 +4893,56 @@ export default function HomeView({
 
       {showDeviceModal ? (
         <div className="overlay" onClick={() => { setShowDeviceModal(false); setImeiLinkState(initialImeiLinkState) }}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <h3>Add Device</h3>
-            <div className="field-grid">
-              <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
-              <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
-              <select value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))}>
-                <option value="">Select Device Version</option>
-                {eviewDeviceVersionOptions.map((version) => <option key={version} value={version}>{version}</option>)}
-              </select>
-              <input placeholder="Webhook Device ID (externalDeviceId)" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
-              <input placeholder="SIM ICCID" value={deviceForm.simIccid} onChange={(event) => setDeviceForm((prev) => ({ ...prev, simIccid: event.target.value }))} />
-              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
-              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+          <div className="modal device-create-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="device-create-head">
+              <h3>Add Device</h3>
+              <p>Create a polished device profile with owner, location, and provisioning details.</p>
             </div>
-            <button className="mini-action" onClick={handleCreateDevice}>Add Device</button>
+            <div className="field-grid two-col device-create-grid">
+              <label>
+                <span>Device Name</span>
+                <input placeholder="e.g. EV-12 North Wing" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
+              </label>
+              <label>
+                <span>Phone Number</span>
+                <input placeholder="e.g. +1 555 0100" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
+              </label>
+              <label>
+                <span>Device Version</span>
+                <select value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))}>
+                  <option value="">Select Device Version</option>
+                  {eviewDeviceVersionOptions.map((version) => <option key={version} value={version}>{version}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>SIM ICCID</span>
+                <input placeholder="898821..." value={deviceForm.simIccid} onChange={(event) => setDeviceForm((prev) => ({ ...prev, simIccid: event.target.value }))} />
+              </label>
+              <label>
+                <span>Owner User</span>
+                <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
+              </label>
+              <label>
+                <span>Location</span>
+                <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+              </label>
+              <label className="device-create-full">
+                <span>Webhook Device ID (externalDeviceId)</span>
+                <input placeholder="Optional IMEI / Webhook ID" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
+              </label>
+            </div>
+            <div className="modal-actions">
+              <button className="mini-action device-detail-btn-primary" onClick={handleCreateDevice}>Add Device</button>
+            </div>
             {imeiLinkState.open ? (
-              <div className="status" style={{ marginTop: 12 }}>
+              <div className="status imei-wait-card" style={{ marginTop: 12 }}>
                 <p>{imeiLinkState.status}</p>
+                {!imeiLinkState.externalDeviceId && imeiLinkState.waitStartedAt ? (
+                  <div className="imei-progress">
+                    <span className="imei-progress-dot" aria-hidden="true" />
+                    <strong>Waiting for IMEI link… {imeiElapsedSeconds}s elapsed</strong>
+                  </div>
+                ) : null}
                 <p>Device ID: {imeiLinkState.deviceId || '-'} · Phone: {imeiLinkState.phoneNumber || '-'}</p>
                 <p>Webhook Device ID: {imeiLinkState.externalDeviceId || '-'}</p>
                 <button
@@ -4932,8 +4984,14 @@ export default function HomeView({
         <div className="overlay" onClick={() => setDeviceRegistrationModal(initialDeviceRegistrationModal)}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <h3>Device Registered</h3>
-            <div className="status" style={{ marginTop: 12 }}>
+            <div className="status imei-wait-card" style={{ marginTop: 12 }}>
               <p>{deviceRegistrationModal.status || 'Device created successfully.'}</p>
+              {!imeiLinkState.externalDeviceId && imeiLinkState.waitStartedAt ? (
+                <div className="imei-progress">
+                  <span className="imei-progress-dot" aria-hidden="true" />
+                  <strong>Waiting for IMEI completion… {imeiElapsedSeconds}s elapsed</strong>
+                </div>
+              ) : null}
               <p>Device ID: {deviceRegistrationModal.device?.id || deviceRegistrationModal.device?.deviceId || '-'}</p>
               <p>Name: {deviceRegistrationModal.device?.name || deviceRegistrationModal.device?.deviceName || '-'}</p>
               <p>Phone: {deviceRegistrationModal.device?.phoneNumber || '-'}</p>
