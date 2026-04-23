@@ -52,7 +52,7 @@ const initialUserForm = {
   allCompanyLocations: false
 }
 const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '', externalDeviceId: '', simIccid: '' }
-const initialImeiLinkState = { open: false, deviceId: null, phoneNumber: '', externalDeviceId: '', status: '', polling: false, resendPending: false, waitStartedAt: null }
+const initialImeiLinkState = { open: false, deviceId: null, phoneNumber: '', externalDeviceId: '', status: '', polling: false, resendPending: false, waitStartedAt: null, lastRetryAt: null }
 const initialDeviceRegistrationModal = { open: false, device: null, status: '', activatingSim: false }
 const WEBHOOK_STORAGE_KEY = 'ev12:webhook-events'
 const DEFAULT_HOME_SECTION = 'dashboard'
@@ -519,6 +519,7 @@ export default function HomeView({
   const [errorLogsStatus, setErrorLogsStatus] = useState('')
   const [errorLogRange, setErrorLogRange] = useState('24h')
   const [imeiElapsedSeconds, setImeiElapsedSeconds] = useState(0)
+  const [imeiRetryCooldownSeconds, setImeiRetryCooldownSeconds] = useState(0)
   const [locationBreadcrumbs, setLocationBreadcrumbs] = useState([])
   const [locationBreadcrumbsStatus, setLocationBreadcrumbsStatus] = useState('')
   const [breadcrumbDateFrom, setBreadcrumbDateFrom] = useState('')
@@ -594,6 +595,23 @@ export default function HomeView({
     const intervalId = setInterval(tick, 1000)
     return () => clearInterval(intervalId)
   }, [imeiLinkState.externalDeviceId, imeiLinkState.open, imeiLinkState.waitStartedAt])
+
+  useEffect(() => {
+    if (!imeiLinkState.lastRetryAt) {
+      setImeiRetryCooldownSeconds(0)
+      return undefined
+    }
+
+    const tick = () => {
+      const elapsedSeconds = Math.floor((Date.now() - new Date(imeiLinkState.lastRetryAt).getTime()) / 1000)
+      const remaining = Math.max(0, 120 - elapsedSeconds)
+      setImeiRetryCooldownSeconds(remaining)
+    }
+
+    tick()
+    const intervalId = setInterval(tick, 1000)
+    return () => clearInterval(intervalId)
+  }, [imeiLinkState.lastRetryAt])
 
   const isMotionAlarmCode = useCallback((alarmCode) => {
     const normalized = String(alarmCode || '').trim()
@@ -1437,7 +1455,17 @@ export default function HomeView({
 
   const handleImeiResend = useCallback(async (deviceId, { showGlobalStatus = false } = {}) => {
     if (!deviceId) throw new Error('Device id is missing')
-    setImeiLinkState((prev) => ({ ...prev, resendPending: true, status: 'Sending IMEI request (V?)…', waitStartedAt: prev.waitStartedAt || new Date().toISOString() }))
+    if (imeiRetryCooldownSeconds > 0) {
+      setImeiLinkState((prev) => ({ ...prev, status: `Manual retry available in ${imeiRetryCooldownSeconds}s.` }))
+      return null
+    }
+    setImeiLinkState((prev) => ({
+      ...prev,
+      resendPending: true,
+      status: 'Sending IMEI request (V?)…',
+      waitStartedAt: prev.waitStartedAt || new Date().toISOString(),
+      lastRetryAt: new Date().toISOString()
+    }))
     try {
       const payload = await fetchJson(`/api/devices/${deviceId}/imei-resend`, { method: 'POST' })
       setImeiLinkState((prev) => ({ ...prev, resendPending: false, status: `Retry sent at ${payload?.sentAt || 'just now'}. Waiting for IMEI link…`, waitStartedAt: prev.waitStartedAt || new Date().toISOString() }))
@@ -1452,7 +1480,7 @@ export default function HomeView({
       }
       throw error
     }
-  }, [])
+  }, [imeiRetryCooldownSeconds])
 
   const syncDeviceRecord = useCallback((deviceId, nextValues) => {
     if (!deviceId || !nextValues) return
@@ -1532,7 +1560,8 @@ export default function HomeView({
           : 'Device created. Backend auto-sent V?. Waiting for IMEI link…',
         polling: !createdExternalId && Boolean(createdDeviceId),
         resendPending: false,
-        waitStartedAt: !createdExternalId && createdDeviceId ? new Date().toISOString() : null
+        waitStartedAt: !createdExternalId && createdDeviceId ? new Date().toISOString() : null,
+        lastRetryAt: null
       })
       setDeviceRegistrationModal({
         open: true,
@@ -4896,7 +4925,6 @@ export default function HomeView({
           <div className="modal device-create-modal" onClick={(event) => event.stopPropagation()}>
             <div className="device-create-head">
               <h3>Add Device</h3>
-              <p>Create a polished device profile with owner, location, and provisioning details.</p>
             </div>
             <div className="field-grid two-col device-create-grid">
               <label>
@@ -4945,13 +4973,14 @@ export default function HomeView({
                 ) : null}
                 <p>Device ID: {imeiLinkState.deviceId || '-'} · Phone: {imeiLinkState.phoneNumber || '-'}</p>
                 <p>Webhook Device ID: {imeiLinkState.externalDeviceId || '-'}</p>
+                <p className="imei-retry-note">Manual IMEI retry can be sent once every 120 seconds.</p>
                 <button
                   className="table-link action-chip action-chip-neutral"
                   type="button"
                   onClick={() => handleImeiResend(imeiLinkState.deviceId)}
-                  disabled={!imeiLinkState.deviceId || imeiLinkState.resendPending}
+                  disabled={!imeiLinkState.deviceId || imeiLinkState.resendPending || imeiRetryCooldownSeconds > 0}
                 >
-                  {imeiLinkState.resendPending ? 'Retrying…' : 'Manual Retry IMEI (V?)'}
+                  {imeiLinkState.resendPending ? 'Retrying…' : (imeiRetryCooldownSeconds > 0 ? `Retry available in ${imeiRetryCooldownSeconds}s` : 'Manual Retry IMEI (V?)')}
                 </button>
               </div>
             ) : null}
@@ -5002,15 +5031,16 @@ export default function HomeView({
               </p>
               <p>Waiting for IMEI: {deviceRegistrationModal.device?.externalDeviceId ? 'No' : 'Yes'}</p>
               <p>Webhook Device ID / IMEI: {deviceRegistrationModal.device?.externalDeviceId || '-'}</p>
+              <p className="imei-retry-note">Manual IMEI retry can be sent once every 120 seconds.</p>
             </div>
             <div className="modal-actions">
               <button
                 className="table-link action-chip action-chip-neutral"
                 type="button"
                 onClick={() => handleImeiResend(deviceRegistrationModal.device?.id || deviceRegistrationModal.device?.deviceId)}
-                disabled={!deviceRegistrationModal.device || imeiLinkState.resendPending}
+                disabled={!deviceRegistrationModal.device || imeiLinkState.resendPending || imeiRetryCooldownSeconds > 0}
               >
-                {imeiLinkState.resendPending ? 'Retrying…' : 'Manual Retry IMEI (V?)'}
+                {imeiLinkState.resendPending ? 'Retrying…' : (imeiRetryCooldownSeconds > 0 ? `Retry available in ${imeiRetryCooldownSeconds}s` : 'Manual Retry IMEI (V?)')}
               </button>
               {!deviceRegistrationModal.device?.simActivated ? (
                 <button
