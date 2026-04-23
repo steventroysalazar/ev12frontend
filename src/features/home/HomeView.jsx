@@ -52,7 +52,7 @@ const initialUserForm = {
   allCompanyLocations: false
 }
 const initialDeviceForm = { name: '', phoneNumber: '', eviewVersion: '', ownerUserId: '', locationId: '', externalDeviceId: '', simIccid: '' }
-const initialImeiLinkState = { open: false, deviceId: null, phoneNumber: '', externalDeviceId: '', status: '', polling: false, resendPending: false }
+const initialImeiLinkState = { open: false, deviceId: null, phoneNumber: '', externalDeviceId: '', status: '', polling: false, resendPending: false, waitStartedAt: null, lastRetryAt: null }
 const initialDeviceRegistrationModal = { open: false, device: null, status: '', activatingSim: false }
 const WEBHOOK_STORAGE_KEY = 'ev12:webhook-events'
 const DEFAULT_HOME_SECTION = 'dashboard'
@@ -76,6 +76,7 @@ const supportedSections = new Set([
   'settings-advanced',
   'location',
   'alarm-logs',
+  'error-logs',
   'commands',
   'replies',
   'webhooks'
@@ -514,6 +515,11 @@ export default function HomeView({
   const [alarmLogConnectionFilter, setAlarmLogConnectionFilter] = useState('all')
   const [alarmLogs, setAlarmLogs] = useState([])
   const [alarmLogsStatus, setAlarmLogsStatus] = useState('')
+  const [errorLogs, setErrorLogs] = useState([])
+  const [errorLogsStatus, setErrorLogsStatus] = useState('')
+  const [errorLogRange, setErrorLogRange] = useState('24h')
+  const [imeiElapsedSeconds, setImeiElapsedSeconds] = useState(0)
+  const [imeiRetryCooldownSeconds, setImeiRetryCooldownSeconds] = useState(0)
   const [locationBreadcrumbs, setLocationBreadcrumbs] = useState([])
   const [locationBreadcrumbsStatus, setLocationBreadcrumbsStatus] = useState('')
   const [breadcrumbDateFrom, setBreadcrumbDateFrom] = useState('')
@@ -572,6 +578,40 @@ export default function HomeView({
     }, 1000)
     return () => clearInterval(intervalId)
   }, [])
+
+  useEffect(() => {
+    const shouldTrackWait = imeiLinkState.open && !imeiLinkState.externalDeviceId && Boolean(imeiLinkState.waitStartedAt)
+    if (!shouldTrackWait) {
+      setImeiElapsedSeconds(0)
+      return undefined
+    }
+
+    const tick = () => {
+      const elapsedMs = Date.now() - new Date(imeiLinkState.waitStartedAt).getTime()
+      setImeiElapsedSeconds(Math.max(0, Math.floor(elapsedMs / 1000)))
+    }
+
+    tick()
+    const intervalId = setInterval(tick, 1000)
+    return () => clearInterval(intervalId)
+  }, [imeiLinkState.externalDeviceId, imeiLinkState.open, imeiLinkState.waitStartedAt])
+
+  useEffect(() => {
+    if (!imeiLinkState.lastRetryAt) {
+      setImeiRetryCooldownSeconds(0)
+      return undefined
+    }
+
+    const tick = () => {
+      const elapsedSeconds = Math.floor((Date.now() - new Date(imeiLinkState.lastRetryAt).getTime()) / 1000)
+      const remaining = Math.max(0, 120 - elapsedSeconds)
+      setImeiRetryCooldownSeconds(remaining)
+    }
+
+    tick()
+    const intervalId = setInterval(tick, 1000)
+    return () => clearInterval(intervalId)
+  }, [imeiLinkState.lastRetryAt])
 
   const isMotionAlarmCode = useCallback((alarmCode) => {
     const normalized = String(alarmCode || '').trim()
@@ -675,14 +715,30 @@ export default function HomeView({
     })
   }, [devices, isAdminDashboard, user])
 
+  const errorRangeOptions = useMemo(() => ([
+    { value: '24h', label: 'Last 24 hours', windowMs: 24 * 60 * 60 * 1000 },
+    { value: '7d', label: 'Last 7 days', windowMs: 7 * 24 * 60 * 60 * 1000 },
+    { value: '30d', label: 'Last 30 days', windowMs: 30 * 24 * 60 * 60 * 1000 }
+  ]), [])
+
+  const recentErrorLogs = useMemo(() => {
+    const selectedOption = errorRangeOptions.find((entry) => entry.value === errorLogRange) || errorRangeOptions[0]
+    const earliestTimestamp = Date.now() - selectedOption.windowMs
+    return errorLogs.filter((entry) => {
+      const occurredAt = new Date(entry?.occurredAt || 0).getTime()
+      return Number.isFinite(occurredAt) && occurredAt >= earliestTimestamp
+    })
+  }, [errorLogRange, errorLogs, errorRangeOptions])
+
   const metrics = useMemo(
     () => [
       { label: 'TOTAL COMPANIES', value: companies.length, icon: 'company', section: 'companies' },
       { label: 'TOTAL USERS', value: users.length, icon: 'users', section: 'users' },
       { label: 'TOTAL DEVICES', value: devices.length, icon: 'devices', section: 'devices' },
-      { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location', section: 'locations' }
+      { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location', section: 'locations' },
+      { label: 'ERROR LOGS', value: recentErrorLogs.length, icon: 'warning', section: 'error-logs', hasRangeControl: true }
     ],
-    [companies.length, users.length, devices.length, locations.length]
+    [companies.length, users.length, devices.length, locations.length, recentErrorLogs.length]
   )
 
   const toggle = (key) => setConfigForm((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -914,6 +970,20 @@ export default function HomeView({
     }
   }, [asCollection, fetchJson, isConnectivityLog, locationDeviceOptions])
 
+  const loadErrorLogs = useCallback(async () => {
+    setErrorLogsStatus('Loading backend error logs...')
+    try {
+      const payload = await fetchJson('/api/error-logs?limit=150', { headers: {} })
+      const rows = asCollection(payload, ['errorLogs', 'logs'])
+      const sortedRows = [...rows].sort((a, b) => new Date(b.occurredAt || 0).getTime() - new Date(a.occurredAt || 0).getTime())
+      setErrorLogs(sortedRows)
+      setErrorLogsStatus(sortedRows.length ? `Showing ${sortedRows.length} backend error log entr${sortedRows.length === 1 ? 'y' : 'ies'}.` : 'No backend errors recorded yet.')
+    } catch (error) {
+      setErrorLogs([])
+      setErrorLogsStatus(`Failed to load backend error logs: ${error.message}`)
+    }
+  }, [asCollection, fetchJson])
+
   const loadLocationBreadcrumbs = useCallback(async (deviceId) => {
     if (!deviceId) {
       setLocationBreadcrumbs([])
@@ -953,8 +1023,9 @@ export default function HomeView({
         if (activeSection === 'locations' || activeSection === 'location-detail') await loadLocations()
         if (activeSection === 'devices' || activeSection === 'bulk-sim' || isDeviceDetailSection(activeSection)) await loadDevices()
         if (activeSection === 'dashboard') {
-          await Promise.all([loadCompanies(), loadUsers(), loadLocations(), loadDevices()])
+          await Promise.all([loadCompanies(), loadUsers(), loadLocations(), loadDevices(), loadErrorLogs()])
         }
+        if (activeSection === 'error-logs') await loadErrorLogs()
         if (activeSection === 'user-detail' || activeSection === 'location-detail') {
           await loadDevices()
         }
@@ -965,7 +1036,7 @@ export default function HomeView({
     }
 
     load()
-  }, [activeSection, loadCompanies, loadUsers, loadLocations, loadDevices, loadLookups])
+  }, [activeSection, loadCompanies, loadUsers, loadLocations, loadDevices, loadLookups, loadErrorLogs])
 
   useEffect(() => {
     if (activeSection !== 'replies' || !autoFetchReplies) return undefined
@@ -1076,6 +1147,7 @@ export default function HomeView({
     }
     loadAlarmLogs()
   }, [activeSection, devices.length, loadAlarmLogs, loadDevices])
+
 
 
   const clearWebhookEvents = useCallback(async () => {
@@ -1383,10 +1455,20 @@ export default function HomeView({
 
   const handleImeiResend = useCallback(async (deviceId, { showGlobalStatus = false } = {}) => {
     if (!deviceId) throw new Error('Device id is missing')
-    setImeiLinkState((prev) => ({ ...prev, resendPending: true, status: 'Sending IMEI request (V?)…' }))
+    if (imeiRetryCooldownSeconds > 0) {
+      setImeiLinkState((prev) => ({ ...prev, status: `Manual retry available in ${imeiRetryCooldownSeconds}s.` }))
+      return null
+    }
+    setImeiLinkState((prev) => ({
+      ...prev,
+      resendPending: true,
+      status: 'Sending IMEI request (V?)…',
+      waitStartedAt: prev.waitStartedAt || new Date().toISOString(),
+      lastRetryAt: new Date().toISOString()
+    }))
     try {
       const payload = await fetchJson(`/api/devices/${deviceId}/imei-resend`, { method: 'POST' })
-      setImeiLinkState((prev) => ({ ...prev, resendPending: false, status: `Retry sent at ${payload?.sentAt || 'just now'}. Waiting for IMEI link…` }))
+      setImeiLinkState((prev) => ({ ...prev, resendPending: false, status: `Retry sent at ${payload?.sentAt || 'just now'}. Waiting for IMEI link…`, waitStartedAt: prev.waitStartedAt || new Date().toISOString() }))
       if (showGlobalStatus) {
         setActionStatus({ type: 'success', message: 'Manual IMEI resend sent successfully.' })
       }
@@ -1398,7 +1480,7 @@ export default function HomeView({
       }
       throw error
     }
-  }, [])
+  }, [imeiRetryCooldownSeconds])
 
   const syncDeviceRecord = useCallback((deviceId, nextValues) => {
     if (!deviceId || !nextValues) return
@@ -1477,7 +1559,9 @@ export default function HomeView({
           ? 'IMEI linked automatically.'
           : 'Device created. Backend auto-sent V?. Waiting for IMEI link…',
         polling: !createdExternalId && Boolean(createdDeviceId),
-        resendPending: false
+        resendPending: false,
+        waitStartedAt: !createdExternalId && createdDeviceId ? new Date().toISOString() : null,
+        lastRetryAt: null
       })
       setDeviceRegistrationModal({
         open: true,
@@ -1500,7 +1584,8 @@ export default function HomeView({
               ...prev,
               externalDeviceId: linkedResult.externalDeviceId,
               status: `IMEI linked: ${linkedResult.externalDeviceId}`,
-              polling: false
+              polling: false,
+              waitStartedAt: null
             }))
             setDeviceRegistrationModal((prev) => ({
               ...prev,
@@ -1509,11 +1594,11 @@ export default function HomeView({
             }))
             await loadDevices()
           } else {
-            setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI not linked yet. You can manually retry V?.' }))
+            setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI not linked yet. You can manually retry V?.', waitStartedAt: prev.waitStartedAt || new Date().toISOString() }))
             setDeviceRegistrationModal((prev) => ({ ...prev, status: 'IMEI not linked yet. You can manually retry V?.' }))
           }
         } catch {
-          setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI polling failed. You can manually retry V?.' }))
+          setImeiLinkState((prev) => ({ ...prev, polling: false, status: 'IMEI polling failed. You can manually retry V?.', waitStartedAt: prev.waitStartedAt || new Date().toISOString() }))
           setDeviceRegistrationModal((prev) => ({ ...prev, status: 'IMEI polling failed. You can manually retry V?.' }))
         }
       }
@@ -3222,7 +3307,21 @@ export default function HomeView({
                           >
                             <div className="metric-card-head">
                               <span className="metric-card-title"><AppIcon name={metric.icon} className="card-icon" />{metric.label}</span>
-                              <span className="metric-card-menu">⋮</span>
+                              {metric.hasRangeControl ? (
+                                <label className="metric-range-select" onClick={(event) => event.stopPropagation()}>
+                                  <span className="sr-only">Error range</span>
+                                  <select
+                                    value={errorLogRange}
+                                    onChange={(event) => setErrorLogRange(event.target.value)}
+                                  >
+                                    {errorRangeOptions.map((option) => (
+                                      <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                  </select>
+                                </label>
+                              ) : (
+                                <span className="metric-card-menu">⋮</span>
+                              )}
                             </div>
                             <div className="metric-card-body">
                               <h3>{Number(metric.value || 0).toLocaleString()}</h3>
@@ -4323,6 +4422,62 @@ export default function HomeView({
           </section>
         )}
 
+        {activeSection === 'error-logs' && (
+          <section className="section-panel">
+            <h2 className="page-title">Error Logs</h2>
+            <article className="card-like">
+              <div className="section-head error-log-head">
+                <label className="webhook-limit-control" htmlFor="error-log-range">
+                  <span>Range</span>
+                  <select id="error-log-range" value={errorLogRange} onChange={(event) => setErrorLogRange(event.target.value)}>
+                    {errorRangeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <button className="mini-action" type="button" onClick={loadErrorLogs}>Refresh</button>
+              </div>
+              <p className="status">{errorLogsStatus}</p>
+              <p className="status">Showing {recentErrorLogs.length} error entr{recentErrorLogs.length === 1 ? 'y' : 'ies'} in the selected range.</p>
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Occurred At</th>
+                      <th>Route</th>
+                      <th>Status</th>
+                      <th>Type</th>
+                      <th>Message</th>
+                      <th>Stack Trace</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentErrorLogs.length ? recentErrorLogs.map((entry) => (
+                      <tr key={entry.id || `${entry.occurredAt || ''}-${entry.path || ''}-${entry.errorType || ''}`}>
+                        <td>{entry.occurredAt ? new Date(entry.occurredAt).toLocaleString() : '-'}</td>
+                        <td>{`${entry.method || '-'} ${entry.path || '-'}`}</td>
+                        <td>{entry.statusCode ?? '-'}</td>
+                        <td>{entry.errorType || '-'}</td>
+                        <td>{entry.errorMessage || '-'}</td>
+                        <td>
+                          <details>
+                            <summary>View</summary>
+                            <pre className="preview-box">{entry.stackTrace || '-'}</pre>
+                          </details>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={6}>No backend errors found for this range.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+        )}
+
         {(activeSection === 'commands' || activeSection === 'device-detail-commands') && (
           <section className="commands-section">
             <h2 className="page-title">Send Commands</h2>
@@ -4767,33 +4922,65 @@ export default function HomeView({
 
       {showDeviceModal ? (
         <div className="overlay" onClick={() => { setShowDeviceModal(false); setImeiLinkState(initialImeiLinkState) }}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <h3>Add Device</h3>
-            <div className="field-grid">
-              <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
-              <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
-              <select value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))}>
-                <option value="">Select Device Version</option>
-                {eviewDeviceVersionOptions.map((version) => <option key={version} value={version}>{version}</option>)}
-              </select>
-              <input placeholder="Webhook Device ID (externalDeviceId)" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
-              <input placeholder="SIM ICCID" value={deviceForm.simIccid} onChange={(event) => setDeviceForm((prev) => ({ ...prev, simIccid: event.target.value }))} />
-              <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
-              <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+          <div className="modal device-create-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="device-create-head">
+              <h3>Add Device</h3>
             </div>
-            <button className="mini-action" onClick={handleCreateDevice}>Add Device</button>
+            <div className="field-grid two-col device-create-grid">
+              <label>
+                <span>Device Name</span>
+                <input placeholder="e.g. EV-12 North Wing" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
+              </label>
+              <label>
+                <span>Phone Number</span>
+                <input placeholder="e.g. +1 555 0100" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
+              </label>
+              <label>
+                <span>Device Version</span>
+                <select value={deviceForm.eviewVersion} onChange={(event) => setDeviceForm((prev) => ({ ...prev, eviewVersion: event.target.value }))}>
+                  <option value="">Select Device Version</option>
+                  {eviewDeviceVersionOptions.map((version) => <option key={version} value={version}>{version}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>SIM ICCID</span>
+                <input placeholder="898821..." value={deviceForm.simIccid} onChange={(event) => setDeviceForm((prev) => ({ ...prev, simIccid: event.target.value }))} />
+              </label>
+              <label>
+                <span>Owner User</span>
+                <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
+              </label>
+              <label>
+                <span>Location</span>
+                <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
+              </label>
+              <label className="device-create-full">
+                <span>Webhook Device ID (externalDeviceId)</span>
+                <input placeholder="Optional IMEI / Webhook ID" value={deviceForm.externalDeviceId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, externalDeviceId: event.target.value }))} />
+              </label>
+            </div>
+            <div className="modal-actions">
+              <button className="mini-action device-detail-btn-primary" onClick={handleCreateDevice}>Add Device</button>
+            </div>
             {imeiLinkState.open ? (
-              <div className="status" style={{ marginTop: 12 }}>
+              <div className="status imei-wait-card" style={{ marginTop: 12 }}>
                 <p>{imeiLinkState.status}</p>
+                {!imeiLinkState.externalDeviceId && imeiLinkState.waitStartedAt ? (
+                  <div className="imei-progress">
+                    <span className="imei-progress-dot" aria-hidden="true" />
+                    <strong>Waiting for IMEI link… {imeiElapsedSeconds}s elapsed</strong>
+                  </div>
+                ) : null}
                 <p>Device ID: {imeiLinkState.deviceId || '-'} · Phone: {imeiLinkState.phoneNumber || '-'}</p>
                 <p>Webhook Device ID: {imeiLinkState.externalDeviceId || '-'}</p>
+                <p className="imei-retry-note">Manual IMEI retry can be sent once every 120 seconds.</p>
                 <button
                   className="table-link action-chip action-chip-neutral"
                   type="button"
                   onClick={() => handleImeiResend(imeiLinkState.deviceId)}
-                  disabled={!imeiLinkState.deviceId || imeiLinkState.resendPending}
+                  disabled={!imeiLinkState.deviceId || imeiLinkState.resendPending || imeiRetryCooldownSeconds > 0}
                 >
-                  {imeiLinkState.resendPending ? 'Retrying…' : 'Manual Retry IMEI (V?)'}
+                  {imeiLinkState.resendPending ? 'Retrying…' : (imeiRetryCooldownSeconds > 0 ? `Retry available in ${imeiRetryCooldownSeconds}s` : 'Manual Retry IMEI (V?)')}
                 </button>
               </div>
             ) : null}
@@ -4826,8 +5013,14 @@ export default function HomeView({
         <div className="overlay" onClick={() => setDeviceRegistrationModal(initialDeviceRegistrationModal)}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <h3>Device Registered</h3>
-            <div className="status" style={{ marginTop: 12 }}>
+            <div className="status imei-wait-card" style={{ marginTop: 12 }}>
               <p>{deviceRegistrationModal.status || 'Device created successfully.'}</p>
+              {!imeiLinkState.externalDeviceId && imeiLinkState.waitStartedAt ? (
+                <div className="imei-progress">
+                  <span className="imei-progress-dot" aria-hidden="true" />
+                  <strong>Waiting for IMEI completion… {imeiElapsedSeconds}s elapsed</strong>
+                </div>
+              ) : null}
               <p>Device ID: {deviceRegistrationModal.device?.id || deviceRegistrationModal.device?.deviceId || '-'}</p>
               <p>Name: {deviceRegistrationModal.device?.name || deviceRegistrationModal.device?.deviceName || '-'}</p>
               <p>Phone: {deviceRegistrationModal.device?.phoneNumber || '-'}</p>
@@ -4838,15 +5031,16 @@ export default function HomeView({
               </p>
               <p>Waiting for IMEI: {deviceRegistrationModal.device?.externalDeviceId ? 'No' : 'Yes'}</p>
               <p>Webhook Device ID / IMEI: {deviceRegistrationModal.device?.externalDeviceId || '-'}</p>
+              <p className="imei-retry-note">Manual IMEI retry can be sent once every 120 seconds.</p>
             </div>
             <div className="modal-actions">
               <button
                 className="table-link action-chip action-chip-neutral"
                 type="button"
                 onClick={() => handleImeiResend(deviceRegistrationModal.device?.id || deviceRegistrationModal.device?.deviceId)}
-                disabled={!deviceRegistrationModal.device || imeiLinkState.resendPending}
+                disabled={!deviceRegistrationModal.device || imeiLinkState.resendPending || imeiRetryCooldownSeconds > 0}
               >
-                {imeiLinkState.resendPending ? 'Retrying…' : 'Manual Retry IMEI (V?)'}
+                {imeiLinkState.resendPending ? 'Retrying…' : (imeiRetryCooldownSeconds > 0 ? `Retry available in ${imeiRetryCooldownSeconds}s` : 'Manual Retry IMEI (V?)')}
               </button>
               {!deviceRegistrationModal.device?.simActivated ? (
                 <button
