@@ -68,6 +68,13 @@ const iconPaths = {
       <path d="M8.6 15.7h6.8" />
     </>
   ),
+  warning: (
+    <>
+      <path d="M12 4.5 3.8 19h16.4L12 4.5z" />
+      <path d="M12 9.5v4.8" />
+      <circle cx="12" cy="16.6" r="0.7" fill="currentColor" stroke="none" />
+    </>
+  ),
   message: <path d="M4 5h16v11H7l-3 3z" />
 }
 

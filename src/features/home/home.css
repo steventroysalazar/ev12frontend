@@ -44,7 +44,7 @@
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  grid-template-columns: repeat(5, minmax(160px, 1fr));
   gap: 0.68rem;
   margin-bottom: 0;
 }
@@ -104,6 +104,24 @@
   color: #6a7784;
   font-size: 1rem;
   line-height: 1;
+}
+
+.metric-range-select select {
+  min-width: 126px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .metric-card-body {
@@ -2106,6 +2124,10 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .webhook-limit-control select {
   min-width: 72px;
+}
+
+.error-log-head {
+  margin-bottom: 0.7rem;
 }
 
 .webhook-hint code {

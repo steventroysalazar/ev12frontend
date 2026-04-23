@@ -12,6 +12,7 @@ const operationsGroup = {
     { id: 'devices', label: 'Devices', icon: 'devices' },
     { id: 'bulk-sim', label: 'Bulk SIM', icon: 'settings', superAdminOnly: true },
     { id: 'alarm-logs', label: 'Alarm Logs', icon: 'clock' },
+    { id: 'error-logs', label: 'Error Logs', icon: 'warning' },
     { id: 'replies', label: 'Replies', icon: 'replies' },
     { id: 'webhooks', label: 'Webhook Events', icon: 'webhook' }
   ]
