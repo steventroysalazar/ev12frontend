@@ -212,6 +212,43 @@ const resolveAuthorizedNumbers = (settings = {}, fallbackPhone = '') => {
   return [fallbackPhone || '']
 }
 
+const resolveSettingValue = (settings = {}, keys = [], fallback = '') => {
+  for (const key of keys) {
+    if (settings?.[key] !== undefined && settings?.[key] !== null) return settings[key]
+  }
+  return fallback
+}
+
+const normalizeProtocolSettingsForForm = (settings = {}) => ({
+  ...settings,
+  contactSlot: resolveSettingValue(settings, ['contactSlot', 'contact_slot'], 1),
+  contactNumber: resolveSettingValue(settings, ['contactNumber', 'contact_number'], ''),
+  contactName: resolveSettingValue(settings, ['contactName', 'contact_name'], ''),
+  smsPassword: resolveSettingValue(settings, ['smsPassword', 'sms_password'], ''),
+  smsWhitelistEnabled: Boolean(resolveSettingValue(settings, ['smsWhitelistEnabled', 'sms_whitelist_enabled'], false)),
+  requestLocation: Boolean(resolveSettingValue(settings, ['requestLocation', 'request_location'], false)),
+  requestGpsLocation: Boolean(resolveSettingValue(settings, ['requestGpsLocation', 'request_gps_location'], false)),
+  requestLbsLocation: Boolean(resolveSettingValue(settings, ['requestLbsLocation', 'request_lbs_location'], false)),
+  sosMode: String(resolveSettingValue(settings, ['sosMode', 'sos_mode'], '1')),
+  sosActionTime: String(resolveSettingValue(settings, ['sosActionTime', 'sos_action_time'], '20')),
+  fallDownEnabled: String(resolveSettingValue(settings, ['fallDownEnabled', 'fall_down_enabled'], '1')),
+  fallDownSensitivity: String(resolveSettingValue(settings, ['fallDownSensitivity', 'fall_down_sensitivity'], '6')),
+  fallDownCall: Boolean(resolveSettingValue(settings, ['fallDownCall', 'fall_down_call'], true)),
+  motionAlarmType: String(resolveSettingValue(settings, ['motionAlarmType', 'motion_alarm_type'], 'motion')),
+  motionEnabled: String(resolveSettingValue(settings, ['motionEnabled', 'motion_enabled'], '1')),
+  motionStaticTime: String(resolveSettingValue(settings, ['motionStaticTime', 'motion_static_time'], '05m')),
+  motionDurationTime: String(resolveSettingValue(settings, ['motionDurationTime', 'motion_duration_time'], '03s')),
+  motionCall: Boolean(resolveSettingValue(settings, ['motionCall', 'motion_call'], true)),
+  overSpeedEnabled: String(resolveSettingValue(settings, ['overSpeedEnabled', 'over_speed_enabled'], '1')),
+  overSpeedLimit: String(resolveSettingValue(settings, ['overSpeedLimit', 'over_speed_limit'], '100km/h')),
+  speakerVolume: String(resolveSettingValue(settings, ['speakerVolume', 'speaker_volume'], '100')),
+  prefixName: resolveSettingValue(settings, ['prefixName', 'prefix_name'], ''),
+  continuousLocateInterval: String(resolveSettingValue(settings, ['continuousLocateInterval', 'continuous_locate_interval'], '')),
+  continuousLocateDuration: String(resolveSettingValue(settings, ['continuousLocateDuration', 'continuous_locate_duration'], '')),
+  timeZone: String(resolveSettingValue(settings, ['timeZone', 'time_zone'], '+08:00')),
+  checkStatus: Boolean(resolveSettingValue(settings, ['checkStatus', 'check_status'], false))
+})
+
 const getRangeProgressStyle = (value, min, max) => {
   const numericValue = Number(value)
   const numericMin = Number(min)
@@ -1134,7 +1171,7 @@ export default function HomeView({
       (device?.settings && typeof device.settings === 'object' ? device.settings : null) ||
       (device?.config && typeof device.config === 'object' ? device.config : null)
 
-    const protocolSettings = protocolSettingsCandidate || {}
+    const protocolSettings = normalizeProtocolSettingsForForm(protocolSettingsCandidate || {})
     const baseConfigForm = { ...initialConfigForm }
 
     setSelectedDevice(device)

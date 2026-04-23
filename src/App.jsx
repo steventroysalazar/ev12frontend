@@ -190,6 +190,38 @@ const pickChangedFields = (current = {}, baseline = null) => {
 
 const buildProtocolSettingsPayload = (settings = {}) => {
   const payload = { ...settings }
+  const aliasMap = {
+    contactSlot: 'contact_slot',
+    contactNumber: 'contact_number',
+    contactName: 'contact_name',
+    smsPassword: 'sms_password',
+    smsWhitelistEnabled: 'sms_whitelist_enabled',
+    requestLocation: 'request_location',
+    requestGpsLocation: 'request_gps_location',
+    requestLbsLocation: 'request_lbs_location',
+    sosMode: 'sos_mode',
+    sosActionTime: 'sos_action_time',
+    fallDownEnabled: 'fall_down_enabled',
+    fallDownSensitivity: 'fall_down_sensitivity',
+    fallDownCall: 'fall_down_call',
+    motionAlarmType: 'motion_alarm_type',
+    motionEnabled: 'motion_enabled',
+    motionStaticTime: 'motion_static_time',
+    motionDurationTime: 'motion_duration_time',
+    motionCall: 'motion_call',
+    overSpeedEnabled: 'over_speed_enabled',
+    overSpeedLimit: 'over_speed_limit',
+    speakerVolume: 'speaker_volume',
+    prefixName: 'prefix_name',
+    continuousLocateInterval: 'continuous_locate_interval',
+    continuousLocateDuration: 'continuous_locate_duration',
+    timeZone: 'time_zone',
+    checkStatus: 'check_status'
+  }
+  Object.entries(aliasMap).forEach(([camelKey, snakeKey]) => {
+    if (settings[camelKey] !== undefined) payload[snakeKey] = settings[camelKey]
+  })
+
   const authorizedNumbers = Array.isArray(settings.authorizedNumbers)
     ? settings.authorizedNumbers.slice(0, 10).map((value) => String(value || '').trim()).filter(Boolean)
     : []
@@ -1082,7 +1114,9 @@ export default function App() {
       const payload = {
         ...activeConfigForm,
         deviceId: hasDeviceId ? normalizedDeviceId : activeConfigForm.deviceId,
-        protocolSettings: changedProtocolSettings,
+        protocolSettings,
+        protocol_settings: protocolSettings,
+        changedProtocolSettings,
         to,
         command
       }
@@ -1136,7 +1170,10 @@ export default function App() {
           const { response } = await fetchWithFallback(`/api/devices/${normalizedDeviceId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', ...commonHeaders() },
-            body: JSON.stringify({ protocolSettings })
+            body: JSON.stringify({
+              protocolSettings,
+              protocol_settings: protocolSettings
+            })
           })
 
           const responseBody = await response.json().catch(() => ({}))
