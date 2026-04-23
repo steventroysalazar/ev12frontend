@@ -150,9 +150,13 @@ const normalizeGeoFenceSlot = (value, fallback = 1) => {
 }
 
 const buildGeoFencesFromForm = (form) => {
-  if (Array.isArray(form?.geoFences) && form.geoFences.length) {
+  const configuredGeoFences = Array.isArray(form?.geoFences) && form.geoFences.length
+    ? form.geoFences
+    : (Array.isArray(form?.geo_fences) && form.geo_fences.length ? form.geo_fences : [])
+
+  if (configuredGeoFences.length) {
     const usedSlots = new Set()
-    return form.geoFences
+    return configuredGeoFences
       .slice(0, 4)
       .map((geoFence, index) => {
         const preferredSlot = normalizeGeoFenceSlot(geoFence?.slot, index + 1)
@@ -195,6 +199,55 @@ const parseJsonInput = (value, fallback = {}) => {
     return fallback
   }
 }
+
+const resolveAuthorizedNumbers = (settings = {}, fallbackPhone = '') => {
+  const candidates = [
+    settings?.authorizedNumbers,
+    settings?.authorized_numbers,
+    settings?.whitelistedNumbers,
+    settings?.whitelisted_numbers
+  ]
+  const matched = candidates.find((entry) => Array.isArray(entry) && entry.length)
+  if (matched) return matched.slice(0, 10).map((value) => String(value || ''))
+  return [fallbackPhone || '']
+}
+
+const resolveSettingValue = (settings = {}, keys = [], fallback = '') => {
+  for (const key of keys) {
+    if (settings?.[key] !== undefined && settings?.[key] !== null) return settings[key]
+  }
+  return fallback
+}
+
+const normalizeProtocolSettingsForForm = (settings = {}) => ({
+  ...settings,
+  contactSlot: resolveSettingValue(settings, ['contactSlot', 'contact_slot'], 1),
+  contactNumber: resolveSettingValue(settings, ['contactNumber', 'contact_number'], ''),
+  contactName: resolveSettingValue(settings, ['contactName', 'contact_name'], ''),
+  smsPassword: resolveSettingValue(settings, ['smsPassword', 'sms_password'], ''),
+  smsWhitelistEnabled: Boolean(resolveSettingValue(settings, ['smsWhitelistEnabled', 'sms_whitelist_enabled'], false)),
+  requestLocation: Boolean(resolveSettingValue(settings, ['requestLocation', 'request_location'], false)),
+  requestGpsLocation: Boolean(resolveSettingValue(settings, ['requestGpsLocation', 'request_gps_location'], false)),
+  requestLbsLocation: Boolean(resolveSettingValue(settings, ['requestLbsLocation', 'request_lbs_location'], false)),
+  sosMode: String(resolveSettingValue(settings, ['sosMode', 'sos_mode'], '1')),
+  sosActionTime: String(resolveSettingValue(settings, ['sosActionTime', 'sos_action_time'], '20')),
+  fallDownEnabled: String(resolveSettingValue(settings, ['fallDownEnabled', 'fall_down_enabled'], '1')),
+  fallDownSensitivity: String(resolveSettingValue(settings, ['fallDownSensitivity', 'fall_down_sensitivity'], '6')),
+  fallDownCall: Boolean(resolveSettingValue(settings, ['fallDownCall', 'fall_down_call'], true)),
+  motionAlarmType: String(resolveSettingValue(settings, ['motionAlarmType', 'motion_alarm_type'], 'motion')),
+  motionEnabled: String(resolveSettingValue(settings, ['motionEnabled', 'motion_enabled'], '1')),
+  motionStaticTime: String(resolveSettingValue(settings, ['motionStaticTime', 'motion_static_time'], '05m')),
+  motionDurationTime: String(resolveSettingValue(settings, ['motionDurationTime', 'motion_duration_time'], '03s')),
+  motionCall: Boolean(resolveSettingValue(settings, ['motionCall', 'motion_call'], true)),
+  overSpeedEnabled: String(resolveSettingValue(settings, ['overSpeedEnabled', 'over_speed_enabled'], '1')),
+  overSpeedLimit: String(resolveSettingValue(settings, ['overSpeedLimit', 'over_speed_limit'], '100km/h')),
+  speakerVolume: String(resolveSettingValue(settings, ['speakerVolume', 'speaker_volume'], '100')),
+  prefixName: resolveSettingValue(settings, ['prefixName', 'prefix_name'], ''),
+  continuousLocateInterval: String(resolveSettingValue(settings, ['continuousLocateInterval', 'continuous_locate_interval'], '')),
+  continuousLocateDuration: String(resolveSettingValue(settings, ['continuousLocateDuration', 'continuous_locate_duration'], '')),
+  timeZone: String(resolveSettingValue(settings, ['timeZone', 'time_zone'], '+08:00')),
+  checkStatus: Boolean(resolveSettingValue(settings, ['checkStatus', 'check_status'], false))
+})
 
 const getRangeProgressStyle = (value, min, max) => {
   const numericValue = Number(value)
@@ -1118,7 +1171,7 @@ export default function HomeView({
       (device?.settings && typeof device.settings === 'object' ? device.settings : null) ||
       (device?.config && typeof device.config === 'object' ? device.config : null)
 
-    const protocolSettings = protocolSettingsCandidate || {}
+    const protocolSettings = normalizeProtocolSettingsForForm(protocolSettingsCandidate || {})
     const baseConfigForm = { ...initialConfigForm }
 
     setSelectedDevice(device)
@@ -1149,9 +1202,16 @@ export default function HomeView({
       imei: device.imei || protocolSettings.imei || baseConfigForm.imei,
       prefixName: device.name || device.deviceName || protocolSettings.prefixName || baseConfigForm.prefixName,
       contacts: seededContacts.slice(0, 1),
-      authorizedNumbers: Array.isArray(protocolSettings.authorizedNumbers) && protocolSettings.authorizedNumbers.length
-        ? protocolSettings.authorizedNumbers.slice(0, 10).map((value) => String(value || ''))
-        : [primaryPhone || ''],
+      authorizedNumbers: resolveAuthorizedNumbers(protocolSettings, primaryPhone),
+      wifiEnabled: String(
+        protocolSettings.wifiEnabled
+        ?? protocolSettings.wifi_enabled
+        ?? protocolSettings.wifiPositioning
+        ?? protocolSettings.wifi_positioning
+        ?? baseConfigForm.wifiEnabled
+      ) === '1' || protocolSettings.wifiPositioning === true || protocolSettings.wifi_positioning === true
+        ? '1'
+        : '0',
       contactSlot: protocolSettings.contactSlot || 1,
       contactNumber: primaryPhone || '',
       contactName: primaryName || '',
