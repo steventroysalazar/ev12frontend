@@ -76,6 +76,7 @@ const supportedSections = new Set([
   'settings-advanced',
   'location',
   'alarm-logs',
+  'error-logs',
   'commands',
   'replies',
   'webhooks'
@@ -514,6 +515,9 @@ export default function HomeView({
   const [alarmLogConnectionFilter, setAlarmLogConnectionFilter] = useState('all')
   const [alarmLogs, setAlarmLogs] = useState([])
   const [alarmLogsStatus, setAlarmLogsStatus] = useState('')
+  const [errorLogs, setErrorLogs] = useState([])
+  const [errorLogsStatus, setErrorLogsStatus] = useState('')
+  const [errorLogRange, setErrorLogRange] = useState('24h')
   const [locationBreadcrumbs, setLocationBreadcrumbs] = useState([])
   const [locationBreadcrumbsStatus, setLocationBreadcrumbsStatus] = useState('')
   const [breadcrumbDateFrom, setBreadcrumbDateFrom] = useState('')
@@ -675,14 +679,30 @@ export default function HomeView({
     })
   }, [devices, isAdminDashboard, user])
 
+  const errorRangeOptions = useMemo(() => ([
+    { value: '24h', label: 'Last 24 hours', windowMs: 24 * 60 * 60 * 1000 },
+    { value: '7d', label: 'Last 7 days', windowMs: 7 * 24 * 60 * 60 * 1000 },
+    { value: '30d', label: 'Last 30 days', windowMs: 30 * 24 * 60 * 60 * 1000 }
+  ]), [])
+
+  const recentErrorLogs = useMemo(() => {
+    const selectedOption = errorRangeOptions.find((entry) => entry.value === errorLogRange) || errorRangeOptions[0]
+    const earliestTimestamp = Date.now() - selectedOption.windowMs
+    return errorLogs.filter((entry) => {
+      const occurredAt = new Date(entry?.occurredAt || 0).getTime()
+      return Number.isFinite(occurredAt) && occurredAt >= earliestTimestamp
+    })
+  }, [errorLogRange, errorLogs, errorRangeOptions])
+
   const metrics = useMemo(
     () => [
       { label: 'TOTAL COMPANIES', value: companies.length, icon: 'company', section: 'companies' },
       { label: 'TOTAL USERS', value: users.length, icon: 'users', section: 'users' },
       { label: 'TOTAL DEVICES', value: devices.length, icon: 'devices', section: 'devices' },
-      { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location', section: 'locations' }
+      { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location', section: 'locations' },
+      { label: 'BACKEND ERRORS', value: recentErrorLogs.length, icon: 'warning', section: 'error-logs', hasRangeControl: true }
     ],
-    [companies.length, users.length, devices.length, locations.length]
+    [companies.length, users.length, devices.length, locations.length, recentErrorLogs.length]
   )
 
   const toggle = (key) => setConfigForm((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -914,6 +934,20 @@ export default function HomeView({
     }
   }, [asCollection, fetchJson, isConnectivityLog, locationDeviceOptions])
 
+  const loadErrorLogs = useCallback(async () => {
+    setErrorLogsStatus('Loading backend error logs...')
+    try {
+      const payload = await fetchJson('/api/error-logs?limit=150', { headers: {} })
+      const rows = asCollection(payload, ['errorLogs', 'logs'])
+      const sortedRows = [...rows].sort((a, b) => new Date(b.occurredAt || 0).getTime() - new Date(a.occurredAt || 0).getTime())
+      setErrorLogs(sortedRows)
+      setErrorLogsStatus(sortedRows.length ? `Showing ${sortedRows.length} backend error log entr${sortedRows.length === 1 ? 'y' : 'ies'}.` : 'No backend errors recorded yet.')
+    } catch (error) {
+      setErrorLogs([])
+      setErrorLogsStatus(`Failed to load backend error logs: ${error.message}`)
+    }
+  }, [asCollection, fetchJson])
+
   const loadLocationBreadcrumbs = useCallback(async (deviceId) => {
     if (!deviceId) {
       setLocationBreadcrumbs([])
@@ -953,8 +987,9 @@ export default function HomeView({
         if (activeSection === 'locations' || activeSection === 'location-detail') await loadLocations()
         if (activeSection === 'devices' || activeSection === 'bulk-sim' || isDeviceDetailSection(activeSection)) await loadDevices()
         if (activeSection === 'dashboard') {
-          await Promise.all([loadCompanies(), loadUsers(), loadLocations(), loadDevices()])
+          await Promise.all([loadCompanies(), loadUsers(), loadLocations(), loadDevices(), loadErrorLogs()])
         }
+        if (activeSection === 'error-logs') await loadErrorLogs()
         if (activeSection === 'user-detail' || activeSection === 'location-detail') {
           await loadDevices()
         }
@@ -965,7 +1000,7 @@ export default function HomeView({
     }
 
     load()
-  }, [activeSection, loadCompanies, loadUsers, loadLocations, loadDevices, loadLookups])
+  }, [activeSection, loadCompanies, loadUsers, loadLocations, loadDevices, loadLookups, loadErrorLogs])
 
   useEffect(() => {
     if (activeSection !== 'replies' || !autoFetchReplies) return undefined
@@ -1076,6 +1111,7 @@ export default function HomeView({
     }
     loadAlarmLogs()
   }, [activeSection, devices.length, loadAlarmLogs, loadDevices])
+
 
 
   const clearWebhookEvents = useCallback(async () => {
@@ -3222,7 +3258,21 @@ export default function HomeView({
                           >
                             <div className="metric-card-head">
                               <span className="metric-card-title"><AppIcon name={metric.icon} className="card-icon" />{metric.label}</span>
-                              <span className="metric-card-menu">⋮</span>
+                              {metric.hasRangeControl ? (
+                                <label className="metric-range-select" onClick={(event) => event.stopPropagation()}>
+                                  <span className="sr-only">Error range</span>
+                                  <select
+                                    value={errorLogRange}
+                                    onChange={(event) => setErrorLogRange(event.target.value)}
+                                  >
+                                    {errorRangeOptions.map((option) => (
+                                      <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                  </select>
+                                </label>
+                              ) : (
+                                <span className="metric-card-menu">⋮</span>
+                              )}
                             </div>
                             <div className="metric-card-body">
                               <h3>{Number(metric.value || 0).toLocaleString()}</h3>
@@ -4319,6 +4369,62 @@ export default function HomeView({
                   </div>
                 </>
               )}
+            </article>
+          </section>
+        )}
+
+        {activeSection === 'error-logs' && (
+          <section className="section-panel">
+            <h2 className="page-title">Error Logs</h2>
+            <article className="card-like">
+              <div className="section-head error-log-head">
+                <label className="webhook-limit-control" htmlFor="error-log-range">
+                  <span>Range</span>
+                  <select id="error-log-range" value={errorLogRange} onChange={(event) => setErrorLogRange(event.target.value)}>
+                    {errorRangeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <button className="mini-action" type="button" onClick={loadErrorLogs}>Refresh</button>
+              </div>
+              <p className="status">{errorLogsStatus}</p>
+              <p className="status">Showing {recentErrorLogs.length} error entr{recentErrorLogs.length === 1 ? 'y' : 'ies'} in the selected range.</p>
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Occurred At</th>
+                      <th>Route</th>
+                      <th>Status</th>
+                      <th>Type</th>
+                      <th>Message</th>
+                      <th>Stack Trace</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentErrorLogs.length ? recentErrorLogs.map((entry) => (
+                      <tr key={entry.id || `${entry.occurredAt || ''}-${entry.path || ''}-${entry.errorType || ''}`}>
+                        <td>{entry.occurredAt ? new Date(entry.occurredAt).toLocaleString() : '-'}</td>
+                        <td>{`${entry.method || '-'} ${entry.path || '-'}`}</td>
+                        <td>{entry.statusCode ?? '-'}</td>
+                        <td>{entry.errorType || '-'}</td>
+                        <td>{entry.errorMessage || '-'}</td>
+                        <td>
+                          <details>
+                            <summary>View</summary>
+                            <pre className="preview-box">{entry.stackTrace || '-'}</pre>
+                          </details>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={6}>No backend errors found for this range.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </article>
           </section>
         )}
