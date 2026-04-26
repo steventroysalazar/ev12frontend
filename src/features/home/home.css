@@ -736,7 +736,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 .table-pagination {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.6rem;
   margin-top: 0.4rem;
   color: #4f5f74;
@@ -1660,6 +1660,8 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .table-shell-tall {
   min-height: 72vh;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .data-table {
