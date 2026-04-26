@@ -4740,6 +4740,7 @@ export default function HomeView({
         <div className="overlay" onClick={() => setShowCompanyModal(false)}>
           <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Create Company</h3>
+            <p>Use the same clean structure as other create forms.</p>
             <div className="field-grid">
               <input placeholder="Company Name" value={companyForm.companyName} onChange={(event) => setCompanyForm((prev) => ({ ...prev, companyName: event.target.value }))} />
               <textarea rows={3} placeholder="Details" value={companyForm.details} onChange={(event) => setCompanyForm((prev) => ({ ...prev, details: event.target.value }))} />
@@ -4841,6 +4842,7 @@ export default function HomeView({
         <div className="overlay" onClick={() => setShowLocationModal(false)}>
           <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Create Location</h3>
+            <p>Keep inputs consistent with the rest of the dashboard.</p>
             <div className="field-grid">
               <select value={locationForm.companyId} onChange={(event) => setLocationForm((prev) => ({ ...prev, companyId: event.target.value }))}>
                 <option value="">Select Company</option>
@@ -4861,6 +4863,7 @@ export default function HomeView({
         <div className="overlay" onClick={() => { setShowEditCompanyModal(false); setEditingCompanyId(null); setCompanyForm(initialCompanyForm) }}>
           <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Company Configuration</h3>
+            <p>Update company details with the same modal layout pattern.</p>
             <div className="field-grid">
               <input placeholder="Company Name" value={companyForm.companyName} onChange={(event) => setCompanyForm((prev) => ({ ...prev, companyName: event.target.value }))} />
               <textarea rows={3} placeholder="Details" value={companyForm.details} onChange={(event) => setCompanyForm((prev) => ({ ...prev, details: event.target.value }))} />
@@ -4896,6 +4899,7 @@ export default function HomeView({
         <div className="overlay" onClick={() => { setShowEditUserModal(false); setEditingUserId(null); setUserForm(initialUserForm) }}>
           <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Edit User</h3>
+            <p>Use matching spacing and controls for user updates.</p>
             <div className="field-grid two-col">
               <input placeholder="First Name" value={userForm.firstName} onChange={(event) => setUserForm((prev) => ({ ...prev, firstName: event.target.value }))} />
               <input placeholder="Last Name" value={userForm.lastName} onChange={(event) => setUserForm((prev) => ({ ...prev, lastName: event.target.value }))} />
@@ -4918,6 +4922,7 @@ export default function HomeView({
         <div className="overlay" onClick={() => { setShowEditLocationModal(false); setEditingLocationId(null); setLocationForm(initialLocationForm) }}>
           <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Edit Location</h3>
+            <p>Maintain the same polished form style across location forms.</p>
             <div className="field-grid">
               <select value={locationForm.companyId} onChange={(event) => setLocationForm((prev) => ({ ...prev, companyId: event.target.value }))}>
                 <option value="">Select Company</option>
@@ -5006,6 +5011,7 @@ export default function HomeView({
         <div className="overlay" onClick={() => { setShowEditDeviceModal(false); setEditingDeviceId(null); setDeviceForm(initialDeviceForm) }}>
           <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Edit Device</h3>
+            <p>Use the same UI language as every create/edit form.</p>
             <div className="field-grid">
               <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
               <input placeholder="Phone Number" value={deviceForm.phoneNumber} onChange={(event) => setDeviceForm((prev) => ({ ...prev, phoneNumber: event.target.value }))} />
