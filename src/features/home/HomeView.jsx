@@ -4757,7 +4757,7 @@ export default function HomeView({
             </div>
             <div className="form-actions">
               <button className="btn-pill btn-pill-secondary" type="button" onClick={() => setShowCompanyModal(false)}>Cancel</button>
-              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateCompany}>Create Company</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateCompany}><AppIcon name="plus" className="btn-icon" />Create Company</button>
             </div>
           </div>
         </div>
@@ -4770,7 +4770,6 @@ export default function HomeView({
               <div className="create-user-modal-icon"><AppIcon name="plusUser" className="btn-icon" /></div>
               <div>
                 <h3>Create User</h3>
-                <p>Enter details to register a new account</p>
               </div>
             </div>
             <div className="field-grid two-col create-user-field-grid">
@@ -4833,7 +4832,7 @@ export default function HomeView({
             </div>
             <div className="modal-actions">
               <button className="btn-pill btn-pill-secondary" type="button" onClick={() => setShowUserModal(false)}>Cancel</button>
-              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateUser}>Create User</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateUser}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
             </div>
           </div>
         </div>
@@ -4854,7 +4853,7 @@ export default function HomeView({
             </div>
             <div className="form-actions">
               <button className="btn-pill btn-pill-secondary" type="button" onClick={() => setShowLocationModal(false)}>Cancel</button>
-              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateLocation}>Create Location</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateLocation}><AppIcon name="plus" className="btn-icon" />Create Location</button>
             </div>
           </div>
         </div>
@@ -4888,7 +4887,7 @@ export default function HomeView({
             </div>
             <div className="form-actions">
               <button className="btn-pill btn-pill-secondary" type="button" onClick={() => { setShowEditCompanyModal(false); setEditingCompanyId(null); setCompanyForm(initialCompanyForm) }}>Cancel</button>
-              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateCompany}>Save Company</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateCompany}><AppIcon name="settings" className="btn-icon" />Save Company</button>
             </div>
           </div>
         </div>
@@ -4913,7 +4912,7 @@ export default function HomeView({
             </div>
             <div className="form-actions">
               <button className="btn-pill btn-pill-secondary" type="button" onClick={() => { setShowEditUserModal(false); setEditingUserId(null); setUserForm(initialUserForm) }}>Cancel</button>
-              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateUser}>Save User</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateUser}><AppIcon name="settings" className="btn-icon" />Save User</button>
             </div>
           </div>
         </div>
@@ -4934,7 +4933,7 @@ export default function HomeView({
             </div>
             <div className="form-actions">
               <button className="btn-pill btn-pill-secondary" type="button" onClick={() => { setShowEditLocationModal(false); setEditingLocationId(null); setLocationForm(initialLocationForm) }}>Cancel</button>
-              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateLocation}>Save Location</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateLocation}><AppIcon name="settings" className="btn-icon" />Save Location</button>
             </div>
           </div>
         </div>
@@ -4980,7 +4979,7 @@ export default function HomeView({
               </label>
             </div>
             <div className="modal-actions">
-              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateDevice}>Add Device</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateDevice}><AppIcon name="plus" className="btn-icon" />Add Device</button>
             </div>
             {imeiLinkState.open ? (
               <div className="status imei-wait-card" style={{ marginTop: 12 }}>
@@ -5027,7 +5026,7 @@ export default function HomeView({
             </div>
             <div className="form-actions">
               <button className="btn-pill btn-pill-secondary" type="button" onClick={() => { setShowEditDeviceModal(false); setEditingDeviceId(null); setDeviceForm(initialDeviceForm) }}>Cancel</button>
-              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateDevice}>Save Device</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateDevice}><AppIcon name="settings" className="btn-icon" />Save Device</button>
             </div>
           </div>
         </div>
