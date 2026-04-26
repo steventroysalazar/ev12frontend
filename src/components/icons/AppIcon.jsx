@@ -75,7 +75,8 @@ const iconPaths = {
       <circle cx="12" cy="16.6" r="0.7" fill="currentColor" stroke="none" />
     </>
   ),
-  message: <path d="M4 5h16v11H7l-3 3z" />
+  message: <path d="M4 5h16v11H7l-3 3z" />,
+  chevronDown: <path d="m7 10 5 5 5-5" />
 }
 
 export default function AppIcon({ name, className = '', strokeWidth = 1.8 }) {
