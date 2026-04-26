@@ -1700,6 +1700,20 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   border-color: #f7bcbc;
 }
 
+.device-alarm-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.device-alarm-cancel-btn {
+  min-height: 28px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.7rem;
+  border-radius: 999px;
+}
+
 .overlay { position: fixed; inset: 0; background: rgba(12, 21, 36, 0.5); display: grid; place-items: center; z-index: 30; }
 .modal { width: min(620px, 92vw); }
 .device-create-modal {
