@@ -1,4 +1,5 @@
 import AppIcon from '../../../components/icons/AppIcon'
+import { Fragment, useState } from 'react'
 
 export default function BulkSimPage({
   devices,
@@ -8,6 +9,7 @@ export default function BulkSimPage({
   simActionPendingByDevice,
   loading
 }) {
+  const [expandedRowId, setExpandedRowId] = useState(null)
   const selectedCount = selectedDeviceIds.length
   const selectableDeviceIds = devices.map((device) => String(device.id || device.deviceId || '')).filter(Boolean)
   const allSelected = selectableDeviceIds.length > 0 && selectableDeviceIds.every((id) => selectedDeviceIds.includes(id))
@@ -64,7 +66,7 @@ export default function BulkSimPage({
       </div>
 
       <div className="table-shell table-shell-tall bulk-sim-table-shell">
-        <table className="data-table devices-list-table bulk-sim-table">
+        <table className="data-table devices-list-table bulk-sim-table expandable-rows-table">
           <thead>
             <tr>
               <th className="bulk-select-col">
@@ -89,29 +91,48 @@ export default function BulkSimPage({
               const deviceId = String(device.id || device.deviceId || '')
               const pending = Boolean(simActionPendingByDevice?.[deviceId])
               const simStatus = String(device.simStatus || '').trim() || (device.simActivated ? 'ACTIVATED' : 'DEACTIVATED')
+              const rowKey = String(deviceId || device.phoneNumber || device.name)
+              const isExpanded = expandedRowId === rowKey
+              const toggleExpanded = () => setExpandedRowId((prev) => (prev === rowKey ? null : rowKey))
               return (
-                <tr key={deviceId || device.phoneNumber || device.name}>
-                  <td className="bulk-select-col">
-                    <div className="bulk-select-check-wrap">
-                      <input
-                        className="bulk-sim-check"
-                        type="checkbox"
-                        checked={selectedDeviceIds.includes(deviceId)}
-                        onChange={() => toggleDevice(deviceId)}
-                        disabled={!deviceId || pending}
-                        aria-label={`Select ${device.name || device.deviceName || 'device'}`}
-                      />
-                    </div>
-                  </td>
-                  <td>{device.name || device.deviceName || '-'}</td>
-                  <td>{device.phoneNumber || '-'}</td>
-                  <td>{device.simIccid || '-'}</td>
-                  <td>
-                    <span className={`bulk-sim-status-pill ${pending ? 'is-pending' : (simStatus.toUpperCase() === 'ACTIVATED' ? 'is-active' : 'is-idle')}`}>
-                      {pending ? 'Updating…' : simStatus}
-                    </span>
-                  </td>
-                </tr>
+                <Fragment key={rowKey}>
+                  <tr className={`expandable-row ${isExpanded ? 'is-expanded' : ''}`} onClick={toggleExpanded}>
+                    <td className="bulk-select-col">
+                      <div className="bulk-select-check-wrap">
+                        <input
+                          className="bulk-sim-check"
+                          type="checkbox"
+                          checked={selectedDeviceIds.includes(deviceId)}
+                          onChange={() => toggleDevice(deviceId)}
+                          onClick={(event) => event.stopPropagation()}
+                          disabled={!deviceId || pending}
+                          aria-label={`Select ${device.name || device.deviceName || 'device'}`}
+                        />
+                      </div>
+                    </td>
+                    <td>{device.name || device.deviceName || '-'}</td>
+                    <td>{device.phoneNumber || '-'}</td>
+                    <td>{device.simIccid || '-'}</td>
+                    <td>
+                      <span className={`bulk-sim-status-pill ${pending ? 'is-pending' : (simStatus.toUpperCase() === 'ACTIVATED' ? 'is-active' : 'is-idle')}`}>
+                        {pending ? 'Updating…' : simStatus}
+                      </span>
+                    </td>
+                  </tr>
+                  {isExpanded ? (
+                    <tr className="expandable-row-detail">
+                      <td colSpan={5}>
+                        <div className="expand-detail-panel">
+                          <div><span>Device</span><strong>{device.name || device.deviceName || '-'}</strong></div>
+                          <div><span>Phone</span><strong>{device.phoneNumber || '-'}</strong></div>
+                          <div><span>SIM ICCID</span><strong>{device.simIccid || '-'}</strong></div>
+                          <div><span>Status</span><strong>{pending ? 'Updating…' : simStatus}</strong></div>
+                          <div><span>Device ID</span><strong>{deviceId || '-'}</strong></div>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
               )
             })}
           </tbody>

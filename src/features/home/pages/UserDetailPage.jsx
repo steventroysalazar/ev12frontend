@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 
 export default function UserDetailPage({
   selectedUser,
@@ -13,6 +13,7 @@ export default function UserDetailPage({
   onBack
 }) {
   const [isEditing, setIsEditing] = useState(false)
+  const [expandedRowId, setExpandedRowId] = useState(null)
   const devicePageSize = 5
 
   const assignedDevices = devices.filter((entry) => String(entry.ownerUserId || entry.userId || entry.user_id || entry.owner?.id || entry.app_user?.id || '') === String(selectedUser?.id || ''))
@@ -138,17 +139,36 @@ export default function UserDetailPage({
               </div>
 
               <div className="table-shell user-devices-table-shell">
-                <table className="data-table user-devices-table">
+                <table className="data-table user-devices-table expandable-rows-table">
                   <thead><tr><th>Device</th><th>Phone</th><th>Version</th><th>Actions</th></tr></thead>
                   <tbody>
-                    {pagedDevices.map((entry) => (
-                      <tr key={`user-device-${entry.id || entry.deviceId || entry.phoneNumber}`}>
-                        <td>{entry.name || entry.deviceName || '-'}</td>
-                        <td>{entry.phoneNumber || '-'}</td>
-                        <td>{entry.eviewVersion || entry.version || '-'}</td>
-                        <td className="user-devices-action-cell"><button className="user-manage-btn" type="button" onClick={() => openDeviceSettings(entry)}>Manage</button></td>
-                      </tr>
-                    ))}
+                    {pagedDevices.map((entry) => {
+                      const rowKey = `user-device-${entry.id || entry.deviceId || entry.phoneNumber}`
+                      const isExpanded = expandedRowId === rowKey
+                      const toggleExpanded = () => setExpandedRowId((prev) => (prev === rowKey ? null : rowKey))
+                      return (
+                        <Fragment key={rowKey}>
+                          <tr className={`expandable-row ${isExpanded ? 'is-expanded' : ''}`} onClick={toggleExpanded}>
+                            <td>{entry.name || entry.deviceName || '-'}</td>
+                            <td>{entry.phoneNumber || '-'}</td>
+                            <td>{entry.eviewVersion || entry.version || '-'}</td>
+                            <td className="user-devices-action-cell"><button className="user-manage-btn" type="button" onClick={(event) => { event.stopPropagation(); openDeviceSettings(entry) }}>Manage</button></td>
+                          </tr>
+                          {isExpanded ? (
+                            <tr className="expandable-row-detail">
+                              <td colSpan={4}>
+                                <div className="expand-detail-panel">
+                                  <div><span>Device</span><strong>{entry.name || entry.deviceName || '-'}</strong></div>
+                                  <div><span>Phone</span><strong>{entry.phoneNumber || '-'}</strong></div>
+                                  <div><span>Version</span><strong>{entry.eviewVersion || entry.version || '-'}</strong></div>
+                                  <div><span>Device ID</span><strong>{entry.id || entry.deviceId || '-'}</strong></div>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
