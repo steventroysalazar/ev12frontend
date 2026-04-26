@@ -2335,8 +2335,16 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .bulk-select-col {
   width: 64px;
+  min-width: 64px;
+  max-width: 64px;
   text-align: center !important;
   vertical-align: middle;
+}
+
+.bulk-sim-table th.bulk-select-col,
+.bulk-sim-table td.bulk-select-col {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .bulk-select-check-wrap {
