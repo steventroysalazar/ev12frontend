@@ -1093,7 +1093,7 @@ export default function HomeView({
       const rows = asCollection(payload, ['errorLogs', 'logs'])
       const sortedRows = [...rows].sort((a, b) => new Date(b.occurredAt || 0).getTime() - new Date(a.occurredAt || 0).getTime())
       setErrorLogs(sortedRows)
-      setErrorLogsStatus(sortedRows.length ? `Showing ${sortedRows.length} backend error log entr${sortedRows.length === 1 ? 'y' : 'ies'}.` : 'No backend errors recorded yet.')
+      setErrorLogsStatus(sortedRows.length ? `${sortedRows.length} backend error log entr${sortedRows.length === 1 ? 'y' : 'ies'}.` : 'No backend errors recorded yet.')
     } catch (error) {
       setErrorLogs([])
       setErrorLogsStatus(`Failed to load backend error logs: ${error.message}`)

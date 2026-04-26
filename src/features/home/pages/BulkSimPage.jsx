@@ -67,11 +67,16 @@ export default function BulkSimPage({
         <table className="data-table devices-list-table bulk-sim-table">
           <thead>
             <tr>
-              <th>
-                <label className="inline-check-row">
-                  <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} />
-                  <span>Select all</span>
-                </label>
+              <th className="bulk-select-col">
+                <div className="bulk-select-check-wrap">
+                  <input
+                    className="bulk-sim-check"
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all devices"
+                  />
+                </div>
               </th>
               <th>Device</th>
               <th>Phone</th>
@@ -86,12 +91,14 @@ export default function BulkSimPage({
               const simStatus = String(device.simStatus || '').trim() || (device.simActivated ? 'ACTIVATED' : 'DEACTIVATED')
               return (
                 <tr key={deviceId || device.phoneNumber || device.name}>
-                  <td>
+                  <td className="bulk-select-col">
                     <input
+                      className="bulk-sim-check"
                       type="checkbox"
                       checked={selectedDeviceIds.includes(deviceId)}
                       onChange={() => toggleDevice(deviceId)}
                       disabled={!deviceId || pending}
+                      aria-label={`Select ${device.name || device.deviceName || 'device'}`}
                     />
                   </td>
                   <td>{device.name || device.deviceName || '-'}</td>

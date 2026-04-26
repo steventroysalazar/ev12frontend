@@ -2333,6 +2333,55 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   background: #f3f6fb;
 }
 
+.bulk-select-col {
+  width: 64px;
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+.bulk-select-check-wrap {
+  display: grid;
+  place-items: center;
+}
+
+.bulk-sim-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1px solid #c2cede;
+  background: #ffffff;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.bulk-sim-check:hover {
+  border-color: #8aa3d6;
+  box-shadow: 0 0 0 3px rgba(94, 120, 192, 0.12);
+}
+
+.bulk-sim-check:checked {
+  border-color: #5875c0;
+  background: linear-gradient(160deg, #6a85cf, #5875c0);
+}
+
+.bulk-sim-check:checked::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(42deg) translate(-1px, -1px);
+}
+
+.bulk-sim-check:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .bulk-sim-status-pill {
   display: inline-flex;
   align-items: center;
