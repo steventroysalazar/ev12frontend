@@ -33,6 +33,7 @@ export default function DevicesPage({
   resolveDeviceMeta,
   getAlarmMeta,
   resolveLiveAlarmCode,
+  handleCancelAlarm,
   openDeviceSettings,
   onSetSimActivation,
   simActionPendingByDevice,
@@ -123,7 +124,7 @@ export default function DevicesPage({
             <option value="idle">No active alarm</option>
           </select>
         </div>
-        <div className="table-shell">
+        <div className="table-shell table-shell-tall">
           <table className="data-table devices-list-table">
             <thead><tr><th>Settings</th><th>SIM</th><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Owner</th><th>Location</th></tr></thead>
             <tbody>
@@ -150,7 +151,17 @@ export default function DevicesPage({
                     <td>{d.phoneNumber || '-'}</td>
                     <td>{d.eviewVersion || d.version || '-'}</td>
                     <td>{d.externalDeviceId || d.external_device_id || d.deviceId || '-'}</td>
-                    <td><span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span></td>
+                    <td className="device-alarm-cell">
+                      <span className={`alarm-pill alarm-pill-${alarmMeta.tone}`}>{alarmMeta.label}</span>
+                      <button
+                        className="table-link table-link-compact action-chip action-chip-danger device-alarm-cancel-btn"
+                        type="button"
+                        onClick={() => handleCancelAlarm?.(d)}
+                        disabled={!resolveLiveAlarmCode(d)}
+                      >
+                        Cancel Alarm
+                      </button>
+                    </td>
                     <td>{deviceMeta.ownerName || '-'}</td>
                     <td>{deviceMeta.ownerLocation || '-'}</td>
                   </tr>

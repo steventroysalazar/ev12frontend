@@ -25,7 +25,7 @@ export default function LocationsPage({
           <option value="without-devices">Without devices</option>
         </select>
       </div>
-      <div className="table-shell">
+      <div className="table-shell table-shell-tall">
         <table className="data-table">
           <thead><tr><th>Name</th><th>Company</th><th>Details</th><th>User Count</th><th>Device Count</th><th>Actions</th></tr></thead>
           <tbody>
