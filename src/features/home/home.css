@@ -1704,7 +1704,8 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .device-alarm-cancel-btn {
@@ -1712,6 +1713,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   padding: 0.2rem 0.55rem;
   font-size: 0.7rem;
   border-radius: 999px;
+  white-space: nowrap;
 }
 
 .overlay { position: fixed; inset: 0; background: rgba(12, 21, 36, 0.5); display: grid; place-items: center; z-index: 30; }
