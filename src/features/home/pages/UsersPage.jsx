@@ -84,18 +84,11 @@ export default function UsersPage({
                         <div className="users-device-summary">
                           <button
                             type="button"
-                            className="users-device-toggle"
+                            className="users-device-trigger"
                             onClick={() => setOpenDevicesByUser((prev) => ({ ...prev, [panel.userKey]: !prev[panel.userKey] }))}
                           >
-                            {panel.allDevices.length} device{panel.allDevices.length === 1 ? '' : 's'}
-                          </button>
-                          <button
-                            type="button"
-                            className="users-device-chevron"
-                            aria-label={openDevicesByUser[panel.userKey] ? 'Collapse devices' : 'Expand devices'}
-                            onClick={() => setOpenDevicesByUser((prev) => ({ ...prev, [panel.userKey]: !prev[panel.userKey] }))}
-                          >
-                            {openDevicesByUser[panel.userKey] ? '⌃' : '⌄'}
+                            <span>{panel.allDevices.length} device{panel.allDevices.length === 1 ? '' : 's'}</span>
+                            <span className="users-device-chevron" aria-hidden="true">{openDevicesByUser[panel.userKey] ? '⌃' : '⌄'}</span>
                           </button>
                         </div>
                         {openDevicesByUser[panel.userKey] ? (
