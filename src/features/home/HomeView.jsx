@@ -4540,9 +4540,9 @@ export default function HomeView({
         )}
 
         {activeSection === 'error-logs' && (
-          <section className="section-panel">
+          <section className="section-panel error-logs-panel">
             <h2 className="page-title">Error Logs</h2>
-            <article className="card-like">
+            <article className="card-like error-logs-card">
               <div className="section-head error-log-head">
                 <div className="table-controls error-log-filters">
                   <label className="webhook-limit-control" htmlFor="error-log-range">
@@ -4588,9 +4588,9 @@ export default function HomeView({
                 <button className="mini-action" type="button" onClick={loadErrorLogs}>Refresh</button>
               </div>
               <p className="status">{errorLogsStatus}</p>
-              <p className="status">Showing {filteredErrorLogs.length} error entr{filteredErrorLogs.length === 1 ? 'y' : 'ies'} in the selected range.</p>
-              <div className="table-wrap">
-                <table className="data-table">
+              <p className="status error-log-count">Showing {filteredErrorLogs.length} error entr{filteredErrorLogs.length === 1 ? 'y' : 'ies'} in the selected range.</p>
+              <div className="table-wrap error-log-table-wrap">
+                <table className="data-table error-log-table">
                   <thead>
                     <tr>
                       <th>Occurred At</th>
@@ -4606,7 +4606,7 @@ export default function HomeView({
                       <tr key={entry.id || `${entry.occurredAt || ''}-${entry.path || ''}-${entry.errorType || ''}`}>
                         <td>{entry.occurredAt ? new Date(entry.occurredAt).toLocaleString() : '-'}</td>
                         <td>{`${entry.method || '-'} ${entry.path || '-'}`}</td>
-                        <td>{entry.statusCode ?? '-'}</td>
+                        <td><span className="error-log-status-badge">{entry.statusCode ?? '-'}</span></td>
                         <td>{entry.errorType || '-'}</td>
                         <td>{entry.errorMessage || '-'}</td>
                         <td>

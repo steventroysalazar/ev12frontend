@@ -2235,6 +2235,145 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   margin-bottom: 0.7rem;
 }
 
+.error-logs-card {
+  border-radius: 20px;
+  background: linear-gradient(180deg, #fcfdff 0%, #f4f7fb 100%);
+  border: 1px solid #d8e1ee;
+}
+
+.error-log-count {
+  margin-top: 0.15rem;
+}
+
+.error-log-table-wrap {
+  border-radius: 14px;
+  border: 1px solid #d5dfec;
+  overflow: auto;
+  background: #ffffff;
+}
+
+.error-log-table th {
+  background: #f2f6fc;
+}
+
+.error-log-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 0.2rem 0.48rem;
+  border-radius: 999px;
+  border: 1px solid #d2dceb;
+  background: #edf2fa;
+  color: #2f476b;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.bulk-sim-panel {
+  border-radius: 22px;
+}
+
+.bulk-sim-head {
+  align-items: flex-start;
+  margin-bottom: 0.8rem;
+}
+
+.bulk-sim-title-wrap .section-title {
+  margin-bottom: 0.3rem;
+}
+
+.bulk-sim-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+  margin-top: 0.55rem;
+}
+
+.bulk-sim-summary-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.24rem 0.58rem;
+  border: 1px solid #d6deeb;
+  background: #f1f4f9;
+  color: #425674;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.bulk-sim-summary-chip.is-active {
+  background: #e7f6ed;
+  border-color: #c6e7d3;
+  color: #24603e;
+}
+
+.bulk-sim-summary-chip.is-idle {
+  background: #eff3f9;
+}
+
+.bulk-sim-summary-chip.is-selected {
+  background: #e8eefc;
+  border-color: #ccd8f6;
+  color: #2f4c8f;
+}
+
+.bulk-sim-actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.bulk-sim-table-shell {
+  border-radius: 16px;
+  border: 1px solid #d4dce9;
+}
+
+.bulk-sim-table th {
+  background: #f3f6fb;
+}
+
+.bulk-sim-status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  border: 1px solid #d2dceb;
+  background: #eef3fa;
+  color: #3d5373;
+}
+
+.bulk-sim-status-pill.is-active {
+  background: #e8f6ee;
+  border-color: #cae7d5;
+  color: #226140;
+}
+
+.bulk-sim-status-pill.is-idle {
+  background: #eef2f8;
+  border-color: #dbe2ee;
+  color: #4d5f7a;
+}
+
+.bulk-sim-status-pill.is-pending {
+  background: #fff4df;
+  border-color: #f1ddb4;
+  color: #8f5c11;
+}
+
+@media (max-width: 980px) {
+  .bulk-sim-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bulk-sim-actions {
+    width: 100%;
+  }
+}
+
 .webhook-hint code {
   font-family: "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: 0.83em;
