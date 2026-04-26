@@ -1055,21 +1055,26 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .inline-devices-content {
-  margin-top: 0.38rem;
-  width: 100%;
-  min-width: 0;
+  margin-top: 0;
+  width: min(290px, 38vw);
+  min-width: 250px;
   max-width: 290px;
   border: 1px solid #d6dfec;
   background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
   border-radius: 12px;
   padding: 0.42rem;
   box-shadow: 0 16px 30px -28px rgba(20, 35, 56, 0.7);
-  position: static;
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 14;
 }
 
 .inline-devices-dropdown {
-  display: grid;
+  display: inline-grid;
   gap: 0.2rem;
+  position: relative;
+  justify-items: start;
 }
 
 .users-device-summary {
