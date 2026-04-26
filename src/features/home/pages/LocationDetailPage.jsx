@@ -1,3 +1,5 @@
+import { Fragment, useState } from 'react'
+
 export default function LocationDetailPage({
   selectedLocation,
   devices,
@@ -17,6 +19,8 @@ export default function LocationDetailPage({
   setLocationDevicePage,
   onBack
 }) {
+  const [expandedUserRowId, setExpandedUserRowId] = useState(null)
+  const [expandedDeviceRowId, setExpandedDeviceRowId] = useState(null)
   const pageSize = 20
   const locationId = String(selectedLocation?.id || '')
   const locationUsers = users.filter((entry) => String(entry.locationId || entry.location_id || entry.location?.id || '') === locationId)
@@ -111,16 +115,34 @@ export default function LocationDetailPage({
             <input placeholder="Search devices..." value={locationDeviceSearch} onChange={(event) => { setLocationDeviceSearch(event.target.value); setLocationDevicePage(1) }} />
           </div>
           <div className="table-shell">
-            <table className="data-table">
+            <table className="data-table expandable-rows-table">
               <thead><tr><th>Name</th><th>Email</th><th>Contact</th></tr></thead>
               <tbody>
-                {pagedUsers.map((entry) => (
-                  <tr key={`location-user-${entry.id || entry.email}`}>
-                    <td>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.name || '-'}</td>
-                    <td>{entry.email || '-'}</td>
-                    <td>{entry.contactNumber || '-'}</td>
-                  </tr>
-                ))}
+                {pagedUsers.map((entry) => {
+                  const rowKey = `location-user-${entry.id || entry.email}`
+                  const isExpanded = expandedUserRowId === rowKey
+                  const toggleExpanded = () => setExpandedUserRowId((prev) => (prev === rowKey ? null : rowKey))
+                  return (
+                    <Fragment key={rowKey}>
+                      <tr className={`expandable-row ${isExpanded ? 'is-expanded' : ''}`} onClick={toggleExpanded}>
+                        <td>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.name || '-'}</td>
+                        <td>{entry.email || '-'}</td>
+                        <td>{entry.contactNumber || '-'}</td>
+                      </tr>
+                      {isExpanded ? (
+                        <tr className="expandable-row-detail">
+                          <td colSpan={3}>
+                            <div className="expand-detail-panel">
+                              <div><span>Name</span><strong>{`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.name || '-'}</strong></div>
+                              <div><span>Email</span><strong>{entry.email || '-'}</strong></div>
+                              <div><span>Contact</span><strong>{entry.contactNumber || '-'}</strong></div>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -131,17 +153,36 @@ export default function LocationDetailPage({
           </div>
 
           <div className="table-shell">
-            <table className="data-table">
+            <table className="data-table expandable-rows-table">
               <thead><tr><th>Device</th><th>Phone</th><th>Owner</th><th>Actions</th></tr></thead>
               <tbody>
-                {pagedDevices.map((entry) => (
-                  <tr key={`location-device-${entry.id || entry.deviceId || entry.phoneNumber}`}>
-                    <td>{entry.name || entry.deviceName || '-'}</td>
-                    <td>{entry.phoneNumber || '-'}</td>
-                    <td>{resolveDeviceMeta(entry).ownerName}</td>
-                    <td><button className="table-link" type="button" onClick={() => openDeviceSettings(entry)}>Open Device Page</button></td>
-                  </tr>
-                ))}
+                {pagedDevices.map((entry) => {
+                  const rowKey = `location-device-${entry.id || entry.deviceId || entry.phoneNumber}`
+                  const isExpanded = expandedDeviceRowId === rowKey
+                  const toggleExpanded = () => setExpandedDeviceRowId((prev) => (prev === rowKey ? null : rowKey))
+                  return (
+                    <Fragment key={rowKey}>
+                      <tr className={`expandable-row ${isExpanded ? 'is-expanded' : ''}`} onClick={toggleExpanded}>
+                        <td>{entry.name || entry.deviceName || '-'}</td>
+                        <td>{entry.phoneNumber || '-'}</td>
+                        <td>{resolveDeviceMeta(entry).ownerName}</td>
+                        <td><button className="table-link" type="button" onClick={(event) => { event.stopPropagation(); openDeviceSettings(entry) }}>Open Device Page</button></td>
+                      </tr>
+                      {isExpanded ? (
+                        <tr className="expandable-row-detail">
+                          <td colSpan={4}>
+                            <div className="expand-detail-panel">
+                              <div><span>Device</span><strong>{entry.name || entry.deviceName || '-'}</strong></div>
+                              <div><span>Phone</span><strong>{entry.phoneNumber || '-'}</strong></div>
+                              <div><span>Owner</span><strong>{resolveDeviceMeta(entry).ownerName}</strong></div>
+                              <div><span>Location</span><strong>{resolveDeviceMeta(entry).ownerLocation}</strong></div>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  )
+                })}
               </tbody>
             </table>
           </div>
