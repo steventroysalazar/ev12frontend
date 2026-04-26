@@ -64,7 +64,7 @@ export default function UsersPage({
           <option value="mobile app user">Mobile App User</option>
         </select>
       </div>
-      <div className="table-shell users-table-shell">
+      <div className="table-shell table-shell-tall users-table-shell">
         <table className="data-table users-data-table">
           <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Devices</th><th>Actions</th></tr></thead>
           <tbody>
@@ -84,18 +84,13 @@ export default function UsersPage({
                         <div className="users-device-summary">
                           <button
                             type="button"
-                            className="users-device-toggle"
+                            className="users-device-trigger"
                             onClick={() => setOpenDevicesByUser((prev) => ({ ...prev, [panel.userKey]: !prev[panel.userKey] }))}
                           >
-                            {panel.allDevices.length} device{panel.allDevices.length === 1 ? '' : 's'}
-                          </button>
-                          <button
-                            type="button"
-                            className="users-device-chevron"
-                            aria-label={openDevicesByUser[panel.userKey] ? 'Collapse devices' : 'Expand devices'}
-                            onClick={() => setOpenDevicesByUser((prev) => ({ ...prev, [panel.userKey]: !prev[panel.userKey] }))}
-                          >
-                            {openDevicesByUser[panel.userKey] ? '⌃' : '⌄'}
+                            <span>{panel.allDevices.length} device{panel.allDevices.length === 1 ? '' : 's'}</span>
+                            <span className={`users-device-chevron ${openDevicesByUser[panel.userKey] ? 'is-open' : ''}`} aria-hidden="true">
+                              <AppIcon name="chevronDown" className="users-device-chevron-icon" />
+                            </span>
                           </button>
                         </div>
                         {openDevicesByUser[panel.userKey] ? (

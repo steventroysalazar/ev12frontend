@@ -22,7 +22,7 @@ export default function CompaniesPage({
           onChange={(event) => setCompanySearch(event.target.value)}
         />
       </div>
-      <div className="table-shell">
+      <div className="table-shell table-shell-tall">
         <table className="data-table">
           <thead><tr><th>Name</th><th>Details</th><th>Locations</th><th>Users</th><th>Devices</th><th>Actions</th></tr></thead>
           <tbody>
