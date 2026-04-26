@@ -124,7 +124,7 @@ export default function DevicesPage({
             <option value="idle">No active alarm</option>
           </select>
         </div>
-        <div className="table-shell">
+        <div className="table-shell table-shell-tall">
           <table className="data-table devices-list-table">
             <thead><tr><th>Settings</th><th>SIM</th><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Owner</th><th>Location</th></tr></thead>
             <tbody>

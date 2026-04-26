@@ -63,7 +63,7 @@ export default function BulkSimPage({
         </div>
       </div>
 
-      <div className="table-shell bulk-sim-table-shell">
+      <div className="table-shell table-shell-tall bulk-sim-table-shell">
         <table className="data-table devices-list-table bulk-sim-table">
           <thead>
             <tr>

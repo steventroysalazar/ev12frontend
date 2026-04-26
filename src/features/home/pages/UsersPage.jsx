@@ -64,7 +64,7 @@ export default function UsersPage({
           <option value="mobile app user">Mobile App User</option>
         </select>
       </div>
-      <div className="table-shell users-table-shell">
+      <div className="table-shell table-shell-tall users-table-shell">
         <table className="data-table users-data-table">
           <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Devices</th><th>Actions</th></tr></thead>
           <tbody>
