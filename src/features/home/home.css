@@ -738,7 +738,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   align-items: center;
   justify-content: flex-end;
   gap: 0.6rem;
-  margin-top: 0.7rem;
+  margin-top: 0.4rem;
   color: #4f5f74;
   font-size: 0.85rem;
   font-weight: 700;
@@ -1659,7 +1659,7 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .table-shell-tall {
-  min-height: 80vh;
+  min-height: 72vh;
 }
 
 .data-table {
