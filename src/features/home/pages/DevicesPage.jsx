@@ -1,4 +1,5 @@
 import AppIcon from '../../../components/icons/AppIcon'
+import { useMemo, useState } from 'react'
 
 const DEFAULT_EVIEW_DEVICE_VERSIONS = ['EV-04', 'EV-07', 'EV-08', 'EV-10', 'EV-12']
 
@@ -40,6 +41,30 @@ export default function DevicesPage({
   devicesPage,
   setDevicesPage
 }) {
+  const columnConfig = useMemo(() => ([
+    { key: 'settings', label: 'Settings' },
+    { key: 'sim', label: 'SIM' },
+    { key: 'device', label: 'Device' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'version', label: 'Version' },
+    { key: 'webhookDeviceId', label: 'Webhook Device ID' },
+    { key: 'alarm', label: 'Alarm' },
+    { key: 'owner', label: 'Owner' },
+    { key: 'location', label: 'Location' }
+  ]), [])
+  const [expandedColumnIndex, setExpandedColumnIndex] = useState(-1)
+
+  const columnWidthStyles = useMemo(() => {
+    const defaultWeights = [11, 11, 16, 13, 9, 14, 14, 11, 11]
+    if (expandedColumnIndex < 0) {
+      return defaultWeights.map((weight) => ({ width: `${weight}%` }))
+    }
+
+    const expandedWidth = 36
+    const collapsedWidth = Number(((100 - expandedWidth) / (columnConfig.length - 1)).toFixed(2))
+    return columnConfig.map((_, index) => ({ width: `${index === expandedColumnIndex ? expandedWidth : collapsedWidth}%` }))
+  }, [columnConfig, expandedColumnIndex])
+
   const filterOptions = devices.reduce((acc, entry) => {
     const owner = resolveDeviceMeta(entry)
     const deviceName = entry.name || entry.deviceName || ''
@@ -125,8 +150,28 @@ export default function DevicesPage({
           </select>
         </div>
         <div className="table-shell table-shell-tall">
-          <table className="data-table devices-list-table">
-            <thead><tr><th>Settings</th><th>SIM</th><th>Device</th><th>Phone</th><th>Version</th><th>Webhook Device ID</th><th>Alarm</th><th>Owner</th><th>Location</th></tr></thead>
+          <table className={`data-table devices-list-table interactive-column-table ${expandedColumnIndex >= 0 ? 'has-expanded-column' : ''}`}>
+            <colgroup>
+              {columnConfig.map((column, index) => (
+                <col key={`devices-col-${column.key}`} style={columnWidthStyles[index]} />
+              ))}
+            </colgroup>
+            <thead>
+              <tr>
+                {columnConfig.map((column, index) => (
+                  <th key={`devices-header-${column.key}`} className={expandedColumnIndex === index ? 'is-expanded' : ''}>
+                    <button
+                      type="button"
+                      className="column-focus-trigger"
+                      onClick={() => setExpandedColumnIndex((prev) => (prev === index ? -1 : index))}
+                      title={expandedColumnIndex === index ? 'Reset column widths' : `Focus ${column.label} column`}
+                    >
+                      {column.label}
+                    </button>
+                  </th>
+                ))}
+              </tr>
+            </thead>
             <tbody>
               {pagedDevices.rows.map((d) => {
                 const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(d))
