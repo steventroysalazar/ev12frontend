@@ -518,6 +518,9 @@ export default function HomeView({
   const [errorLogs, setErrorLogs] = useState([])
   const [errorLogsStatus, setErrorLogsStatus] = useState('')
   const [errorLogRange, setErrorLogRange] = useState('24h')
+  const [errorLogCompanyFilter, setErrorLogCompanyFilter] = useState('all')
+  const [errorLogLocationFilter, setErrorLogLocationFilter] = useState('all')
+  const [errorLogUserFilter, setErrorLogUserFilter] = useState('all')
   const [imeiElapsedSeconds, setImeiElapsedSeconds] = useState(0)
   const [imeiRetryCooldownSeconds, setImeiRetryCooldownSeconds] = useState(0)
   const [locationBreadcrumbs, setLocationBreadcrumbs] = useState([])
@@ -696,7 +699,18 @@ export default function HomeView({
 
   const normalizedRole = String(roleLabel(user?.userRole || user?.role || user?.user_role || 3)).toLowerCase()
   const isSuperAdmin = normalizedRole === 'qview admin'
+  const isCompanyAdmin = normalizedRole === 'company admin'
   const isAdminDashboard = normalizedRole === 'qview admin' || normalizedRole === 'company admin'
+  const currentUserId = useMemo(() => String(user?.id || user?.userId || user?.user_id || '').trim(), [user])
+  const currentUserCompanyId = useMemo(() => String(user?.companyId || user?.company_id || '').trim(), [user])
+
+  const resolveErrorLogField = useCallback((entry, keys = []) => {
+    for (const key of keys) {
+      const value = entry?.[key]
+      if (value !== null && value !== undefined && String(value).trim()) return String(value).trim()
+    }
+    return ''
+  }, [])
   useEffect(() => {
     if (activeSection !== 'bulk-sim') return
     if (isSuperAdmin) return
@@ -706,12 +720,12 @@ export default function HomeView({
   const locationDeviceOptions = useMemo(() => {
     if (isAdminDashboard) return devices
 
-    const currentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
-    if (!currentUserId) return devices
+    const numericCurrentUserId = Number(user?.id || user?.userId || user?.user_id || 0)
+    if (!numericCurrentUserId) return devices
 
     return devices.filter((device) => {
       const ownerId = Number(device.ownerUserId || device.userId || device.user_id || device.owner?.id || device.app_user?.id || 0)
-      return ownerId === currentUserId
+      return ownerId === numericCurrentUserId
     })
   }, [devices, isAdminDashboard, user])
 
@@ -721,14 +735,116 @@ export default function HomeView({
     { value: '30d', label: 'Last 30 days', windowMs: 30 * 24 * 60 * 60 * 1000 }
   ]), [])
 
+  const roleScopedErrorLogs = useMemo(() => {
+    if (isSuperAdmin) return errorLogs
+
+    const resolveCompanyId = (entry) => resolveErrorLogField(entry, ['companyId', 'company_id', 'companyID'])
+    const resolveLocationId = (entry) => resolveErrorLogField(entry, ['locationId', 'location_id', 'locationID'])
+    const resolveUserId = (entry) => resolveErrorLogField(entry, ['userId', 'user_id', 'ownerUserId', 'owner_user_id', 'actorUserId', 'actor_user_id'])
+
+    if (isCompanyAdmin) {
+      const allowedLocationIds = new Set(
+        locations
+          .filter((location) => String(location.companyId || location.company_id || '') === currentUserCompanyId)
+          .map((location) => String(location.id || location.locationId || location.location_id || '').trim())
+          .filter(Boolean)
+      )
+
+      const allowedUserIds = new Set(
+        users
+          .filter((entry) => String(entry.companyId || entry.company_id || '') === currentUserCompanyId)
+          .map((entry) => String(entry.id || entry.userId || entry.user_id || '').trim())
+          .filter(Boolean)
+      )
+
+      return errorLogs.filter((entry) => {
+        const companyId = resolveCompanyId(entry)
+        const locationId = resolveLocationId(entry)
+        const userId = resolveUserId(entry)
+        if (companyId && companyId === currentUserCompanyId) return true
+        if (locationId && allowedLocationIds.has(locationId)) return true
+        if (userId && allowedUserIds.has(userId)) return true
+        return false
+      })
+    }
+
+    return errorLogs.filter((entry) => {
+      const userId = resolveUserId(entry)
+      if (!currentUserId) return false
+      return userId === currentUserId
+    })
+  }, [currentUserCompanyId, currentUserId, errorLogs, isCompanyAdmin, isSuperAdmin, locations, resolveErrorLogField, users])
+
   const recentErrorLogs = useMemo(() => {
     const selectedOption = errorRangeOptions.find((entry) => entry.value === errorLogRange) || errorRangeOptions[0]
     const earliestTimestamp = Date.now() - selectedOption.windowMs
-    return errorLogs.filter((entry) => {
+    return roleScopedErrorLogs.filter((entry) => {
       const occurredAt = new Date(entry?.occurredAt || 0).getTime()
       return Number.isFinite(occurredAt) && occurredAt >= earliestTimestamp
     })
-  }, [errorLogRange, errorLogs, errorRangeOptions])
+  }, [errorLogRange, errorRangeOptions, roleScopedErrorLogs])
+
+  const errorLogFilterOptions = useMemo(() => {
+    const scopedCompanies = isSuperAdmin
+      ? companies
+      : companies.filter((entry) => String(entry.id || '') === currentUserCompanyId)
+    const scopedLocations = isSuperAdmin
+      ? locations
+      : locations.filter((entry) => String(entry.companyId || entry.company_id || '') === currentUserCompanyId)
+    const scopedUsers = isSuperAdmin
+      ? users
+      : (isCompanyAdmin
+          ? users.filter((entry) => String(entry.companyId || entry.company_id || '') === currentUserCompanyId)
+          : users.filter((entry) => String(entry.id || entry.userId || entry.user_id || '') === currentUserId))
+
+    const companyScopedLocations = errorLogCompanyFilter === 'all'
+      ? scopedLocations
+      : scopedLocations.filter((entry) => String(entry.companyId || entry.company_id || '') === errorLogCompanyFilter)
+
+    const locationScopedUsers = errorLogLocationFilter === 'all'
+      ? scopedUsers
+      : scopedUsers.filter((entry) => String(entry.locationId || entry.location_id || '') === errorLogLocationFilter)
+    const companyAndLocationScopedUsers = errorLogCompanyFilter === 'all'
+      ? locationScopedUsers
+      : locationScopedUsers.filter((entry) => String(entry.companyId || entry.company_id || '') === errorLogCompanyFilter)
+
+    return {
+      companies: scopedCompanies.map((entry) => ({ id: String(entry.id || ''), label: entry.companyName || entry.company_name || entry.name || `Company ${entry.id}` })).filter((entry) => entry.id),
+      locations: companyScopedLocations.map((entry) => ({ id: String(entry.id || entry.locationId || entry.location_id || ''), label: entry.name || `Location ${entry.id}` })).filter((entry) => entry.id),
+      users: companyAndLocationScopedUsers.map((entry) => ({ id: String(entry.id || entry.userId || entry.user_id || ''), label: `${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.email || `User ${entry.id}` })).filter((entry) => entry.id)
+    }
+  }, [companies, currentUserCompanyId, currentUserId, errorLogCompanyFilter, errorLogLocationFilter, isCompanyAdmin, isSuperAdmin, locations, users])
+
+  const filteredErrorLogs = useMemo(() => {
+    const resolveCompanyId = (entry) => resolveErrorLogField(entry, ['companyId', 'company_id', 'companyID'])
+    const resolveLocationId = (entry) => resolveErrorLogField(entry, ['locationId', 'location_id', 'locationID'])
+    const resolveUserId = (entry) => resolveErrorLogField(entry, ['userId', 'user_id', 'ownerUserId', 'owner_user_id', 'actorUserId', 'actor_user_id'])
+
+    return recentErrorLogs.filter((entry) => {
+      if (errorLogCompanyFilter !== 'all' && resolveCompanyId(entry) !== errorLogCompanyFilter) return false
+      if (errorLogLocationFilter !== 'all' && resolveLocationId(entry) !== errorLogLocationFilter) return false
+      if (errorLogUserFilter !== 'all' && resolveUserId(entry) !== errorLogUserFilter) return false
+      return true
+    })
+  }, [errorLogCompanyFilter, errorLogLocationFilter, errorLogUserFilter, recentErrorLogs, resolveErrorLogField])
+
+  useEffect(() => {
+    if (errorLogCompanyFilter !== 'all' && !errorLogFilterOptions.companies.some((entry) => entry.id === errorLogCompanyFilter)) {
+      setErrorLogCompanyFilter('all')
+    }
+    if (errorLogLocationFilter !== 'all' && !errorLogFilterOptions.locations.some((entry) => entry.id === errorLogLocationFilter)) {
+      setErrorLogLocationFilter('all')
+    }
+    if (errorLogUserFilter !== 'all' && !errorLogFilterOptions.users.some((entry) => entry.id === errorLogUserFilter)) {
+      setErrorLogUserFilter('all')
+    }
+  }, [errorLogCompanyFilter, errorLogFilterOptions, errorLogLocationFilter, errorLogUserFilter])
+
+  useEffect(() => {
+    if (isSuperAdmin || isCompanyAdmin) return
+    if (!currentUserId) return
+    setErrorLogUserFilter(currentUserId)
+  }, [currentUserId, isCompanyAdmin, isSuperAdmin])
 
   const metrics = useMemo(
     () => [
@@ -736,9 +852,9 @@ export default function HomeView({
       { label: 'TOTAL USERS', value: users.length, icon: 'users', section: 'users' },
       { label: 'TOTAL DEVICES', value: devices.length, icon: 'devices', section: 'devices' },
       { label: 'TOTAL LOCATIONS', value: locations.length, icon: 'location', section: 'locations' },
-      { label: 'ERROR LOGS', value: recentErrorLogs.length, icon: 'warning', section: 'error-logs', hasRangeControl: true }
+      { label: 'ERROR LOGS', value: roleScopedErrorLogs.length, icon: 'warning', section: 'error-logs', hasRangeControl: true }
     ],
-    [companies.length, users.length, devices.length, locations.length, recentErrorLogs.length]
+    [companies.length, users.length, devices.length, locations.length, roleScopedErrorLogs.length]
   )
 
   const toggle = (key) => setConfigForm((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -977,7 +1093,7 @@ export default function HomeView({
       const rows = asCollection(payload, ['errorLogs', 'logs'])
       const sortedRows = [...rows].sort((a, b) => new Date(b.occurredAt || 0).getTime() - new Date(a.occurredAt || 0).getTime())
       setErrorLogs(sortedRows)
-      setErrorLogsStatus(sortedRows.length ? `Showing ${sortedRows.length} backend error log entr${sortedRows.length === 1 ? 'y' : 'ies'}.` : 'No backend errors recorded yet.')
+      setErrorLogsStatus(sortedRows.length ? `${sortedRows.length} backend error log entr${sortedRows.length === 1 ? 'y' : 'ies'}.` : 'No backend errors recorded yet.')
     } catch (error) {
       setErrorLogs([])
       setErrorLogsStatus(`Failed to load backend error logs: ${error.message}`)
@@ -1014,6 +1130,7 @@ export default function HomeView({
           activeSection === 'location-detail' ||
           activeSection === 'devices' ||
           activeSection === 'alarm-logs' ||
+          activeSection === 'error-logs' ||
           isDeviceDetailSection(activeSection)
 
         if (needsLookups) await loadLookups()
@@ -4423,24 +4540,57 @@ export default function HomeView({
         )}
 
         {activeSection === 'error-logs' && (
-          <section className="section-panel">
+          <section className="section-panel error-logs-panel">
             <h2 className="page-title">Error Logs</h2>
-            <article className="card-like">
+            <article className="card-like error-logs-card">
               <div className="section-head error-log-head">
-                <label className="webhook-limit-control" htmlFor="error-log-range">
-                  <span>Range</span>
-                  <select id="error-log-range" value={errorLogRange} onChange={(event) => setErrorLogRange(event.target.value)}>
-                    {errorRangeOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
+                <div className="table-controls error-log-filters">
+                  <label className="webhook-limit-control" htmlFor="error-log-range">
+                    <span>Range</span>
+                    <select id="error-log-range" value={errorLogRange} onChange={(event) => setErrorLogRange(event.target.value)}>
+                      {errorRangeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  {isSuperAdmin ? (
+                    <label className="webhook-limit-control" htmlFor="error-log-company-filter">
+                      <span>Company</span>
+                      <select id="error-log-company-filter" value={errorLogCompanyFilter} onChange={(event) => setErrorLogCompanyFilter(event.target.value)}>
+                        <option value="all">All companies</option>
+                        {errorLogFilterOptions.companies.map((entry) => (
+                          <option key={`error-company-${entry.id}`} value={entry.id}>{entry.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  {(isSuperAdmin || isCompanyAdmin) ? (
+                    <label className="webhook-limit-control" htmlFor="error-log-location-filter">
+                      <span>Location</span>
+                      <select id="error-log-location-filter" value={errorLogLocationFilter} onChange={(event) => setErrorLogLocationFilter(event.target.value)}>
+                        <option value="all">All locations</option>
+                        {errorLogFilterOptions.locations.map((entry) => (
+                          <option key={`error-location-${entry.id}`} value={entry.id}>{entry.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  <label className="webhook-limit-control" htmlFor="error-log-user-filter">
+                    <span>User</span>
+                    <select id="error-log-user-filter" value={errorLogUserFilter} onChange={(event) => setErrorLogUserFilter(event.target.value)}>
+                      <option value="all">{isSuperAdmin || isCompanyAdmin ? 'All users' : 'My logs'}</option>
+                      {errorLogFilterOptions.users.map((entry) => (
+                        <option key={`error-user-${entry.id}`} value={entry.id}>{entry.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
                 <button className="mini-action" type="button" onClick={loadErrorLogs}>Refresh</button>
               </div>
               <p className="status">{errorLogsStatus}</p>
-              <p className="status">Showing {recentErrorLogs.length} error entr{recentErrorLogs.length === 1 ? 'y' : 'ies'} in the selected range.</p>
-              <div className="table-wrap">
-                <table className="data-table">
+              <p className="status error-log-count">Showing {filteredErrorLogs.length} error entr{filteredErrorLogs.length === 1 ? 'y' : 'ies'} in the selected range.</p>
+              <div className="table-wrap error-log-table-wrap">
+                <table className="data-table error-log-table">
                   <thead>
                     <tr>
                       <th>Occurred At</th>
@@ -4452,11 +4602,11 @@ export default function HomeView({
                     </tr>
                   </thead>
                   <tbody>
-                    {recentErrorLogs.length ? recentErrorLogs.map((entry) => (
+                    {filteredErrorLogs.length ? filteredErrorLogs.map((entry) => (
                       <tr key={entry.id || `${entry.occurredAt || ''}-${entry.path || ''}-${entry.errorType || ''}`}>
                         <td>{entry.occurredAt ? new Date(entry.occurredAt).toLocaleString() : '-'}</td>
                         <td>{`${entry.method || '-'} ${entry.path || '-'}`}</td>
-                        <td>{entry.statusCode ?? '-'}</td>
+                        <td><span className="error-log-status-badge">{entry.statusCode ?? '-'}</span></td>
                         <td>{entry.errorType || '-'}</td>
                         <td>{entry.errorMessage || '-'}</td>
                         <td>
@@ -4468,7 +4618,7 @@ export default function HomeView({
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan={6}>No backend errors found for this range.</td>
+                        <td colSpan={6}>No backend errors found for this filter.</td>
                       </tr>
                     )}
                   </tbody>
@@ -4738,7 +4888,7 @@ export default function HomeView({
 
       {showCompanyModal ? (
         <div className="overlay" onClick={() => setShowCompanyModal(false)}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Create Company</h3>
             <div className="field-grid">
               <input placeholder="Company Name" value={companyForm.companyName} onChange={(event) => setCompanyForm((prev) => ({ ...prev, companyName: event.target.value }))} />
@@ -4754,19 +4904,21 @@ export default function HomeView({
                 <span>Include Alarm Receiver</span>
               </label>
             </div>
-            <button className="mini-action" onClick={handleCreateCompany}>Create</button>
+            <div className="form-actions">
+              <button className="btn-pill btn-pill-secondary" type="button" onClick={() => setShowCompanyModal(false)}>Cancel</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateCompany}><AppIcon name="plus" className="btn-icon" />Create Company</button>
+            </div>
           </div>
         </div>
       ) : null}
 
       {showUserModal ? (
         <div className="overlay" onClick={() => setShowUserModal(false)}>
-          <div className="modal create-user-modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal form-modal create-user-modal" onClick={(event) => event.stopPropagation()}>
             <div className="create-user-modal-head">
               <div className="create-user-modal-icon"><AppIcon name="plusUser" className="btn-icon" /></div>
               <div>
                 <h3>Create User</h3>
-                <p>Enter details to register a new account</p>
               </div>
             </div>
             <div className="field-grid two-col create-user-field-grid">
@@ -4828,8 +4980,8 @@ export default function HomeView({
               </div>
             </div>
             <div className="modal-actions">
-              <button className="create-user-btn create-user-btn-cancel" type="button" onClick={() => setShowUserModal(false)}>Cancel</button>
-              <button className="create-user-btn create-user-btn-submit" onClick={handleCreateUser}>Create</button>
+              <button className="btn-pill btn-pill-secondary" type="button" onClick={() => setShowUserModal(false)}>Cancel</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateUser}><AppIcon name="plusUser" className="btn-icon" />Create User</button>
             </div>
           </div>
         </div>
@@ -4837,7 +4989,7 @@ export default function HomeView({
 
       {showLocationModal ? (
         <div className="overlay" onClick={() => setShowLocationModal(false)}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Create Location</h3>
             <div className="field-grid">
               <select value={locationForm.companyId} onChange={(event) => setLocationForm((prev) => ({ ...prev, companyId: event.target.value }))}>
@@ -4847,14 +4999,17 @@ export default function HomeView({
               <input placeholder="Location Name" value={locationForm.name} onChange={(event) => setLocationForm((prev) => ({ ...prev, name: event.target.value }))} />
               <textarea rows={3} placeholder="Details" value={locationForm.details} onChange={(event) => setLocationForm((prev) => ({ ...prev, details: event.target.value }))} />
             </div>
-            <button className="mini-action" onClick={handleCreateLocation}>Create</button>
+            <div className="form-actions">
+              <button className="btn-pill btn-pill-secondary" type="button" onClick={() => setShowLocationModal(false)}>Cancel</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateLocation}><AppIcon name="plus" className="btn-icon" />Create Location</button>
+            </div>
           </div>
         </div>
       ) : null}
 
       {showEditCompanyModal ? (
         <div className="overlay" onClick={() => { setShowEditCompanyModal(false); setEditingCompanyId(null); setCompanyForm(initialCompanyForm) }}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Company Configuration</h3>
             <div className="field-grid">
               <input placeholder="Company Name" value={companyForm.companyName} onChange={(event) => setCompanyForm((prev) => ({ ...prev, companyName: event.target.value }))} />
@@ -4877,7 +5032,10 @@ export default function HomeView({
               <textarea rows={3} placeholder="IP whitelist (comma or newline separated)" value={companyForm.ipWhitelistText} onChange={(event) => setCompanyForm((prev) => ({ ...prev, ipWhitelistText: event.target.value }))} />
               <textarea rows={6} placeholder="Alarm Receiver Config JSON" value={companyForm.alarmReceiverConfigJson} onChange={(event) => setCompanyForm((prev) => ({ ...prev, alarmReceiverConfigJson: event.target.value }))} />
             </div>
-            <button className="mini-action" onClick={handleUpdateCompany}>Save Company</button>
+            <div className="form-actions">
+              <button className="btn-pill btn-pill-secondary" type="button" onClick={() => { setShowEditCompanyModal(false); setEditingCompanyId(null); setCompanyForm(initialCompanyForm) }}>Cancel</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateCompany}><AppIcon name="settings" className="btn-icon" />Save Company</button>
+            </div>
           </div>
         </div>
       ) : null}
@@ -4886,7 +5044,7 @@ export default function HomeView({
 
       {showEditUserModal ? (
         <div className="overlay" onClick={() => { setShowEditUserModal(false); setEditingUserId(null); setUserForm(initialUserForm) }}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Edit User</h3>
             <div className="field-grid two-col">
               <input placeholder="First Name" value={userForm.firstName} onChange={(event) => setUserForm((prev) => ({ ...prev, firstName: event.target.value }))} />
@@ -4898,14 +5056,17 @@ export default function HomeView({
               <select value={userForm.companyId} onChange={(event) => setUserForm((prev) => ({ ...prev, companyId: event.target.value, locationId: '' }))}><option value="">Company</option>{selectableCompanies.map((company) => <option key={company.id || company.name || company.companyName} value={company.id || ''}>{company.companyName || company.company_name || company.name || 'Unknown company'}</option>)}</select>
               <select value={userForm.locationId} onChange={(event) => setUserForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
             </div>
-            <button className="mini-action" onClick={handleUpdateUser}>Save User</button>
+            <div className="form-actions">
+              <button className="btn-pill btn-pill-secondary" type="button" onClick={() => { setShowEditUserModal(false); setEditingUserId(null); setUserForm(initialUserForm) }}>Cancel</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateUser}><AppIcon name="settings" className="btn-icon" />Save User</button>
+            </div>
           </div>
         </div>
       ) : null}
 
       {showEditLocationModal ? (
         <div className="overlay" onClick={() => { setShowEditLocationModal(false); setEditingLocationId(null); setLocationForm(initialLocationForm) }}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Edit Location</h3>
             <div className="field-grid">
               <select value={locationForm.companyId} onChange={(event) => setLocationForm((prev) => ({ ...prev, companyId: event.target.value }))}>
@@ -4915,14 +5076,17 @@ export default function HomeView({
               <input placeholder="Location Name" value={locationForm.name} onChange={(event) => setLocationForm((prev) => ({ ...prev, name: event.target.value }))} />
               <textarea rows={3} placeholder="Details" value={locationForm.details} onChange={(event) => setLocationForm((prev) => ({ ...prev, details: event.target.value }))} />
             </div>
-            <button className="mini-action" onClick={handleUpdateLocation}>Save Location</button>
+            <div className="form-actions">
+              <button className="btn-pill btn-pill-secondary" type="button" onClick={() => { setShowEditLocationModal(false); setEditingLocationId(null); setLocationForm(initialLocationForm) }}>Cancel</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateLocation}><AppIcon name="settings" className="btn-icon" />Save Location</button>
+            </div>
           </div>
         </div>
       ) : null}
 
       {showDeviceModal ? (
         <div className="overlay" onClick={() => { setShowDeviceModal(false); setImeiLinkState(initialImeiLinkState) }}>
-          <div className="modal device-create-modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal form-modal device-create-modal" onClick={(event) => event.stopPropagation()}>
             <div className="device-create-head">
               <h3>Add Device</h3>
             </div>
@@ -4960,7 +5124,7 @@ export default function HomeView({
               </label>
             </div>
             <div className="modal-actions">
-              <button className="mini-action device-detail-btn-primary" onClick={handleCreateDevice}>Add Device</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleCreateDevice}><AppIcon name="plus" className="btn-icon" />Add Device</button>
             </div>
             {imeiLinkState.open ? (
               <div className="status imei-wait-card" style={{ marginTop: 12 }}>
@@ -4990,7 +5154,7 @@ export default function HomeView({
 
       {showEditDeviceModal ? (
         <div className="overlay" onClick={() => { setShowEditDeviceModal(false); setEditingDeviceId(null); setDeviceForm(initialDeviceForm) }}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal form-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Edit Device</h3>
             <div className="field-grid">
               <input placeholder="Device Name" value={deviceForm.name} onChange={(event) => setDeviceForm((prev) => ({ ...prev, name: event.target.value }))} />
@@ -5004,7 +5168,10 @@ export default function HomeView({
               <select value={deviceForm.ownerUserId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, ownerUserId: event.target.value }))}><option value="">Select User</option>{assignableUsers.map((user) => <option key={user.id || user.email} value={user.id || ''}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}</select>
               <select value={deviceForm.locationId} onChange={(event) => setDeviceForm((prev) => ({ ...prev, locationId: event.target.value }))}><option value="">Location (Optional)</option>{selectableLocations.map((location) => <option key={location.id || location.name} value={location.id || ''}>{location.name || 'Unknown location'}</option>)}</select>
             </div>
-            <button className="mini-action" onClick={handleUpdateDevice}>Save Device</button>
+            <div className="form-actions">
+              <button className="btn-pill btn-pill-secondary" type="button" onClick={() => { setShowEditDeviceModal(false); setEditingDeviceId(null); setDeviceForm(initialDeviceForm) }}>Cancel</button>
+              <button className="btn-pill btn-pill-primary" type="button" onClick={handleUpdateDevice}><AppIcon name="settings" className="btn-icon" />Save Device</button>
+            </div>
           </div>
         </div>
       ) : null}
