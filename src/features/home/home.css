@@ -849,6 +849,18 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   margin-bottom: 0.7rem;
 }
 
+.error-log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.6rem;
+  margin-bottom: 0;
+}
+
+.error-log-filters .webhook-limit-control {
+  min-width: 160px;
+}
+
 .device-list-workspace {
   display: grid;
   gap: 0.75rem;
