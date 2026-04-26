@@ -88,7 +88,9 @@ export default function UsersPage({
                             onClick={() => setOpenDevicesByUser((prev) => ({ ...prev, [panel.userKey]: !prev[panel.userKey] }))}
                           >
                             <span>{panel.allDevices.length} device{panel.allDevices.length === 1 ? '' : 's'}</span>
-                            <span className="users-device-chevron" aria-hidden="true">{openDevicesByUser[panel.userKey] ? '⌃' : '⌄'}</span>
+                            <span className={`users-device-chevron ${openDevicesByUser[panel.userKey] ? 'is-open' : ''}`} aria-hidden="true">
+                              <AppIcon name="chevronDown" className="users-device-chevron-icon" />
+                            </span>
                           </button>
                         </div>
                         {openDevicesByUser[panel.userKey] ? (
