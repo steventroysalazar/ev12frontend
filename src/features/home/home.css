@@ -3268,28 +3268,35 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 }
 
 .device-settings-cell {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  padding-left: 0.9rem;
 }
 
 .row-chevron {
-  width: 20px;
-  height: 20px;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
   border: 0;
   background: transparent;
   color: #5f73a8;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.72rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: transform 220ms ease, color 180ms ease;
+  transition: transform 220ms ease, color 180ms ease, opacity 180ms ease;
+  opacity: 0.82;
 }
 
 .row-chevron.is-expanded {
-  transform: rotate(90deg);
+  transform: translateY(-50%) rotate(90deg);
   color: #3f5f9c;
+  opacity: 1;
 }
 
 .expandable-row-detail td {
