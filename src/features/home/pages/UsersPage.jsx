@@ -23,6 +23,7 @@ export default function UsersPage({
   const [deviceSearchByUser, setDeviceSearchByUser] = React.useState({})
   const [devicePageByUser, setDevicePageByUser] = React.useState({})
   const [openDevicesByUser, setOpenDevicesByUser] = React.useState({})
+  const [expandedRowId, setExpandedRowId] = React.useState(null)
   const devicePageSize = 20
 
   const getRowUserKey = (user) => String(user.id || user.email || user.name || 'user')
@@ -65,78 +66,98 @@ export default function UsersPage({
         </select>
       </div>
       <div className="table-shell table-shell-tall users-table-shell">
-        <table className="data-table users-data-table">
+        <table className="data-table users-data-table expandable-rows-table">
           <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Location</th><th>Devices</th><th>Actions</th></tr></thead>
           <tbody>
-            {pagedUsers.rows.map((u) => (
-              <tr key={u.id || u.email}>
-                <td>{`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || '-'}</td>
-                <td>{u.email || '-'}</td>
-                <td>{roleLabel(u.userRole || u.role || u.user_role || '-')}</td>
-                <td>{u.contactNumber || '-'}</td>
-                <td>{u.locationName || u.location?.name || '-'}</td>
-                <td>
-                  {(() => {
-                    const panel = getDevicePanel(u)
-                    if (!panel.allDevices.length) return <span className="status">No devices</span>
-                    return (
-                      <div className="inline-devices-dropdown">
-                        <div className="users-device-summary">
-                          <button
-                            type="button"
-                            className="users-device-trigger"
-                            onClick={() => setOpenDevicesByUser((prev) => ({ ...prev, [panel.userKey]: !prev[panel.userKey] }))}
-                          >
-                            <span>{panel.allDevices.length} device{panel.allDevices.length === 1 ? '' : 's'}</span>
-                            <span className={`users-device-chevron ${openDevicesByUser[panel.userKey] ? 'is-open' : ''}`} aria-hidden="true">
-                              <AppIcon name="chevronDown" className="users-device-chevron-icon" />
-                            </span>
-                          </button>
-                        </div>
-                        {openDevicesByUser[panel.userKey] ? (
-                          <div className="inline-devices-content">
-                          <input
-                            placeholder="Search devices..."
-                            value={panel.search}
-                            onChange={(event) => {
-                              const value = event.target.value
-                              setDeviceSearchByUser((prev) => ({ ...prev, [panel.userKey]: value }))
-                              setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: 1 }))
-                            }}
-                          />
-                          <div className="inline-devices-table-wrap">
-                            <table className="inline-devices-table">
-                              <thead>
-                                <tr><th>Device</th><th>Phone</th></tr>
-                              </thead>
-                              <tbody>
-                                {panel.pageRows.map((entry) => (
-                                  <tr key={`user-table-device-${u.id || u.email}-${entry.id || entry.deviceId || entry.phoneNumber}`}>
-                                    <td>{entry.name || entry.deviceName || 'Unnamed device'}</td>
-                                    <td>{entry.phoneNumber || '-'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                          {panel.filtered.length > devicePageSize ? (
-                            <div className="inline-devices-pagination">
-                              <button type="button" className="table-link" disabled={panel.currentPage <= 1} onClick={() => setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: Math.max(panel.currentPage - 1, 1) }))}>Prev</button>
-                              <span>{panel.currentPage}/{panel.totalPages}</span>
-                              <button type="button" className="table-link" disabled={panel.currentPage >= panel.totalPages} onClick={() => setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: Math.min(panel.currentPage + 1, panel.totalPages) }))}>Next</button>
+            {pagedUsers.rows.map((u) => {
+              const rowKey = String(u.id || u.email || u.name)
+              const isExpanded = expandedRowId === rowKey
+              const toggleExpanded = () => setExpandedRowId((prev) => (prev === rowKey ? null : rowKey))
+              return (
+                <React.Fragment key={rowKey}>
+                  <tr className={`expandable-row ${isExpanded ? 'is-expanded' : ''}`} onClick={toggleExpanded}>
+                    <td>{`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || '-'}</td>
+                    <td>{u.email || '-'}</td>
+                    <td>{roleLabel(u.userRole || u.role || u.user_role || '-')}</td>
+                    <td>{u.contactNumber || '-'}</td>
+                    <td>{u.locationName || u.location?.name || '-'}</td>
+                    <td>
+                      {(() => {
+                        const panel = getDevicePanel(u)
+                        if (!panel.allDevices.length) return <span className="status">No devices</span>
+                        return (
+                          <div className="inline-devices-dropdown" onClick={(event) => event.stopPropagation()}>
+                            <div className="users-device-summary">
+                              <button
+                                type="button"
+                                className="users-device-trigger"
+                                onClick={() => setOpenDevicesByUser((prev) => ({ ...prev, [panel.userKey]: !prev[panel.userKey] }))}
+                              >
+                                <span>{panel.allDevices.length} device{panel.allDevices.length === 1 ? '' : 's'}</span>
+                                <span className={`users-device-chevron ${openDevicesByUser[panel.userKey] ? 'is-open' : ''}`} aria-hidden="true">
+                                  <AppIcon name="chevronDown" className="users-device-chevron-icon" />
+                                </span>
+                              </button>
                             </div>
-                          ) : null}
+                            {openDevicesByUser[panel.userKey] ? (
+                              <div className="inline-devices-content">
+                                <input
+                                  placeholder="Search devices..."
+                                  value={panel.search}
+                                  onChange={(event) => {
+                                    const value = event.target.value
+                                    setDeviceSearchByUser((prev) => ({ ...prev, [panel.userKey]: value }))
+                                    setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: 1 }))
+                                  }}
+                                />
+                                <div className="inline-devices-table-wrap">
+                                  <table className="inline-devices-table">
+                                    <thead>
+                                      <tr><th>Device</th><th>Phone</th></tr>
+                                    </thead>
+                                    <tbody>
+                                      {panel.pageRows.map((entry) => (
+                                        <tr key={`user-table-device-${u.id || u.email}-${entry.id || entry.deviceId || entry.phoneNumber}`}>
+                                          <td>{entry.name || entry.deviceName || 'Unnamed device'}</td>
+                                          <td>{entry.phoneNumber || '-'}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                                {panel.filtered.length > devicePageSize ? (
+                                  <div className="inline-devices-pagination">
+                                    <button type="button" className="table-link" disabled={panel.currentPage <= 1} onClick={() => setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: Math.max(panel.currentPage - 1, 1) }))}>Prev</button>
+                                    <span>{panel.currentPage}/{panel.totalPages}</span>
+                                    <button type="button" className="table-link" disabled={panel.currentPage >= panel.totalPages} onClick={() => setDevicePageByUser((prev) => ({ ...prev, [panel.userKey]: Math.min(panel.currentPage + 1, panel.totalPages) }))}>Next</button>
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
                           </div>
-                        ) : null}
-                      </div>
-                    )
-                  })()}
-                </td>
-                <td className="users-actions-cell">
-                  <button className="table-link users-view-btn" type="button" onClick={() => openUserDetailPage(u)}>VIEW</button>
-                </td>
-              </tr>
-            ))}
+                        )
+                      })()}
+                    </td>
+                    <td className="users-actions-cell">
+                      <button className="table-link users-view-btn" type="button" onClick={(event) => { event.stopPropagation(); openUserDetailPage(u) }}>VIEW</button>
+                    </td>
+                  </tr>
+                  {isExpanded ? (
+                    <tr className="expandable-row-detail">
+                      <td colSpan={7}>
+                        <div className="expand-detail-panel">
+                          <div><span>Name</span><strong>{`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || '-'}</strong></div>
+                          <div><span>Email</span><strong>{u.email || '-'}</strong></div>
+                          <div><span>Role</span><strong>{roleLabel(u.userRole || u.role || u.user_role || '-')}</strong></div>
+                          <div><span>Contact</span><strong>{u.contactNumber || '-'}</strong></div>
+                          <div><span>Location</span><strong>{u.locationName || u.location?.name || '-'}</strong></div>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : null}
+                </React.Fragment>
+              )
+            })}
           </tbody>
         </table>
       </div>

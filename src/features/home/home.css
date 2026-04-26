@@ -1862,20 +1862,6 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   vertical-align: middle;
 }
 
-.devices-list-table th:nth-child(6),
-.devices-list-table td:nth-child(6) {
-  width: 180px;
-  min-width: 180px;
-}
-
-.devices-list-table th:nth-child(7),
-.devices-list-table td:nth-child(7),
-.devices-list-table th:nth-child(8),
-.devices-list-table td:nth-child(8) {
-  width: 170px;
-  min-width: 170px;
-}
-
 .table-link {
   background: transparent;
   color: #0f766e;
@@ -3252,6 +3238,101 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
 
 .data-table td {
   color: #333d53;
+}
+
+.expandable-rows-table th,
+.expandable-rows-table td {
+  border-bottom: 1px solid #e4e9f1;
+}
+
+.expandable-rows-table th:not(:last-child),
+.expandable-rows-table td:not(:last-child) {
+  border-right: 1px solid #edf1f6;
+}
+
+.expandable-rows-table thead th {
+  background: linear-gradient(180deg, #f8faff 0%, #f2f5fb 100%);
+}
+
+.expandable-row {
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+
+.expandable-row:hover {
+  background: #fafcff;
+}
+
+.expandable-row.is-expanded td {
+  border-bottom-color: transparent;
+}
+
+.device-settings-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.row-chevron {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  background: transparent;
+  color: #5f73a8;
+  cursor: pointer;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 220ms ease, color 180ms ease;
+}
+
+.row-chevron.is-expanded {
+  transform: rotate(90deg);
+  color: #3f5f9c;
+}
+
+.expandable-row-detail td {
+  padding: 0.25rem 0.85rem 0.9rem;
+  border-top: none;
+}
+
+.expand-detail-panel {
+  border: 1px solid #dde5f1;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
+  box-shadow: 0 8px 20px -16px rgba(53, 76, 120, 0.45);
+  padding: 0.9rem 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.6rem 1rem;
+  animation: expand-row-in 240ms ease;
+}
+
+.expand-detail-panel span {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #7e8fb0;
+  margin-bottom: 0.2rem;
+  font-weight: 700;
+}
+
+.expand-detail-panel strong {
+  color: #2f3d58;
+  font-size: 0.88rem;
+}
+
+@keyframes expand-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .dashboard-status-panel {
