@@ -3,6 +3,7 @@ import Navbar from './components/navbar/Navbar'
 import { buildEv12Preview, formatReply, initialConfigForm } from './features/home/ev12'
 import { buildEviewSmsAccessSetup } from './features/home/smsAccessSetup'
 import { fetchWithFallback } from './lib/apiClient'
+import { getWebDeviceMetadata } from './lib/deviceInfo'
 import { startAlarmStream } from './lib/alarmStream'
 import { authReducer, initialAuthState, loadPersistedAuth, persistAuth } from './store/authStore'
 import './App.css'
@@ -897,6 +898,7 @@ export default function App() {
   const handleLogin = async () => {
     const email = loginForm.email.trim()
     const password = loginForm.password
+    const deviceMetadata = getWebDeviceMetadata()
 
     if (!email || !password) {
       setAuthStatus('Login validation: email and password are required.')
@@ -915,7 +917,7 @@ export default function App() {
       const { response } = await fetchWithFallback('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, ...deviceMetadata })
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
@@ -934,7 +936,25 @@ export default function App() {
     }
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      if (auth?.user?.id) {
+        const deviceMetadata = getWebDeviceMetadata()
+        await fetchWithFallback('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...commonHeaders() },
+          body: JSON.stringify({
+            userId: auth.user.id,
+            device_id: deviceMetadata.device_id,
+            os_type: deviceMetadata.os_type,
+            api_version: deviceMetadata.api_version
+          })
+        })
+      }
+    } catch {
+      // Continue local logout even if API logout fails.
+    }
+
     dispatchAuth({ type: 'LOGOUT' })
     setAlarmStateByDevice({})
     setAlarmFeed([])
