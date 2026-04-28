@@ -38,3 +38,35 @@ const output = buildEviewSmsAccessSetup({
 - Phone values are normalized to compact international format (`+<digits>`) and rejected if malformed.
 - If `restrictedAccess=true` and no valid numbers remain after normalization, validation fails with a user-facing error.
 - `callin(0|1)` is always queued last, after all `A` slot commands.
+
+## Web auth device + audit trail flow
+
+For web clients, we now send device metadata with login/logout so backend audit logs can track PC sessions.
+
+### Login
+
+- Call `POST /api/auth/login` with:
+  - `email` (or `username`)
+  - `password`
+  - `grant_type: "password"`
+  - `scope: "type:1"`
+  - `os_type` (resolved from browser user agent/platform)
+  - `os_version` (best-effort platform value)
+  - `api_version: "Web Browser"`
+  - `device_id` (stable value persisted in localStorage per browser install)
+
+### Logout
+
+- Call `POST /api/auth/logout` with:
+  - `userId`
+  - same `device_id`
+  - `os_type`
+  - `api_version`
+
+### Audit trail
+
+- Backend writes successful login/logout events into `login_logs`.
+- Frontend can render audit history from:
+  - `GET /api/auth/logs`
+  - alias: `GET /api/auth/login-logs`
+  - optional filter: `?userId=<id>`

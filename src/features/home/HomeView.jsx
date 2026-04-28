@@ -76,6 +76,7 @@ const supportedSections = new Set([
   'settings-advanced',
   'location',
   'alarm-logs',
+  'auth-logs',
   'error-logs',
   'commands',
   'replies',
@@ -517,6 +518,8 @@ export default function HomeView({
   const [alarmLogsStatus, setAlarmLogsStatus] = useState('')
   const [errorLogs, setErrorLogs] = useState([])
   const [errorLogsStatus, setErrorLogsStatus] = useState('')
+  const [authLogs, setAuthLogs] = useState([])
+  const [authLogsStatus, setAuthLogsStatus] = useState('')
   const [errorLogRange, setErrorLogRange] = useState('24h')
   const [errorLogCompanyFilter, setErrorLogCompanyFilter] = useState('all')
   const [errorLogLocationFilter, setErrorLogLocationFilter] = useState('all')
@@ -1100,6 +1103,21 @@ export default function HomeView({
     }
   }, [asCollection, fetchJson])
 
+  const loadAuthLogs = useCallback(async () => {
+    setAuthLogsStatus('Loading auth audit trail...')
+    try {
+      const suffix = currentUserId ? `?userId=${encodeURIComponent(currentUserId)}` : ''
+      const payload = await fetchJson(`/api/auth/logs${suffix}`, { headers: {} })
+      const rows = asCollection(payload, ['logs', 'authLogs', 'loginLogs'])
+      const sortedRows = [...rows].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      setAuthLogs(sortedRows)
+      setAuthLogsStatus(sortedRows.length ? `${sortedRows.length} auth log entr${sortedRows.length === 1 ? 'y' : 'ies'} loaded.` : 'No auth audit events yet.')
+    } catch (error) {
+      setAuthLogs([])
+      setAuthLogsStatus(`Failed to load auth audit trail: ${error.message}`)
+    }
+  }, [asCollection, currentUserId, fetchJson])
+
   const loadLocationBreadcrumbs = useCallback(async (deviceId) => {
     if (!deviceId) {
       setLocationBreadcrumbs([])
@@ -1130,6 +1148,7 @@ export default function HomeView({
           activeSection === 'location-detail' ||
           activeSection === 'devices' ||
           activeSection === 'alarm-logs' ||
+          activeSection === 'auth-logs' ||
           activeSection === 'error-logs' ||
           isDeviceDetailSection(activeSection)
 
@@ -1143,6 +1162,7 @@ export default function HomeView({
           await Promise.all([loadCompanies(), loadUsers(), loadLocations(), loadDevices(), loadErrorLogs()])
         }
         if (activeSection === 'error-logs') await loadErrorLogs()
+        if (activeSection === 'auth-logs') await loadAuthLogs()
         if (activeSection === 'user-detail' || activeSection === 'location-detail') {
           await loadDevices()
         }
@@ -1153,7 +1173,7 @@ export default function HomeView({
     }
 
     load()
-  }, [activeSection, loadCompanies, loadUsers, loadLocations, loadDevices, loadLookups, loadErrorLogs])
+  }, [activeSection, loadCompanies, loadUsers, loadLocations, loadDevices, loadLookups, loadErrorLogs, loadAuthLogs])
 
   useEffect(() => {
     if (activeSection !== 'replies' || !autoFetchReplies) return undefined
@@ -4535,6 +4555,54 @@ export default function HomeView({
                   </div>
                 </>
               )}
+            </article>
+          </section>
+        )}
+
+        {activeSection === 'auth-logs' && (
+          <section className="section-panel">
+            <h2 className="page-title">Login / Logout Audit Trail</h2>
+            <article className="card-like">
+              <div className="section-head">
+                <button className="mini-action" type="button" onClick={loadAuthLogs}>Refresh</button>
+              </div>
+              <p className="status">{authLogsStatus}</p>
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Created At</th>
+                      <th>Event</th>
+                      <th>User ID</th>
+                      <th>Identifier</th>
+                      <th>Device ID</th>
+                      <th>OS</th>
+                      <th>API Version</th>
+                      <th>IP Address</th>
+                      <th>User Agent</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {authLogs.length ? authLogs.map((entry) => (
+                      <tr key={entry.id || `${entry.createdAt || ''}-${entry.eventType || ''}-${entry.userId || ''}`}>
+                        <td>{entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '-'}</td>
+                        <td>{entry.eventType || '-'}</td>
+                        <td>{entry.userId ?? '-'}</td>
+                        <td>{entry.loginIdentifier || '-'}</td>
+                        <td>{entry.deviceId || '-'}</td>
+                        <td>{entry.osType || '-'}</td>
+                        <td>{entry.apiVersion || '-'}</td>
+                        <td>{entry.ipAddress || '-'}</td>
+                        <td>{entry.userAgent || '-'}</td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={9}>No login/logout audit entries found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </article>
           </section>
         )}
