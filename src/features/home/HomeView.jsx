@@ -575,6 +575,14 @@ export default function HomeView({
     if (/\bno[-\s]?motion\b/i.test(normalizedCode)) return { label: 'No-Motion Alert', tone: 'warning' }
     if (/\bmotion\b/i.test(normalizedCode)) return { label: 'Motion Alert', tone: 'active' }
 
+    const geoMatch = normalizedCode.match(/^GEO-([1-4])\s+Alert(?:\s*\((inbound|outbound)\))?$/i)
+    if (geoMatch) {
+      const slot = geoMatch[1]
+      const direction = geoMatch[2] ? geoMatch[2].toLowerCase() : ''
+      const label = direction ? `GEO-${slot} Alert (${direction})` : `GEO-${slot} Alert`
+      return { label, tone: 'warning' }
+    }
+
     return { label: normalizedCode, tone: 'active' }
   }, [])
 
@@ -3816,6 +3824,7 @@ export default function HomeView({
             </div>
             {selectedWorkspaceDevice ? (
               <div className="lifecycle-grid">
+                <div className="lifecycle-card"><strong>Alarm Status</strong><span>{getAlarmMeta(resolveLiveAlarmCode(selectedWorkspaceDevice)).label}</span></div>
                 <div className="lifecycle-card"><strong>Alarm Triggered</strong><span>{formatTimestamp(getAlarmTriggeredAt(selectedWorkspaceDevice))}</span></div>
                 <div className="lifecycle-card"><strong>Alarm Cancelled</strong><span>{formatTimestamp(getAlarmCancelledAt(selectedWorkspaceDevice))}</span></div>
                 <div className="lifecycle-card"><strong>Last Power ON</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastPowerOnAt || selectedWorkspaceDevice.last_power_on_at)}</span></div>
