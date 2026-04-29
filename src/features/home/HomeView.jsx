@@ -2503,6 +2503,37 @@ export default function HomeView({
     [alarmNowMs, alarmStateByDevice, getDeviceMotionAlertDurationMs, isMotionAlarmCode]
   )
 
+  const activeGeoFenceAlert = useMemo(() => {
+    const liveAlarmCode = String(resolveLiveAlarmCode(selectedWorkspaceDevice) || '').trim()
+    const match = liveAlarmCode.match(/^GEO-([1-4])\s+Alert(?:\s*\((inbound|outbound)\))?$/i)
+    if (!match) return null
+    return {
+      slot: Number(match[1]),
+      direction: match[2] ? match[2].toLowerCase() : '',
+      alarmText: liveAlarmCode
+    }
+  }, [resolveLiveAlarmCode, selectedWorkspaceDevice])
+
+  const assignedGeoFenceStatuses = useMemo(() => {
+    if (!geoFenceConfigs.length) return []
+
+    return geoFenceConfigs
+      .slice()
+      .sort((left, right) => left.slot - right.slot)
+      .map((geoFence) => {
+        const isActive = activeGeoFenceAlert?.slot === geoFence.slot
+        const statusLabel = isActive
+          ? `Alert Active${activeGeoFenceAlert?.direction ? ` (${activeGeoFenceAlert.direction})` : ''}`
+          : 'Normal'
+
+        return {
+          ...geoFence,
+          isActive,
+          statusLabel
+        }
+      })
+  }, [activeGeoFenceAlert, geoFenceConfigs])
+
   const activeAlarmDevices = useMemo(
     () =>
       devices
