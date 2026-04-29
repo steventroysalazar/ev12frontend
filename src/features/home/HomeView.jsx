@@ -2479,29 +2479,57 @@ export default function HomeView({
   const activeAlertPageSize = 6
   const listPageSize = 10
 
-  const resolveLiveAlarmCode = useCallback(
-    (device) => {
-      const deviceId = Number(device?.id || device?.deviceId || 0)
-      const externalDeviceId = String(device?.externalDeviceId || device?.external_device_id || '').trim()
-      const liveEntry =
-        (deviceId ? alarmStateByDevice?.[`id:${deviceId}`] : null) ||
-        (externalDeviceId ? alarmStateByDevice?.[`ext:${externalDeviceId}`] : null)
+  const resolveDeviceLiveAlarmCode = (device) => {
+    const deviceId = Number(device?.id || device?.deviceId || 0)
+    const externalDeviceId = String(device?.externalDeviceId || device?.external_device_id || '').trim()
+    const liveEntry =
+      (deviceId ? alarmStateByDevice?.[`id:${deviceId}`] : null) ||
+      (externalDeviceId ? alarmStateByDevice?.[`ext:${externalDeviceId}`] : null)
 
-      if (!liveEntry) return device?.alarmCode ?? null
-      if (liveEntry.alarmCode === null) return null
+    if (!liveEntry) return device?.alarmCode ?? null
+    if (liveEntry.alarmCode === null) return null
 
-      if (isMotionAlarmCode(liveEntry.alarmCode)) {
-        const updatedAtMs = new Date(liveEntry?.updatedAt || liveEntry?.receivedAt || liveEntry?.timestamp || 0).getTime()
-        if (Number.isFinite(updatedAtMs) && updatedAtMs > 0) {
-          const motionDurationMs = getDeviceMotionAlertDurationMs(device)
-          if (alarmNowMs - updatedAtMs >= motionDurationMs) return null
-        }
+    if (isMotionAlarmCode(liveEntry.alarmCode)) {
+      const updatedAtMs = new Date(liveEntry?.updatedAt || liveEntry?.receivedAt || liveEntry?.timestamp || 0).getTime()
+      if (Number.isFinite(updatedAtMs) && updatedAtMs > 0) {
+        const motionDurationMs = getDeviceMotionAlertDurationMs(device)
+        if (alarmNowMs - updatedAtMs >= motionDurationMs) return null
       }
+    }
 
-      return liveEntry.alarmCode || device?.alarmCode || null
-    },
-    [alarmNowMs, alarmStateByDevice, getDeviceMotionAlertDurationMs, isMotionAlarmCode]
-  )
+    return liveEntry.alarmCode || device?.alarmCode || null
+  }
+
+  const activeGeoFenceAlertMeta = useMemo(() => {
+    const liveAlarmCode = String(resolveDeviceLiveAlarmCode(selectedWorkspaceDevice) || '').trim()
+    const match = liveAlarmCode.match(/^GEO-([1-4])\s+Alert(?:\s*\((inbound|outbound)\))?$/i)
+    if (!match) return null
+    return {
+      slot: Number(match[1]),
+      direction: match[2] ? match[2].toLowerCase() : '',
+      alarmText: liveAlarmCode
+    }
+  }, [resolveDeviceLiveAlarmCode, selectedWorkspaceDevice])
+
+  const deviceAssignedGeoFenceStatuses = useMemo(() => {
+    if (!geoFenceConfigs.length) return []
+
+    return geoFenceConfigs
+      .slice()
+      .sort((left, right) => left.slot - right.slot)
+      .map((geoFence) => {
+        const isActive = activeGeoFenceAlertMeta?.slot === geoFence.slot
+        const statusLabel = isActive
+          ? `Alert Active${activeGeoFenceAlertMeta?.direction ? ` (${activeGeoFenceAlertMeta.direction})` : ''}`
+          : 'Normal'
+
+        return {
+          ...geoFence,
+          isActive,
+          statusLabel
+        }
+      })
+  }, [activeGeoFenceAlertMeta, geoFenceConfigs])
 
   const activeGeoFenceAlertMeta = useMemo(() => {
     const liveAlarmCode = String(resolveLiveAlarmCode(selectedWorkspaceDevice) || '').trim()
@@ -2537,9 +2565,9 @@ export default function HomeView({
   const activeAlarmDevices = useMemo(
     () =>
       devices
-        .map((device) => ({ device, alarmCode: resolveLiveAlarmCode(device) }))
+        .map((device) => ({ device, alarmCode: resolveDeviceLiveAlarmCode(device) }))
         .filter((entry) => Boolean(entry.alarmCode)),
-    [devices, resolveLiveAlarmCode]
+    [devices, alarmNowMs, alarmStateByDevice, getDeviceMotionAlertDurationMs, isMotionAlarmCode]
   )
   const dashboardAlertCodeOptions = useMemo(() => {
     const fallbackCodes = activeAlarmDevices.map((entry) => String(entry.alarmCode || '').trim()).filter(Boolean)
@@ -2577,8 +2605,8 @@ export default function HomeView({
     const keyword = dashboardDeviceSearch.trim().toLowerCase()
     return devices
       .filter((entry) => {
-        const hasActiveAlarm = Boolean(resolveLiveAlarmCode(entry))
-        const normalizedAlarmCode = String(resolveLiveAlarmCode(entry) || '').trim().toLowerCase()
+        const hasActiveAlarm = Boolean(resolveDeviceLiveAlarmCode(entry))
+        const normalizedAlarmCode = String(resolveDeviceLiveAlarmCode(entry) || '').trim().toLowerCase()
         const alarmMatch =
           dashboardDeviceAlertFilter === 'all'
             ? true
@@ -2598,14 +2626,14 @@ export default function HomeView({
         return text.includes(keyword)
       })
       .sort((a, b) => {
-        const aActive = Boolean(resolveLiveAlarmCode(a))
-        const bActive = Boolean(resolveLiveAlarmCode(b))
+        const aActive = Boolean(resolveDeviceLiveAlarmCode(a))
+        const bActive = Boolean(resolveDeviceLiveAlarmCode(b))
         if (aActive !== bActive) return aActive ? -1 : 1
         const aName = String(a.name || a.deviceName || '').toLowerCase()
         const bName = String(b.name || b.deviceName || '').toLowerCase()
         return aName.localeCompare(bName)
       })
-  }, [dashboardDeviceAlertFilter, dashboardDeviceSearch, devices, resolveDeviceMeta, resolveLiveAlarmCode])
+  }, [dashboardDeviceAlertFilter, dashboardDeviceSearch, devices, resolveDeviceMeta, resolveDeviceLiveAlarmCode])
   const dashboardTotalPages = Math.max(1, Math.ceil(filteredDashboardDevices.length / dashboardPageSize))
   const paginatedDashboardDevices = useMemo(() => {
     const start = (dashboardDevicePage - 1) * dashboardPageSize
@@ -2676,7 +2704,7 @@ export default function HomeView({
     const phoneKeyword = deviceFilters.phone.trim().toLowerCase()
     const versionFilter = deviceFilters.version.trim().toLowerCase()
     return devices.filter((entry) => {
-      const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(entry))
+      const alarmMeta = getAlarmMeta(resolveDeviceLiveAlarmCode(entry))
       const alarmMatch = deviceAlarmFilter === 'all' ? true : alarmMeta.tone === deviceAlarmFilter
       const owner = resolveDeviceMeta(entry)
       const deviceText = String(entry.name || entry.deviceName || '').toLowerCase()
@@ -2692,7 +2720,7 @@ export default function HomeView({
       const versionMatch = !versionFilter || versionText === versionFilter
       return alarmMatch && deviceMatch && ownerMatch && locationMatch && phoneMatch && versionMatch
     })
-  }, [deviceAlarmFilter, deviceFilters, devices, getAlarmMeta, resolveDeviceMeta, resolveLiveAlarmCode])
+  }, [deviceAlarmFilter, deviceFilters, devices, getAlarmMeta, resolveDeviceMeta, resolveDeviceLiveAlarmCode])
 
   const toPagedRows = useCallback((rows, page) => {
     const totalPages = Math.max(1, Math.ceil(rows.length / listPageSize))
@@ -3102,7 +3130,7 @@ export default function HomeView({
     return [
       ['Device Name', currentDevice.name || currentDevice.deviceName || '-'],
       ['Device Phone Number', currentDevice.phoneNumber || '-'],
-      ['Alarm Status', resolveLiveAlarmCode(currentDevice) || 'No active alarm'],
+      ['Alarm Status', resolveDeviceLiveAlarmCode(currentDevice) || 'No active alarm'],
       ['Alarm Triggered', formatTimestamp(alarmTriggeredAt)],
       ['Alarm Cancelled', formatTimestamp(alarmCancelledAt)],
       ['Last Power ON', formatTimestamp(currentDevice.lastPowerOnAt || currentDevice.last_power_on_at)],
@@ -3113,7 +3141,7 @@ export default function HomeView({
       ['Last reply', replyRows[0]?.receivedAt || 'No reply yet'],
       ['Battery status', currentDevice.batteryStatus || currentDevice.battery || 'Unknown']
     ]
-  }, [devices, formatTimestamp, replyRows, user, resolveDeviceMeta, resolveLiveAlarmCode])
+  }, [devices, formatTimestamp, replyRows, user, resolveDeviceMeta, resolveDeviceLiveAlarmCode])
 
   const getAlarmCancelledAt = useCallback((device) => {
     const internalId = Number(device?.id || device?.deviceId || 0)
@@ -3649,7 +3677,7 @@ export default function HomeView({
                         <tbody>
                           {paginatedDashboardDevices.map((device) => {
                             const meta = resolveDeviceMeta(device)
-                            const alarmMeta = getAlarmMeta(resolveLiveAlarmCode(device))
+                            const alarmMeta = getAlarmMeta(resolveDeviceLiveAlarmCode(device))
                             return (
                               <tr key={device.id || device.phoneNumber || device.name}>
                                 <td>{device.name || device.deviceName || '-'}</td>
@@ -3776,7 +3804,7 @@ export default function HomeView({
             pagedDevices={pagedDevices}
             resolveDeviceMeta={resolveDeviceMeta}
             getAlarmMeta={getAlarmMeta}
-            resolveLiveAlarmCode={resolveLiveAlarmCode}
+            resolveLiveAlarmCode={resolveDeviceLiveAlarmCode}
             getAlarmCancelledAt={getAlarmCancelledAt}
             handleCancelAlarm={handleCancelAlarm}
             openLocationDetailPage={openLocationDetailPage}
@@ -3886,7 +3914,7 @@ export default function HomeView({
             </div>
             {selectedWorkspaceDevice ? (
               <div className="lifecycle-grid">
-                <div className="lifecycle-card"><strong>Alarm Status</strong><span>{getAlarmMeta(resolveLiveAlarmCode(selectedWorkspaceDevice)).label}</span></div>
+                <div className="lifecycle-card"><strong>Alarm Status</strong><span>{getAlarmMeta(resolveDeviceLiveAlarmCode(selectedWorkspaceDevice)).label}</span></div>
                 <div className="lifecycle-card"><strong>Alarm Triggered</strong><span>{formatTimestamp(getAlarmTriggeredAt(selectedWorkspaceDevice))}</span></div>
                 <div className="lifecycle-card"><strong>Alarm Cancelled</strong><span>{formatTimestamp(getAlarmCancelledAt(selectedWorkspaceDevice))}</span></div>
                 <div className="lifecycle-card"><strong>Last Power ON</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastPowerOnAt || selectedWorkspaceDevice.last_power_on_at)}</span></div>
@@ -3925,7 +3953,7 @@ export default function HomeView({
               >
                 Retry IMEI Request (V?)
               </button>
-              <button className="table-link action-chip action-chip-danger" type="button" onClick={() => selectedWorkspaceDevice && handleCancelAlarm(selectedWorkspaceDevice)} disabled={!selectedWorkspaceDevice || !resolveLiveAlarmCode(selectedWorkspaceDevice)}>Cancel Active Alarm</button>
+              <button className="table-link action-chip action-chip-danger" type="button" onClick={() => selectedWorkspaceDevice && handleCancelAlarm(selectedWorkspaceDevice)} disabled={!selectedWorkspaceDevice || !resolveDeviceLiveAlarmCode(selectedWorkspaceDevice)}>Cancel Active Alarm</button>
               <button className="table-link action-chip action-chip-neutral" type="button" onClick={() => moveToDeviceSection('device-detail-commands', { force: true })}>Open Command Center</button>
             </div>
             <div className="device-profile-actions">
