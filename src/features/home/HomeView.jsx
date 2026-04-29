@@ -2363,6 +2363,37 @@ export default function HomeView({
     geoFenceConfigs.find((entry) => entry.slot === activeGeoFenceSlot) || geoFenceConfigs[0] || { slot: 1, enabled: '1', mode: '0', radius: '100m' }
   ), [activeGeoFenceSlot, geoFenceConfigs])
 
+  const activeGeoFenceAlert = useMemo(() => {
+    const liveAlarmCode = String(resolveLiveAlarmCode(selectedWorkspaceDevice) || '').trim()
+    const match = liveAlarmCode.match(/^GEO-([1-4])\s+Alert(?:\s*\((inbound|outbound)\))?$/i)
+    if (!match) return null
+    return {
+      slot: Number(match[1]),
+      direction: match[2] ? match[2].toLowerCase() : '',
+      alarmText: liveAlarmCode
+    }
+  }, [resolveLiveAlarmCode, selectedWorkspaceDevice])
+
+  const assignedGeoFenceStatuses = useMemo(() => {
+    if (!geoFenceConfigs.length) return []
+
+    return geoFenceConfigs
+      .slice()
+      .sort((left, right) => left.slot - right.slot)
+      .map((geoFence) => {
+        const isActive = activeGeoFenceAlert?.slot === geoFence.slot
+        const statusLabel = isActive
+          ? `Alert Active${activeGeoFenceAlert?.direction ? ` (${activeGeoFenceAlert.direction})` : ''}`
+          : 'Normal'
+
+        return {
+          ...geoFence,
+          isActive,
+          statusLabel
+        }
+      })
+  }, [activeGeoFenceAlert, geoFenceConfigs])
+
   useEffect(() => {
     if (!geoFenceConfigs.length) return
     if (geoFenceConfigs.some((entry) => entry.slot === activeGeoFenceSlot)) return
@@ -3875,6 +3906,26 @@ export default function HomeView({
                 ) : null}
               </div>
             ) : null}
+
+            {deviceAssignedGeoFenceStatuses.length ? (
+              <div className="geofence-status-card">
+                <div className="geofence-status-head">
+                  <strong>Assigned Geofences</strong>
+                  <span>{deviceAssignedGeoFenceStatuses.length} total</span>
+                </div>
+                <ul className="geofence-status-list">
+                  {deviceAssignedGeoFenceStatuses.map((entry) => (
+                    <li key={`device-geofence-${entry.slot}`} className="geofence-status-row">
+                      <span className="geofence-status-name">Geofence {entry.slot}</span>
+                      <span className={`alarm-pill ${entry.isActive ? 'alarm-pill-warning' : 'alarm-pill-idle'}`}>
+                        {entry.statusLabel}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             <div className="device-quick-actions">
               <button className="table-link action-chip action-chip-neutral" type="button" onClick={() => moveToDeviceSection('device-detail-location', { force: true })}>Go to Live Location</button>
               <button className="table-link action-chip action-chip-primary device-detail-btn-primary" type="button" onClick={requestLocationUpdate} disabled={loading}>Request Location Now</button>
