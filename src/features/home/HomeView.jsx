@@ -2514,7 +2514,7 @@ export default function HomeView({
     }
   }, [resolveLiveAlarmCode, selectedWorkspaceDevice])
 
-  const assignedGeoFenceStatuses = useMemo(() => {
+  const deviceAssignedGeoFenceStatuses = useMemo(() => {
     if (!geoFenceConfigs.length) return []
 
     return geoFenceConfigs
@@ -3895,14 +3895,14 @@ export default function HomeView({
               </div>
             ) : null}
 
-            {assignedGeoFenceStatuses.length ? (
+            {deviceAssignedGeoFenceStatuses.length ? (
               <div className="geofence-status-card">
                 <div className="geofence-status-head">
                   <strong>Assigned Geofences</strong>
-                  <span>{assignedGeoFenceStatuses.length} total</span>
+                  <span>{deviceAssignedGeoFenceStatuses.length} total</span>
                 </div>
                 <ul className="geofence-status-list">
-                  {assignedGeoFenceStatuses.map((entry) => (
+                  {deviceAssignedGeoFenceStatuses.map((entry) => (
                     <li key={`device-geofence-${entry.slot}`} className="geofence-status-row">
                       <span className="geofence-status-name">Geofence {entry.slot}</span>
                       <span className={`alarm-pill ${entry.isActive ? 'alarm-pill-warning' : 'alarm-pill-idle'}`}>
