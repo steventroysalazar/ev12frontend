@@ -575,6 +575,14 @@ export default function HomeView({
     if (/\bno[-\s]?motion\b/i.test(normalizedCode)) return { label: 'No-Motion Alert', tone: 'warning' }
     if (/\bmotion\b/i.test(normalizedCode)) return { label: 'Motion Alert', tone: 'active' }
 
+    const geoMatch = normalizedCode.match(/^GEO-([1-4])\s+Alert(?:\s*\((inbound|outbound)\))?$/i)
+    if (geoMatch) {
+      const slot = geoMatch[1]
+      const direction = geoMatch[2] ? geoMatch[2].toLowerCase() : ''
+      const label = direction ? `GEO-${slot} Alert (${direction})` : `GEO-${slot} Alert`
+      return { label, tone: 'warning' }
+    }
+
     return { label: normalizedCode, tone: 'active' }
   }, [])
 
@@ -2464,6 +2472,37 @@ export default function HomeView({
     [alarmNowMs, alarmStateByDevice, getDeviceMotionAlertDurationMs, isMotionAlarmCode]
   )
 
+  const activeGeoFenceAlertMeta = useMemo(() => {
+    const liveAlarmCode = String(resolveLiveAlarmCode(selectedWorkspaceDevice) || '').trim()
+    const match = liveAlarmCode.match(/^GEO-([1-4])\s+Alert(?:\s*\((inbound|outbound)\))?$/i)
+    if (!match) return null
+    return {
+      slot: Number(match[1]),
+      direction: match[2] ? match[2].toLowerCase() : '',
+      alarmText: liveAlarmCode
+    }
+  }, [resolveLiveAlarmCode, selectedWorkspaceDevice])
+
+  const assignedGeoFenceStatuses = useMemo(() => {
+    if (!geoFenceConfigs.length) return []
+
+    return geoFenceConfigs
+      .slice()
+      .sort((left, right) => left.slot - right.slot)
+      .map((geoFence) => {
+        const isActive = activeGeoFenceAlertMeta?.slot === geoFence.slot
+        const statusLabel = isActive
+          ? `Alert Active${activeGeoFenceAlertMeta?.direction ? ` (${activeGeoFenceAlertMeta.direction})` : ''}`
+          : 'Normal'
+
+        return {
+          ...geoFence,
+          isActive,
+          statusLabel
+        }
+      })
+  }, [activeGeoFenceAlertMeta, geoFenceConfigs])
+
   const activeAlarmDevices = useMemo(
     () =>
       devices
@@ -3816,6 +3855,7 @@ export default function HomeView({
             </div>
             {selectedWorkspaceDevice ? (
               <div className="lifecycle-grid">
+                <div className="lifecycle-card"><strong>Alarm Status</strong><span>{getAlarmMeta(resolveLiveAlarmCode(selectedWorkspaceDevice)).label}</span></div>
                 <div className="lifecycle-card"><strong>Alarm Triggered</strong><span>{formatTimestamp(getAlarmTriggeredAt(selectedWorkspaceDevice))}</span></div>
                 <div className="lifecycle-card"><strong>Alarm Cancelled</strong><span>{formatTimestamp(getAlarmCancelledAt(selectedWorkspaceDevice))}</span></div>
                 <div className="lifecycle-card"><strong>Last Power ON</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastPowerOnAt || selectedWorkspaceDevice.last_power_on_at)}</span></div>
@@ -3823,6 +3863,26 @@ export default function HomeView({
                 <div className="lifecycle-card"><strong>Last Disconnected</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastDisconnectedAt || selectedWorkspaceDevice.last_disconnected_at)}</span></div>
               </div>
             ) : null}
+
+            {assignedGeoFenceStatuses.length ? (
+              <div className="geofence-status-card">
+                <div className="geofence-status-head">
+                  <strong>Assigned Geofences</strong>
+                  <span>{assignedGeoFenceStatuses.length} total</span>
+                </div>
+                <ul className="geofence-status-list">
+                  {assignedGeoFenceStatuses.map((entry) => (
+                    <li key={`device-geofence-${entry.slot}`} className="geofence-status-row">
+                      <span className="geofence-status-name">Geofence {entry.slot}</span>
+                      <span className={`alarm-pill ${entry.isActive ? 'alarm-pill-warning' : 'alarm-pill-idle'}`}>
+                        {entry.statusLabel}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             <div className="device-quick-actions">
               <button className="table-link action-chip action-chip-neutral" type="button" onClick={() => moveToDeviceSection('device-detail-location', { force: true })}>Go to Live Location</button>
               <button className="table-link action-chip action-chip-primary device-detail-btn-primary" type="button" onClick={requestLocationUpdate} disabled={loading}>Request Location Now</button>
