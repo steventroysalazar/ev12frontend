@@ -185,16 +185,17 @@ const buildGeoFencesFromForm = (form) => {
   }))
 }
 
-const resolveDeviceGeofenceStatusList = (device) => {
-  if (!device || typeof device !== 'object') return []
+const resolveDeviceGeofenceStatusList = (device, fallbackGeoFences = []) => {
+  if (!device && !fallbackGeoFences.length) return []
 
-  const configured = Array.isArray(device.geoFences)
+  const configuredFromDevice = Array.isArray(device?.geoFences)
     ? device.geoFences
-    : (Array.isArray(device.geo_fences) ? device.geo_fences : [])
+    : (Array.isArray(device?.geo_fences) ? device.geo_fences : [])
+  const configured = configuredFromDevice.length ? configuredFromDevice : fallbackGeoFences
 
   const alertSlots = new Set(
-    (Array.isArray(device.activeGeofenceSlots) ? device.activeGeofenceSlots : [])
-      .concat(Array.isArray(device.active_geofence_slots) ? device.active_geofence_slots : [])
+    (Array.isArray(device?.activeGeofenceSlots) ? device.activeGeofenceSlots : [])
+      .concat(Array.isArray(device?.active_geofence_slots) ? device.active_geofence_slots : [])
       .map((entry) => Number.parseInt(String(entry), 10))
       .filter((entry) => Number.isInteger(entry) && entry > 0)
   )
@@ -3236,8 +3237,8 @@ export default function HomeView({
     return resolveDeviceMeta(selectedWorkspaceDevice)
   }, [resolveDeviceMeta, selectedWorkspaceDevice])
   const deviceGeofenceStatusList = useMemo(
-    () => resolveDeviceGeofenceStatusList(selectedWorkspaceDevice),
-    [selectedWorkspaceDevice]
+    () => resolveDeviceGeofenceStatusList(selectedWorkspaceDevice, geoFenceConfigs),
+    [geoFenceConfigs, selectedWorkspaceDevice]
   )
   const workspaceDeviceProfileChanged = useMemo(() => {
     if (!selectedWorkspaceDevice) return false
