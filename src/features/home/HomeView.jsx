@@ -185,6 +185,50 @@ const buildGeoFencesFromForm = (form) => {
   }))
 }
 
+const resolveDeviceGeofenceStatusList = (device) => {
+  if (!device || typeof device !== 'object') return []
+
+  const configured = Array.isArray(device.geoFences)
+    ? device.geoFences
+    : (Array.isArray(device.geo_fences) ? device.geo_fences : [])
+
+  const alertSlots = new Set(
+    (Array.isArray(device.activeGeofenceSlots) ? device.activeGeofenceSlots : [])
+      .concat(Array.isArray(device.active_geofence_slots) ? device.active_geofence_slots : [])
+      .map((entry) => Number.parseInt(String(entry), 10))
+      .filter((entry) => Number.isInteger(entry) && entry > 0)
+  )
+
+  const listFromConfigured = configured
+    .slice(0, 4)
+    .map((entry, index) => {
+      const slot = normalizeGeoFenceSlot(entry?.slot, index + 1)
+      const isAlert = alertSlots.has(slot) || entry?.status === 'alert' || entry?.status === 'active'
+      return {
+        slot,
+        label: `Geofence ${slot}`,
+        status: isAlert ? 'alert' : 'normal',
+        statusLabel: isAlert ? 'Alert Active' : 'Normal'
+      }
+    })
+    .sort((a, b) => a.slot - b.slot)
+
+  if (listFromConfigured.length) return listFromConfigured
+
+  if (!alertSlots.size) return []
+
+  return Array.from({ length: Math.min(4, Math.max(...Array.from(alertSlots), 1)) }, (_, index) => {
+    const slot = index + 1
+    const isAlert = alertSlots.has(slot)
+    return {
+      slot,
+      label: `Geofence ${slot}`,
+      status: isAlert ? 'alert' : 'normal',
+      statusLabel: isAlert ? 'Alert Active' : 'Normal'
+    }
+  })
+}
+
 const parseCsvLines = (value) => String(value || '')
   .split(/[,\n]/)
   .map((entry) => entry.trim())
@@ -3191,6 +3235,10 @@ export default function HomeView({
     if (!selectedWorkspaceDevice) return null
     return resolveDeviceMeta(selectedWorkspaceDevice)
   }, [resolveDeviceMeta, selectedWorkspaceDevice])
+  const deviceGeofenceStatusList = useMemo(
+    () => resolveDeviceGeofenceStatusList(selectedWorkspaceDevice),
+    [selectedWorkspaceDevice]
+  )
   const workspaceDeviceProfileChanged = useMemo(() => {
     if (!selectedWorkspaceDevice) return false
     const selectedOwnerId = String(selectedWorkspaceDevice.ownerUserId || selectedWorkspaceDevice.userId || selectedWorkspaceDevice.user_id || selectedWorkspaceDevice.owner?.id || selectedWorkspaceDevice.app_user?.id || '')
@@ -3831,6 +3879,29 @@ export default function HomeView({
                 <div className="lifecycle-card"><strong>Last Power OFF</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastPowerOffAt || selectedWorkspaceDevice.last_power_off_at)}</span></div>
                 <div className="lifecycle-card"><strong>Last Disconnected</strong><span>{formatTimestamp(selectedWorkspaceDevice.lastDisconnectedAt || selectedWorkspaceDevice.last_disconnected_at)}</span></div>
               </div>
+            ) : null}
+            {selectedWorkspaceDevice ? (
+              <section className="device-geofence-panel" aria-label="Assigned geofences">
+                <div className="device-geofence-header">
+                  <strong>Assigned Geofences</strong>
+                  <span className="device-geofence-total">Total: {deviceGeofenceStatusList.length}</span>
+                </div>
+                {deviceGeofenceStatusList.length ? (
+                  <div className="device-geofence-list">
+                    {deviceGeofenceStatusList.map((geofence) => (
+                      <article key={`device-geofence-${geofence.slot}`} className={`device-geofence-card ${geofence.status === 'alert' ? 'is-alert' : 'is-normal'}`}>
+                        <span className="device-geofence-name">{geofence.label}</span>
+                        <span className="device-geofence-status">
+                          <span className="device-geofence-dot" aria-hidden="true" />
+                          {geofence.statusLabel}
+                        </span>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="status">No geofence assignment found for this device yet.</p>
+                )}
+              </section>
             ) : null}
             <div className="device-quick-actions">
               <button className="table-link action-chip action-chip-neutral" type="button" onClick={() => moveToDeviceSection('device-detail-location', { force: true })}>Go to Live Location</button>

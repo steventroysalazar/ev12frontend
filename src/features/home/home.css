@@ -2089,6 +2089,80 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
   font-weight: 700;
   font-size: 1.05rem;
 }
+.device-geofence-panel {
+  margin: 0.9rem 0;
+  border: 1px solid #cfdaea;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 0.75rem 0.85rem;
+}
+.device-geofence-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.55rem;
+}
+.device-geofence-header strong {
+  color: #2d4f79;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+.device-geofence-total {
+  font-size: 0.78rem;
+  color: #607795;
+  background: #eef4fb;
+  border: 1px solid #d4dfeb;
+  border-radius: 999px;
+  padding: 0.17rem 0.55rem;
+}
+.device-geofence-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(170px, 1fr));
+  gap: 0.55rem;
+}
+.device-geofence-card {
+  border: 1px solid #d4dfeb;
+  border-radius: 10px;
+  background: #f9fbff;
+  padding: 0.52rem 0.62rem;
+  display: grid;
+  gap: 0.18rem;
+}
+.device-geofence-name {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #66809d;
+  font-weight: 700;
+}
+.device-geofence-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #2a4e77;
+  font-size: 0.95rem;
+}
+.device-geofence-dot {
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 999px;
+  background: #7d91ab;
+}
+.device-geofence-card.is-alert {
+  border-color: #dfd2b4;
+  background: #fff9ef;
+}
+.device-geofence-card.is-alert .device-geofence-status {
+  color: #9d6a26;
+}
+.device-geofence-card.is-alert .device-geofence-dot {
+  background: #d9a441;
+}
+.device-geofence-card.is-normal .device-geofence-dot {
+  background: #7c8ea6;
+}
 .request-btn-inline {
   margin: 0;
 }
@@ -2236,6 +2310,9 @@ input,select,textarea { background: #f5f6f7; border: 1px solid #d7dade; border-r
     grid-template-columns: 1fr;
   }
   .lifecycle-grid {
+    grid-template-columns: 1fr;
+  }
+  .device-geofence-list {
     grid-template-columns: 1fr;
   }
 }
