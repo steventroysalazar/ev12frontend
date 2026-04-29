@@ -2363,6 +2363,37 @@ export default function HomeView({
     geoFenceConfigs.find((entry) => entry.slot === activeGeoFenceSlot) || geoFenceConfigs[0] || { slot: 1, enabled: '1', mode: '0', radius: '100m' }
   ), [activeGeoFenceSlot, geoFenceConfigs])
 
+  const activeGeoFenceAlert = useMemo(() => {
+    const liveAlarmCode = String(resolveLiveAlarmCode(selectedWorkspaceDevice) || '').trim()
+    const match = liveAlarmCode.match(/^GEO-([1-4])\s+Alert(?:\s*\((inbound|outbound)\))?$/i)
+    if (!match) return null
+    return {
+      slot: Number(match[1]),
+      direction: match[2] ? match[2].toLowerCase() : '',
+      alarmText: liveAlarmCode
+    }
+  }, [resolveLiveAlarmCode, selectedWorkspaceDevice])
+
+  const assignedGeoFenceStatuses = useMemo(() => {
+    if (!geoFenceConfigs.length) return []
+
+    return geoFenceConfigs
+      .slice()
+      .sort((left, right) => left.slot - right.slot)
+      .map((geoFence) => {
+        const isActive = activeGeoFenceAlert?.slot === geoFence.slot
+        const statusLabel = isActive
+          ? `Alert Active${activeGeoFenceAlert?.direction ? ` (${activeGeoFenceAlert.direction})` : ''}`
+          : 'Normal'
+
+        return {
+          ...geoFence,
+          isActive,
+          statusLabel
+        }
+      })
+  }, [activeGeoFenceAlert, geoFenceConfigs])
+
   useEffect(() => {
     if (!geoFenceConfigs.length) return
     if (geoFenceConfigs.some((entry) => entry.slot === activeGeoFenceSlot)) return
